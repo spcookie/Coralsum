@@ -1,0 +1,6 @@
+applicationType: default
+defaultPackage: coralsum
+testFramework: junit
+sourceLanguage: kotlin
+buildTool: gradle_kotlin
+features: [annotation-api, app-name, assertj, cache-caffeine, data, data-r2dbc, gradle, http-client-test, jackson-databind, jmx, jobrunr-jobrunr, junit, kotlin, kotlin-application, kotlin-extension-functions, ksp, logback, management, micrometer, micrometer-annotation, micronaut-aop, micronaut-aot, micronaut-build, micronaut-http-validation, netflix-hystrix, netty-server, openapi, postgres, r2dbc, reactor, reactor-http-client, readme, retry, serialization-jackson, shade, static-resources, test-resources, toml, toml-build, validation]

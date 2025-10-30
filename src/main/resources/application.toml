@@ -1,0 +1,14 @@
+hystrix.stream.enabled = false
+
+[micronaut]
+application.name = 'coralsum'
+metrics.enabled = true
+
+[r2dbc.datasources.default]
+schema-generate = 'CREATE_DROP'
+dialect = 'POSTGRES'
+db-type = 'postgres'
+
+[jobrunr]
+background-job-server.enabled = false
+dashboard.enabled = false

@@ -1,0 +1,77 @@
+micronaut:
+  application:
+    name: coralsum
+  server:
+    multipart:
+      max-file-size: 10485760 # 50M
+      location: /tmp/uploads
+    netty:
+      access-logger:
+        enabled: true
+        logger-name: request-access-logger
+        log-format: common
+    port: 8080
+  http:
+    client:
+      read-timeout: 2m
+  metrics:
+    enabled: true
+  object-storage:
+    local:
+      default:
+        enabled: false
+        path: ${user.dir}/s3
+    aws:
+      default:
+        enabled: true
+        bucket: mac-nano
+  router:
+    static-resources:
+      swagger:
+        paths: classpath:META-INF/swagger
+        mapping: /swagger/**
+  security:
+    intercept-url-map:
+      - pattern: /api/**
+        access:
+          - isAnonymous()
+      - pattern: /mn-os/**
+        access:
+          - isAnonymous()
+jackson:
+  serializationInclusion: ALWAYS
+datasources:
+  default:
+    url: jdbc:h2:file:${store.base}/store/data;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ''
+    driver-class-name: org.h2.Driver
+r2dbc:
+  datasources:
+    default:
+      dialect: H2
+      url: r2dbc:h2:file:///${store.base}/store/data;DB_CLOSE_ON_EXIT=FALSE
+      username: sa
+      password: ''
+flyway:
+  datasources:
+    default:
+      enabled: true
+logger:
+  levels:
+    io.micronaut.data.query: DEBUG
+    io.r2dbc.h2: DEBUG
+    org.h2.jdbc: DEBUG
+#jobrunr:
+#  background-job-server:
+#    enabled: false
+#  dashboard:
+#    enabled: false
+aws:
+  region: aws-global
+  services:
+    s3:
+      endpoint-override: ${oss.endpoint}
+  s3:
+    path-style-access-enabled: false
+    chunked-encoding-enabled: false

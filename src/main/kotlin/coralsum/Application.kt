@@ -1,6 +1,6 @@
 package coralsum
 
-import coralsum.toolkit.RuntimePath
+import coralsum.toolkit.logger
 import io.micronaut.runtime.Micronaut.run
 import io.swagger.v3.oas.annotations.OpenAPIDefinition
 import io.swagger.v3.oas.annotations.info.Info
@@ -14,6 +14,10 @@ import org.h2.tools.Server
 )
 object Api
 
+class Application
+
+private val log = logger<Application>()
+
 fun main(args: Array<String>) {
     initProps()
     run(*args)
@@ -21,13 +25,13 @@ fun main(args: Array<String>) {
 }
 
 fun initProps() {
-    val absolutePath = RuntimePath.getExecutableDir().absolutePath
-    System.setProperty("user.dir", absolutePath)
-    System.setProperty("store.base", absolutePath.replace("\\", "/"))
+//    val absolutePath = RuntimePath.getExecutableDir().absolutePath
+//    System.setProperty("user.dir", absolutePath)
+    System.setProperty("store.base", System.getProperty("user.dir").replace("\\", "/"))
 }
 
 fun startH2Console() {
     val h2Console = Server.createWebServer("-web", "-webPort", "8082")
     h2Console.start()
-    println("H2 console started at http://localhost:8082")
+    log.info("H2 console started at http://localhost:8082")
 }

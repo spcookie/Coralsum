@@ -1,5 +1,6 @@
 package coralsum.entity
 
+import coralsum.common.enums.UserSource
 import io.micronaut.data.annotation.*
 import io.micronaut.data.model.naming.NamingStrategies
 import io.micronaut.security.annotation.CreatedBy
@@ -16,11 +17,13 @@ data class OutletUser(
     @field:MappedProperty(value = "open_user_id")
     val openUser: OpenUser? = null,
 
-    val openUserId: Long? = null,
+    val userSource: UserSource? = null,
 
-    val userSource: String? = null,
+    val nickName: String? = null,
 
     val sourceCode: String? = null,
+
+    val secret: String? = null,
 
     @field:DateCreated
     val createTime: LocalDateTime? = null,
@@ -32,5 +35,5 @@ data class OutletUser(
     val createBy: String? = null,
 
     @field:UpdatedBy
-    val updateBy: String? = null
+    val updateBy: String? = null,
 )

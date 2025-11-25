@@ -6,18 +6,18 @@ import io.micronaut.security.annotation.CreatedBy
 import io.micronaut.security.annotation.UpdatedBy
 import java.time.LocalDateTime
 
-@MappedEntity(value = "open_user", namingStrategy = NamingStrategies.UnderScoreSeparatedLowerCase::class)
-data class OpenUser(
+@MappedEntity(
+    value = "retrieval_image_req_record",
+    namingStrategy = NamingStrategies.UnderScoreSeparatedLowerCase::class
+)
+data class RetrievalImageReqRecord(
     @field:Id
     @field:GeneratedValue(GeneratedValue.Type.AUTO)
     val id: Long? = null,
 
-    val uid: String? = null,
+    val imageRef: String,
 
-    @field:Relation(value = Relation.Kind.ONE_TO_MANY, mappedBy = "openUser")
-    val outletUsers: MutableList<OutletUser>? = null,
-
-    val assignRole: String? = null,
+    val ip: String? = null,
 
     @field:DateCreated
     val createTime: LocalDateTime? = null,
@@ -30,6 +30,4 @@ data class OpenUser(
 
     @field:UpdatedBy
     val updateBy: String? = null,
-) {
-    fun assignRoleList() = assignRole?.split(",")?.map { it.trim() }
-}
+)

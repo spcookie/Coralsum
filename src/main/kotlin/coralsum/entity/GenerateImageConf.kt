@@ -1,23 +1,27 @@
 package coralsum.entity
 
 import io.micronaut.data.annotation.*
+import io.micronaut.data.model.DataType
 import io.micronaut.data.model.naming.NamingStrategies
 import io.micronaut.security.annotation.CreatedBy
 import io.micronaut.security.annotation.UpdatedBy
 import java.time.LocalDateTime
 
-@MappedEntity(value = "open_user", namingStrategy = NamingStrategies.UnderScoreSeparatedLowerCase::class)
-data class OpenUser(
+@MappedEntity(
+    value = "generate_image_conf",
+    namingStrategy = NamingStrategies.UnderScoreSeparatedLowerCase::class
+)
+data class GenerateImageConf(
     @field:Id
-    @field:GeneratedValue(GeneratedValue.Type.AUTO)
+    @field:GeneratedValue
     val id: Long? = null,
 
-    val uid: String? = null,
+    @field:Relation(value = Relation.Kind.ONE_TO_ONE)
+    @field:MappedProperty(value = "open_user_id")
+    val openUser: OpenUser? = null,
 
-    @field:Relation(value = Relation.Kind.ONE_TO_MANY, mappedBy = "openUser")
-    val outletUsers: MutableList<OutletUser>? = null,
-
-    val assignRole: String? = null,
+    @field:TypeDef(type = DataType.JSON)
+    val conf: String? = null,
 
     @field:DateCreated
     val createTime: LocalDateTime? = null,
@@ -30,6 +34,4 @@ data class OpenUser(
 
     @field:UpdatedBy
     val updateBy: String? = null,
-) {
-    fun assignRoleList() = assignRole?.split(",")?.map { it.trim() }
-}
+)

@@ -26,13 +26,12 @@ class NanoBanana(private val apiKey: String) : Closeable {
     fun gen(
         text: String,
         image: ByteArray? = null,
-        candidateCount: Int = 1,
         aspectRatio: String? = null,
         system: String? = null,
         temperature: Float = 1f,
         maxOutputTokens: Int = 32768,
-        topP: Float = 1f
-    ): Pair<List<Pair<String?, BufferedImage>>, GenerateContentResponseUsageMetadata> {
+        topP: Float = 1f,
+    ): Pair<Pair<String?, BufferedImage?>, GenerateContentResponseUsageMetadata> {
         val contentConfig = GenerateContentConfig.builder()
             .responseModalities("TEXT", "IMAGE").apply {
                 if (system != null) {
@@ -56,26 +55,27 @@ class NanoBanana(private val apiKey: String) : Closeable {
                     )
                 }
             }
-            .candidateCount(candidateCount)
             .temperature(temperature)
             .topP(topP)
             .maxOutputTokens(maxOutputTokens)
             .build()
         val response = client.models.generateContent(
-            "gemini-2.5-flash-image", Content.builder().parts(
-                buildList {
-                    add(
-                        Part.builder().text(text).build()
-                    )
-                    if (image != null) {
+            "gemini-2.5-flash-image",
+            Content.builder()
+                .parts(
+                    buildList {
                         add(
-                            Part.builder().inlineData(
-                                Blob.builder().data(image)
-                                    .mimeType("image/" + FileTypeUtil.getType(image.inputStream())).build()
-                            ).build()
+                            Part.builder().text(text).build()
                         )
-                    }
-                }).role("user").build(), contentConfig
+                        if (image != null) {
+                            add(
+                                Part.builder().inlineData(
+                                    Blob.builder().data(image)
+                                        .mimeType("image/" + FileTypeUtil.getType(image.inputStream())).build()
+                                ).build()
+                            )
+                        }
+                    }).role("user").build(), contentConfig
         )
         val result = response.candidates()
             .map { candidates ->
@@ -85,30 +85,26 @@ class NanoBanana(private val apiKey: String) : Closeable {
                             .flatMap { content -> content.parts() }
                             .getOrElse { Lists.newArrayList() }
                     }
-                    .toList()
+                    .findFirst()
+                    .getOrElse { listOf() }
             }
-            .map { candidates ->
-                val group: List<Pair<String?, BufferedImage>> = buildList {
-                    for (parts in candidates) {
-                        var text: String? = null
-                        var image: BufferedImage? = null
-                        for (part in parts) {
-                            if (part.text().isPresent) {
-                                text = part.text().get()
-                            } else if (part.inlineData().isPresent) {
-                                image = ImageIO.read(
-                                    ByteArrayInputStream(
-                                        part.inlineData().flatMap { obj -> obj.data() }.get()
-                                    )
-                                )
-                            }
-                        }
-                        add(Pair(text, image!!))
+            .map { parts ->
+                var text: String? = null
+                var image: BufferedImage? = null
+                for (part in parts) {
+                    if (part.text().isPresent) {
+                        text = part.text().get()
+                    } else if (part.inlineData().isPresent) {
+                        image = ImageIO.read(
+                            ByteArrayInputStream(
+                                part.inlineData().flatMap { obj -> obj.data() }.get()
+                            )
+                        )
                     }
                 }
-                group
+                Pair(text, image)
             }
-            .getOrElse { listOf() }
+            .getOrElse { Pair(null, null) }
         val usage = response.usageMetadata().get()
         return Pair(result, usage)
     }

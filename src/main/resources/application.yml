@@ -4,7 +4,6 @@ micronaut:
   server:
     multipart:
       max-file-size: 10485760 # 50M
-      location: /tmp/uploads
     netty:
       access-logger:
         enabled: true
@@ -13,7 +12,7 @@ micronaut:
     port: 8080
   http:
     client:
-      read-timeout: 2m
+      read-timeout: 3m
   metrics:
     enabled: true
   object-storage:
@@ -30,16 +29,62 @@ micronaut:
       swagger:
         paths: classpath:META-INF/swagger
         mapping: /swagger/**
+      static:
+        paths: classpath:static
+        mapping: /**
+  caches:
+    generate-task-result:
+      expire-after-access: 4m
+    generate-task-statue:
+      expire-after-access: 4m
   security:
+    authentication: bearer
+    reject-not-found: true
+    redirect:
+      enabled: false
+    basic-auth:
+      enabled: true
+      www-authenticate: false
+    token:
+      jwt:
+        signatures:
+          secret:
+            generator:
+              secret: gH7sK92ns8DkPw93Jdls82bnSd92Ks82
+              jws-algorithm: HS256
+      generator:
+        access-token:
+          expiration: 3600
+    endpoints:
+      login:
+        enabled: true
+        path: /api/auth/login
     intercept-url-map:
-      - pattern: /api/**
+      - pattern: /swagger/*
         access:
           - isAnonymous()
-      - pattern: /mn-os/**
+      - pattern: /mn-os/*
         access:
           - isAnonymous()
-jackson:
-  serializationInclusion: ALWAYS
+      - pattern: /favicon.ico
+        access:
+          - isAnonymous()
+      - pattern: /dashboard
+        access:
+          - isAnonymous()
+      - pattern: /css/**
+        access:
+          - isAnonymous()
+      - pattern: /js/*
+        access:
+          - isAnonymous()
+  serde:
+    serialization:
+      inclusion: always
+    deserialization:
+      accept-case-insensitive-enums: true
+    date-format: yyyy-MM-dd HH:mm:ss
+    property-naming-strategy: SNAKE_CASE
 datasources:
   default:
     url: jdbc:h2:file:${store.base}/store/data;DB_CLOSE_ON_EXIT=FALSE
@@ -62,11 +107,13 @@ logger:
     io.micronaut.data.query: DEBUG
     io.r2dbc.h2: DEBUG
     org.h2.jdbc: DEBUG
-#jobrunr:
-#  background-job-server:
-#    enabled: false
-#  dashboard:
-#    enabled: false
+jobrunr:
+  job-scheduler:
+    enabled: true
+  background-job-server:
+    enabled: true
+  dashboard:
+    enabled: true
 aws:
   region: aws-global
   services:
@@ -75,3 +122,16 @@ aws:
   s3:
     path-style-access-enabled: false
     chunked-encoding-enabled: false
+resilience4j:
+  ratelimiter:
+    enabled: true
+    configs:
+      default:
+        # 一分钟最多 60 次
+        limitForPeriod: 10
+        limitRefreshPeriod: 10s
+        timeoutDuration: 0s
+        eventConsumerBufferSize: 100
+    instances:
+      callGenerateImage:
+        baseConfig: default

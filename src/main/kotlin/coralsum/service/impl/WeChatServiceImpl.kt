@@ -2,8 +2,14 @@ package coralsum.service.impl
 
 import coralsum.common.dto.Res
 import coralsum.common.dto.ResCode
+import coralsum.common.enums.UserSource
 import coralsum.common.response.GenResultResponse
+import coralsum.common.response.IntentAssessmentResponse
 import coralsum.config.WeChatConfig
+import coralsum.entity.GenerateImageConf
+import coralsum.entity.OpenUser
+import coralsum.repository.GenerateImageConfRepository
+import coralsum.repository.OutletUserRepository
 import coralsum.service.IWeChatService
 import coralsum.toolkit.logger
 import io.micronaut.core.type.Argument
@@ -11,13 +17,17 @@ import io.micronaut.http.HttpRequest
 import io.micronaut.http.MediaType
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.multipart.MultipartBody
+import io.micronaut.http.uri.UriBuilder
+import io.micronaut.json.JsonMapper
 import io.micronaut.reactor.http.client.ReactorHttpClient
 import jakarta.annotation.PostConstruct
 import jakarta.inject.Singleton
 import kotlinx.coroutines.*
 import kotlinx.coroutines.reactive.awaitFirst
+import me.chanjar.weixin.common.session.WxSession
 import me.chanjar.weixin.common.session.WxSessionManager
 import me.chanjar.weixin.mp.api.WxMpMessageHandler
+import me.chanjar.weixin.mp.api.WxMpMessageInterceptor
 import me.chanjar.weixin.mp.api.WxMpMessageRouter
 import me.chanjar.weixin.mp.api.WxMpService
 import me.chanjar.weixin.mp.api.impl.WxMpServiceOkHttpImpl
@@ -25,13 +35,18 @@ import me.chanjar.weixin.mp.bean.message.WxMpXmlMessage
 import me.chanjar.weixin.mp.bean.message.WxMpXmlOutMessage
 import me.chanjar.weixin.mp.bean.message.WxMpXmlOutTextMessage
 import org.apache.commons.lang3.StringUtils
+import java.io.File
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.seconds
 
 
 @Singleton
 class WeChatServiceImpl(
     val weChatConfig: WeChatConfig,
-    @Client("http://localhost:\${micronaut.server.port}") val httpClient: ReactorHttpClient
+    val generateImageConfRepository: GenerateImageConfRepository,
+    val outletUserRepository: OutletUserRepository,
+    val jsonMapper: JsonMapper,
+    @Client("http://localhost:\${micronaut.server.port}") val httpClient: ReactorHttpClient,
 ) : IWeChatService {
 
     private val log = logger<WeChatServiceImpl>()
@@ -53,14 +68,34 @@ class WeChatServiceImpl(
     private fun buildRouter(router: WxMpMessageRouter) {
         router.rule()
             .async(false)
+            .matcher { it.content?.startsWith("/imgset") ?: false }
+            .handler(ImgSetHandler(generateImageConfRepository, outletUserRepository, jsonMapper))
+            .end()
+            .rule()
+            .async(false)
+            .matcher { it.content?.startsWith("/imgget") ?: false }
+            .handler(ImgGetHandler(generateImageConfRepository, outletUserRepository))
+            .end()
+            .rule()
+            .async(false)
+            .matcher { it.content?.startsWith("/") ?: false }
+            .handler(IllegalCmdHandler())
+            .end()
+            .rule()
+            .async(false)
             .msgType("text")
+            .interceptor(ImgSetInterceptor(generateImageConfRepository, outletUserRepository))
             .handler(TextHandler(httpClient))
-            .next()
+            .end()
             .rule()
             .async(false)
             .msgType("image")
             .handler(ImageHandler())
             .end()
+            .rule()
+            .event("subscribe")
+            .handler(SubscribeHandler(httpClient))
+            .end()// oHG1U6h1EMHlm8e1qEWy0d6uI0wc
     }
 
     override suspend fun handle(
@@ -70,7 +105,7 @@ class WeChatServiceImpl(
         echostr: String?,
         encryptType: String?,
         msgSignature: String?,
-        request: HttpRequest<ByteArray>
+        request: HttpRequest<ByteArray>,
     ): String {
         if (!wxMpService.checkSignature(timestamp, nonce, signature)) {
             // 消息签名不正确，说明不是公众平台发过来的消息
@@ -83,12 +118,13 @@ class WeChatServiceImpl(
         }
         val encryptType = if (StringUtils.isBlank(encryptType)) "raw" else encryptType
 
+        val ctx = mapOf("coroutineContext" to currentCoroutineContext())
 
         if ("raw" == encryptType) {
             // 明文传输的消息
             val inMessage: WxMpXmlMessage = WxMpXmlMessage.fromXml(request.body.get().inputStream())
             val outMessage = withContext(Dispatchers.IO) {
-                wxMpMessageRouter.route(inMessage)
+                wxMpMessageRouter.route(inMessage, ctx)
             }
             if (outMessage == null) {
                 return ""
@@ -105,7 +141,7 @@ class WeChatServiceImpl(
                 msgSignature
             )
             val outMessage = withContext(Dispatchers.IO) {
-                wxMpMessageRouter.route(inMessage)
+                wxMpMessageRouter.route(inMessage, ctx)
             }
             if (outMessage == null) {
                 // 为null，说明路由配置有问题，需要注意
@@ -121,12 +157,12 @@ class WeChatServiceImpl(
         timestamp: String,
         nonce: String,
         signature: String,
-        echostr: String?
+        echostr: String?,
     ): String? {
         return echostr
     }
 
-    class TextHandler(val httpClient: ReactorHttpClient) : WxMpMessageHandler {
+    private class TextHandler(val httpClient: ReactorHttpClient) : WxMpMessageHandler {
 
         private val log = logger<TextHandler>()
 
@@ -137,10 +173,50 @@ class WeChatServiceImpl(
             wxMessage: WxMpXmlMessage,
             context: Map<String, Any>,
             wxMpService: WxMpService,
-            sessionManager: WxSessionManager
+            sessionManager: WxSessionManager,
         ): WxMpXmlOutMessage? {
             log.info("接收到微信文本消息：{}", wxMessage)
+
             val session = sessionManager.getSession(wxMessage.fromUser)
+
+            val isBuilding = session.getAttribute("building")
+            val hasResult = session.getAttribute("result")
+
+            if (isBuilding == null && hasResult == null) {
+                val res = try {
+                    httpClient.retrieve(
+                        HttpRequest.POST("/api/generative-image/assess-intent", wxMessage.content)
+                            .contentType(MediaType.TEXT_PLAIN)
+                            .basicAuth("WECHAT", wxMessage.fromUser),
+                        Argument.of(
+                            Res::class.java,
+                            IntentAssessmentResponse::class.java
+                        )
+                    ).block()
+                } catch (e: Exception) {
+                    log.error("请求意图评估服务异常", e)
+                    return WxMpXmlOutTextMessage.TEXT().content("服务器出了点小差错，请稍候再试。")
+                        .fromUser(wxMessage.toUser)
+                        .toUser(wxMessage.fromUser)
+                        .build()
+                }
+
+                if (res != null && res.code == ResCode.SUCCESS && res.data as IntentAssessmentResponse? != null) {
+                    val data = res.data
+                    log.info("意图评估结果：{}", data)
+                    if (!data.generateIntent) {
+                        return WxMpXmlOutTextMessage.TEXT().content(data.guideMessage ?: "")
+                            .fromUser(wxMessage.toUser)
+                            .toUser(wxMessage.fromUser)
+                            .build()
+                    }
+                } else {
+                    return WxMpXmlOutTextMessage.TEXT().content("服务器出了点小差错，请稍候再试。")
+                        .fromUser(wxMessage.toUser)
+                        .toUser(wxMessage.fromUser)
+                        .build()
+                }
+            }
 
             if ("取消" == wxMessage.content) {
                 val image = session.getAttribute("reference_media_id")
@@ -156,19 +232,78 @@ class WeChatServiceImpl(
 
             // 获取全局参数
             val globalParam by lazy {
-                val param: ParamParser? = session.getAttribute("global_param") as ParamParser?
-                if (param != null) {
-                    val (updated, newParam) = param merge ParamParser(wxMessage.content)
-                    if (updated) {
-                        session.setAttribute("global_param", newParam)
-                    }
-                } else {
-                    session.setAttribute("global_param", ParamParser(wxMessage.content))
-                }
-                session.getAttribute("global_param") as ParamParser
+                session.getAttribute("global_param") as ParamParser? ?: ParamParser("")
             }
 
             // 获取上次的生成结果
+            val result = getLatestResult(session, wxMessage)
+
+            if (result != null) {
+                return result
+            }
+
+            // 开始生成图片
+            scope.launch {
+                // 设置开始生成标识
+                session.setAttribute("building", true)
+
+                // 获取参考图片 media_id
+                val mediaId = session.getAttribute("reference_media_id") as String?
+                val mediaFile = try {
+                    session.removeAttribute("reference_media_id")
+                    if (mediaId != null) {
+                        log.info("开始下载参考图片 media_id: {}", mediaId)
+                        val media = wxMpService.materialService.mediaDownload(mediaId)
+                        if (media != null) {
+                            media
+                        } else {
+                            log.warn("media_id {} 下载临时资源失败", mediaId)
+                            null
+                        }
+                    } else {
+                        null
+                    }
+                } catch (e: Exception) {
+                    log.error("media_id {} 下载临时资源失败", mediaId, e)
+                    val generate = Res.fail<Any>("参考图片下载失败。")
+                    return@launch session.setAttribute("result", generate)
+                }
+
+                val generate = try {
+                    val multipartBody = MultipartBody.builder()
+                        .addPart("text", wxMessage.content)
+                        .apply { applyParams(mediaFile, globalParam) }
+                        .build()
+
+                    val argument = Argument.of(
+                        Res::class.java,
+                        GenResultResponse::class.java
+                    )
+
+                    httpClient.retrieve(
+                        HttpRequest.POST("/api/generative-image", multipartBody)
+                            .contentType(MediaType.MULTIPART_FORM_DATA_TYPE)
+                            .basicAuth("WECHAT", wxMessage.fromUser),
+                        argument
+                    ).awaitFirst()
+                } catch (e: Exception) {
+                    log.error("生成失败", e)
+                    Res.fail<Any>("生成失败，请稍候重试。")
+                }
+                session.setAttribute("result", generate)
+            }
+
+            return WxMpXmlOutTextMessage.TEXT()
+                .content("正在生成中，请等待30秒后，发送任意文本消息获取结果。")
+                .fromUser(wxMessage.toUser)
+                .toUser(wxMessage.fromUser)
+                .build()
+        }
+
+        private fun getLatestResult(
+            session: WxSession,
+            wxMessage: WxMpXmlMessage,
+        ): WxMpXmlOutTextMessage? {
             val deferred = scope.async {
                 repeat(6) {
                     val building = session.getAttribute("building") as Boolean?
@@ -187,115 +322,60 @@ class WeChatServiceImpl(
                 return@async WxMpXmlOutTextMessage.TEXT()
                     .fromUser(wxMessage.toUser)
                     .toUser(wxMessage.fromUser)
-                    .content("正在生成中，请稍后发送任意消息获取结果。")
+                    .content("正在生成中，请稍后发送任意文本消息获取结果。")
                     .build()
             }
 
             val result = runBlocking {
                 deferred.await()
             }
+            return result
+        }
 
-            if (result != null) {
-                return result
+        private fun MultipartBody.Builder.applyParams(
+            mediaFile: File?,
+            globalParam: ParamParser,
+        ) {
+            if (mediaFile != null) {
+                addPart("image", "image", mediaFile)
             }
-
-            // 获取参考图片 media_id
-            val mediaId = session.getAttribute("reference_media_id") as String?
-            val mediaFile = try {
-                session.removeAttribute("reference_media_id")
-                if (mediaId != null) {
-                    log.info("开始下载参考图片 media_id: {}", mediaId)
-                    val media = wxMpService.materialService.mediaDownload(mediaId)
-                    if (media != null) {
-                        media
-                    } else {
-                        log.warn("media_id {} 下载临时资源失败", mediaId)
-                        null
-                    }
-                } else {
-                    null
-                }
-            } catch (e: Exception) {
-                log.error("media_id {} 下载临时资源失败", mediaId, e)
-                return WxMpXmlOutTextMessage.TEXT()
-                    .fromUser(wxMessage.toUser)
-                    .toUser(wxMessage.fromUser)
-                    .content("参考图片下载失败")
-                    .build()
+            if (globalParam has ParamKey.CC) {
+                val candidateCount: String = ParamKey.CC from globalParam
+                addPart("candidateCount", candidateCount)
             }
-
-            // 设置开始生成标识
-            session.setAttribute("building", true)
-
-            // 开始生成图片
-            scope.launch {
-                val generate = try {
-                    val multipartBody = MultipartBody.builder()
-                        .addPart("text", wxMessage.content)
-                        .apply {
-                            if (mediaFile != null) {
-                                addPart("image", "image", mediaFile)
-                            }
-                            if (globalParam has ParamKey.CC) {
-                                val candidateCount: String = ParamKey.CC from globalParam
-                                addPart("candidateCount", candidateCount)
-                            }
-                            if (globalParam has ParamKey.T) {
-                                val temperature: String = ParamKey.T from globalParam
-                                addPart("temperature", temperature)
-                            }
-                            if (globalParam has ParamKey.TP) {
-                                val topP: String = ParamKey.TP from globalParam
-                                addPart("topP", topP)
-                            }
-                            if (globalParam has ParamKey.MOT) {
-                                val maxOutputTokens: String = ParamKey.MOT from globalParam
-                                addPart("maxOutputTokens", maxOutputTokens)
-                            }
-                            if (globalParam has ParamKey.AR) {
-                                val aspectRatio: String = ParamKey.AR from globalParam
-                                addPart("aspectRatio", aspectRatio)
-                            }
-                            if (globalParam has ParamKey.F) {
-                                val format: String = ParamKey.F from globalParam
-                                addPart("format", format)
-                            }
-                            if (globalParam has ParamKey.UM) {
-                                val upscaylModel: String = ParamKey.UM from globalParam
-                                addPart("upscaylModel", upscaylModel)
-                            }
-                            if (globalParam has ParamKey.US) {
-                                val upscaylScale: String = ParamKey.US from globalParam
-                                addPart("upscaylScale", upscaylScale)
-                            }
-                        }
-                        .build()
-
-                    val argument = Argument.of(Res::class.java, GenResultResponse::class.java)
-
-                    httpClient.retrieve(
-                        HttpRequest.POST("/api/generative-image", multipartBody)
-                            .contentType(MediaType.MULTIPART_FORM_DATA_TYPE)
-                            .basicAuth("WECHAT", wxMessage.fromUser),
-                        argument
-                    ).awaitFirst()
-                } catch (e: Exception) {
-                    log.error("生成失败", e)
-                    Res.success(GenResultResponse(mutableListOf(GenResultResponse.GroupResponse("生成失败，请稍候重试。"))))
-                }
-                session.setAttribute("result", generate)
+            if (globalParam has ParamKey.T) {
+                val temperature: String = ParamKey.T from globalParam
+                addPart("temperature", temperature)
             }
-
-            return WxMpXmlOutTextMessage.TEXT()
-                .content("正在生成中，请等待15秒后，发送任意消息获取结果。")
-                .fromUser(wxMessage.toUser)
-                .toUser(wxMessage.fromUser)
-                .build()
+            if (globalParam has ParamKey.TP) {
+                val topP: String = ParamKey.TP from globalParam
+                addPart("topP", topP)
+            }
+            if (globalParam has ParamKey.MOT) {
+                val maxOutputTokens: String = ParamKey.MOT from globalParam
+                addPart("maxOutputTokens", maxOutputTokens)
+            }
+            if (globalParam has ParamKey.AR) {
+                val aspectRatio: String = ParamKey.AR from globalParam
+                addPart("aspectRatio", aspectRatio)
+            }
+            if (globalParam has ParamKey.F) {
+                val format: String = ParamKey.F from globalParam
+                addPart("format", format)
+            }
+            if (globalParam has ParamKey.UM) {
+                val upscaylModel: String = ParamKey.UM from globalParam
+                addPart("upscaylModel", upscaylModel)
+            }
+            if (globalParam has ParamKey.US) {
+                val upscaylScale: String = ParamKey.US from globalParam
+                addPart("upscaylScale", upscaylScale)
+            }
         }
 
         private fun buildMessage(
             wxMessage: WxMpXmlMessage,
-            result: Res<*>
+            result: Res<*>,
         ): WxMpXmlOutTextMessage? = WxMpXmlOutTextMessage.TEXT()
             .fromUser(wxMessage.toUser)
             .toUser(wxMessage.fromUser)
@@ -304,28 +384,67 @@ class WeChatServiceImpl(
                     ResCode.SUCCESS == result.code -> {
                         val response = result.data as GenResultResponse?
                         if (response != null) {
-                            append(
-                                response.groups
-                                    .joinToString("\n") {
-                                        "${it.text ?: ""}\n${it.url ?: ""}"
-                                    }
-                            )
+                            var hasUrl = false
+                            var count = 1
+                            for (url in response.images) {
+                                if (url != null) {
+                                    hasUrl = true
+                                    appendLine("$count. $url")
+                                    count += 1
+                                }
+                            }
+                            if (hasUrl) {
+                                appendLine()
+                                appendLine("⚠️ 链接仅有 2 次有效访问次数，请注意保存图片。")
+                            }
                         }
                     }
+
+                    ResCode.FAIL == result.code -> appendLine(result.message)
 
                     else -> appendLine("生成失败")
                 }
             })
             .build()
-
     }
 
-    class ImageHandler : WxMpMessageHandler {
+    private class SubscribeHandler(
+        val httpClient: ReactorHttpClient,
+    ) : WxMpMessageHandler {
+
+        companion object {
+            val log = logger<SubscribeHandler>()
+        }
+
         override fun handle(
             wxMessage: WxMpXmlMessage,
             context: Map<String, Any>,
             wxMpService: WxMpService,
-            sessionManager: WxSessionManager
+            sessionManager: WxSessionManager,
+        ): WxMpXmlOutMessage? {
+            try {
+                val uri = UriBuilder
+                    .of("/api/user/subscribe")
+                    .queryParam("user_source", UserSource.WECHAT)
+                    .queryParam("source_code", wxMessage.fromUser)
+                    .build()
+                httpClient.retrieve(
+                    HttpRequest.GET<Any>(uri),
+                    Res::class.java
+                ).block()
+            } catch (e: Exception) {
+                log.error("用户关注消息处理失败", e)
+            }
+            return null
+        }
+    }
+
+    private class ImageHandler : WxMpMessageHandler {
+        override fun handle(
+            wxMessage: WxMpXmlMessage,
+            context: Map<String, Any>,
+            wxMpService: WxMpService,
+            sessionManager: WxSessionManager,
         ): WxMpXmlOutMessage? {
             val session = sessionManager.getSession(wxMessage.fromUser)
             val refId = session.getAttribute("reference_media_id")
@@ -346,6 +465,140 @@ class WeChatServiceImpl(
         }
     }
 
+    private class ImgSetHandler(
+        val generateImageConfRepository: GenerateImageConfRepository,
+        val outletUserRepository: OutletUserRepository,
+        val jsonMapper: JsonMapper,
+    ) : WxMpMessageHandler {
+        override fun handle(
+            wxMessage: WxMpXmlMessage,
+            context: Map<String, Any>,
+            wxMpService: WxMpService,
+            sessionManager: WxSessionManager,
+        ): WxMpXmlOutMessage {
+            val session = sessionManager.getSession(wxMessage.fromUser)
+            val cmd = wxMessage.content.removePrefix("/imgset").trim()
+            val coroutineContext = context["coroutineContext"] as CoroutineContext
+            return runBlocking(coroutineContext) {
+                val outletUser =
+                    outletUserRepository.findBySourceCodeAndUserSource(wxMessage.fromUser, UserSource.WECHAT)
+                if (outletUser == null) {
+                    return@runBlocking WxMpXmlOutTextMessage.TEXT().content("请先绑定公众号。")
+                        .fromUser(wxMessage.toUser)
+                        .toUser(wxMessage.fromUser)
+                        .build()
+                }
+                val openUserId = outletUser.openUser!!.id!!
+                val imageConf = generateImageConfRepository.findByOpenUserId(openUserId)
+                val globalParam = if (imageConf != null) {
+                    ParamParser.fromJson(imageConf.conf!!)
+                } else {
+                    ParamParser("")
+                }
+                val (_, newGlobalParam) = globalParam merge ParamParser(cmd)
+                val conf = GenerateImageConf(
+                    id = imageConf?.id,
+                    openUser = OpenUser(openUserId),
+                    conf = jsonMapper.writeValueAsString(newGlobalParam.values),
+                    updateBy = outletUser.openUser.uid,
+                    createBy = imageConf?.createBy ?: outletUser.openUser.uid
+                )
+                if (conf.id == null) {
+                    generateImageConfRepository.save(conf)
+                } else {
+                    generateImageConfRepository.update(conf)
+                }
+                session.setAttribute("global_param", newGlobalParam)
+                return@runBlocking WxMpXmlOutTextMessage.TEXT().content("已设置生成参数。")
+                    .fromUser(wxMessage.toUser)
+                    .toUser(wxMessage.fromUser)
+                    .build()
+            }
+        }
+    }
+
+    private class ImgGetHandler(
+        val generateImageConfRepository: GenerateImageConfRepository,
+        val outletUserRepository: OutletUserRepository,
+    ) : WxMpMessageHandler {
+        override fun handle(
+            wxMessage: WxMpXmlMessage,
+            context: Map<String, Any>,
+            wxMpService: WxMpService,
+            sessionManager: WxSessionManager,
+        ): WxMpXmlOutMessage? {
+            val coroutineContext = context["coroutineContext"] as CoroutineContext
+            return runBlocking(coroutineContext) {
+                val outletUser =
+                    outletUserRepository.findBySourceCodeAndUserSource(wxMessage.fromUser, UserSource.WECHAT)
+                if (outletUser == null) {
+                    return@runBlocking null
+                }
+                val openUserId = outletUser.openUser!!.id!!
+                val imageConf = generateImageConfRepository.findByOpenUserId(openUserId)
+                val paramParser = if (imageConf != null) {
+                    ParamParser.fromJson(imageConf.conf!!)
+                } else {
+                    ParamParser.fromJson("")
+                }
+                val param = paramParser.values.map {
+                    "${it.key.code}: ${it.value}"
+                }.joinToString("\n")
+                return@runBlocking WxMpXmlOutTextMessage.TEXT()
+                    .content(
+                        buildString {
+                            appendLine("当前生成参数：")
+                            appendLine(param)
+                        }
+                    )
+                    .fromUser(wxMessage.toUser)
+                    .toUser(wxMessage.fromUser)
+                    .build()
+            }
+        }
+    }
+
+    private class ImgSetInterceptor(
+        val generateImageConfRepository: GenerateImageConfRepository,
+        val outletUserRepository: OutletUserRepository,
+    ) : WxMpMessageInterceptor {
+        override fun intercept(
+            wxMessage: WxMpXmlMessage,
+            context: Map<String, Any>,
+            wxMpService: WxMpService,
+            sessionManager: WxSessionManager,
+        ): Boolean {
+            val session = sessionManager.getSession(wxMessage.fromUser)
+            val coroutineContext = context["coroutineContext"] as CoroutineContext
+            runBlocking(coroutineContext) {
+                val outletUser =
+                    outletUserRepository.findBySourceCodeAndUserSource(wxMessage.fromUser, UserSource.WECHAT)
+                if (outletUser == null) {
+                    return@runBlocking
+                }
+                val imageConf = generateImageConfRepository.findByOpenUserId(outletUser.openUser!!.id!!)
+                if (imageConf != null) {
+                    session.setAttribute("global_param", ParamParser.fromJson(imageConf.conf!!))
+                }
+            }
+            return true
+        }
+    }
+
+    private class IllegalCmdHandler : WxMpMessageHandler {
+        override fun handle(
+            wxMessage: WxMpXmlMessage,
+            context: Map<String, Any>,
+            wxMpService: WxMpService,
+            sessionManager: WxSessionManager,
+        ): WxMpXmlOutMessage {
+            return WxMpXmlOutTextMessage.TEXT().content("无效的命令。")
+                .fromUser(wxMessage.toUser)
+                .toUser(wxMessage.fromUser)
+                .build()
+        }
+    }
+
 }
 
 class ParamParser(private val input: String) {
@@ -356,17 +609,28 @@ class ParamParser(private val input: String) {
         if (::_values.isInitialized) _values else parse(input)
     }
 
+    companion object {
+        fun fromJson(json: String): ParamParser {
+            val mapper = JsonMapper.createDefault()
+            val map = mapper.readValue(json, Map::class.java)
+            val input = map.entries.joinToString { (key, value) -> (key as String).lowercase() + "-" + value }
+            return ParamParser(input)
+        }
+    }
+
     private constructor(values: Map<ParamKey, String?>) : this("") {
         _values = values
     }
 
-    infix fun has(key: ParamKey): Boolean = values.containsKey(key)
+    infix fun has(key: ParamKey): Boolean = values[key] != null
 
     infix fun merge(updates: ParamParser): Pair<Boolean, ParamParser> {
         val newMap = values.toMutableMap()
         updates.values.forEach { (key, value) ->
-            if (newMap.containsKey(key)) {
+            if (value != null) {
                 newMap[key] = value
+            } else {
+                newMap.remove(key)
             }
         }
         val that = ParamParser(newMap)
@@ -388,7 +652,7 @@ class ParamParser(private val input: String) {
                 ar-(?<ar>\d*:\d*) |
                 f-(?<f>png|jpg|jpeg|webp)? |
                 um-(?<um>[A-Za-z0-9\-]*) |
-                us-(?<us>[2-4]?)
+                us-(?<us>[1-4]?)
             """.trimIndent(),
             RegexOption.COMMENTS
         )
@@ -399,7 +663,9 @@ class ParamParser(private val input: String) {
             groupNames.forEach { name ->
                 val group = match.groups[name]
                 val key = ParamKey.fromCode(name) ?: return@forEach
-                map[key] = group?.value?.ifBlank { null }
+                group?.value?.let {
+                    map[key] = group.value.ifBlank { null }
+                }
             }
         }
 

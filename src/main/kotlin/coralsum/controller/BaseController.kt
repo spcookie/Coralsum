@@ -13,9 +13,9 @@ class BaseController {
     private val logger = logger<BaseController>()
 
     @Error(BusinessException::class, global = true)
-    fun globalError(e: BusinessException): HttpResponse<Res<String>> {
+    fun globalError(e: BusinessException): HttpResponse<Res<Any>> {
         logger.error(e.message, e)
-        return HttpResponse.serverError<Res<String>>()
+        return HttpResponse.serverError<Res<Any>>()
             .body(Res.fail(e.message))
     }
 }

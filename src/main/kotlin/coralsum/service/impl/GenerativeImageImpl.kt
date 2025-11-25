@@ -1,14 +1,30 @@
 package coralsum.service.impl
 
+import coralsum.cache.GenerateTaskCache
+import coralsum.common.enums.GenTaskStatue
 import coralsum.config.CloudflareConfig
 import coralsum.config.NanoConfig
 import coralsum.entity.GenerateImageReqRecord
+import coralsum.entity.RetrievalImageReqRecord
+import coralsum.excption.BusinessException
 import coralsum.repository.GenerateImageReqRecordRepository
-import coralsum.service.IGenerativeImage
+import coralsum.repository.RetrievalImageReqRecordRepository
+import coralsum.service.*
 import coralsum.toolkit.NanoBanana
-import coralsum.toolkit.RuntimePath
 import coralsum.toolkit.Upscayl
 import coralsum.toolkit.logger
+import dev.langchain4j.data.message.SystemMessage
+import dev.langchain4j.data.message.UserMessage
+import dev.langchain4j.http.client.jdk.JdkHttpClientBuilder
+import dev.langchain4j.model.chat.Capability
+import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.request.ChatRequest
+import dev.langchain4j.model.chat.request.ResponseFormat
+import dev.langchain4j.model.chat.request.ResponseFormatType
+import dev.langchain4j.model.chat.request.json.JsonObjectSchema
+import dev.langchain4j.model.chat.request.json.JsonSchema
+import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
+import io.github.resilience4j.micronaut.annotation.RateLimiter
 import io.micronaut.http.HttpRequest
 import io.micronaut.json.JsonMapper
 import io.micronaut.objectstorage.aws.AwsS3Operations
@@ -16,18 +32,27 @@ import io.micronaut.objectstorage.request.PresignRequest
 import io.micronaut.objectstorage.request.UploadRequest
 import io.micronaut.retry.annotation.Retryable
 import io.micronaut.security.utils.SecurityService
-import io.micronaut.serde.annotation.Serdeable
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import jakarta.inject.Singleton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import okio.FileSystem
+import okio.Path
 import okio.Path.Companion.toPath
+import org.apache.commons.lang3.concurrent.BasicThreadFactory
 import org.apache.commons.lang3.time.StopWatch
 import java.awt.image.BufferedImage
+import java.net.InetSocketAddress
+import java.net.ProxySelector
+import java.net.http.HttpClient
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
+import kotlin.io.path.Path
 import kotlin.io.path.createTempDirectory
+import kotlin.jvm.optionals.getOrElse
 
 @Singleton
 class GenerativeImageImpl(
@@ -36,22 +61,59 @@ class GenerativeImageImpl(
     val cloudflareConfig: CloudflareConfig,
     val securityService: SecurityService,
     val jsonMapper: JsonMapper,
-    val generateImageReqRecordRepository: GenerateImageReqRecordRepository
+    val generateImageReqRecordRepository: GenerateImageReqRecordRepository,
+    val retrievalImageReqRecordRepository: RetrievalImageReqRecordRepository,
+    val generateTaskCache: GenerateTaskCache,
 ) : IGenerativeImage {
 
     private lateinit var nano: NanoBanana
 
     private lateinit var upscayl: Upscayl
 
+    private val gemini: ChatModel = GoogleAiGeminiChatModel.builder()
+        .apiKey(System.getenv("GEMINI_AI_KEY"))
+        .supportedCapabilities(Capability.RESPONSE_FORMAT_JSON_SCHEMA)
+        .modelName("gemini-2.5-flash-lite")
+        .logRequestsAndResponses(true)
+        .httpClientBuilder(
+            JdkHttpClientBuilder().httpClientBuilder(
+                HttpClient.newBuilder()
+                    .proxy(
+                        ProxySelector.of(
+                            InetSocketAddress(
+                                nanoConfig.proxyHost,
+                                nanoConfig.proxyPort
+                            )
+                        )
+                    )
+            )
+        )
+        .maxRetries(2)
+        .build()
+
     companion object {
         @JvmStatic
         private val log = logger<IGenerativeImage>()
+
+        @JvmStatic
+        private val executor = ThreadPoolExecutor(
+            60, 60,
+            0L, TimeUnit.MILLISECONDS,
+            ArrayBlockingQueue(1000),
+            BasicThreadFactory.builder()
+                .namingPattern("image-generator-%d")
+                .build()
+        )
+
+        private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+        private const val MAX_PRE_COUNT = 5
     }
 
     @PostConstruct
     fun init() {
         nano = NanoBanana(nanoConfig.apiKey)
-        upscayl = Upscayl(RuntimePath.getExecutableDir().resolve("upscayl-bin").toString())
+        upscayl = Upscayl(Path(System.getProperty("user.dir")).resolve("upscayl-bin").toString())
     }
 
     @PreDestroy
@@ -59,6 +121,7 @@ class GenerativeImageImpl(
         nano.close()
     }
 
+    @RateLimiter(name = "callGenerateImage")
     override suspend fun generate(genRequest: GenRequest, request: HttpRequest<*>): GenResult {
         val watch = StopWatch.createStarted()
         val conf = jsonMapper.writeValueAsString(genRequest.copy(text = null, image = null))
@@ -70,25 +133,25 @@ class GenerativeImageImpl(
         )
         val genResult = withContext(Dispatchers.IO) {
             val fs = FileSystem.SYSTEM
-            val tempDir = createTempDirectory("coralsum-nano-").toAbsolutePath().toString().toPath()
-
+            val tempDir = createTempDirectory("coralsum-").toAbsolutePath().toString().toPath()
             try {
-                val pairs = doGenerate(genRequest, imageReqRecord)
+                val pairs = doConcurrentGenerate(genRequest, imageReqRecord)
 
-                val groups = pairs.mapIndexed { index, pair ->
-                    val (text, bufferedImage) = pair
+                val images = pairs.mapIndexed { index, pair ->
+                    val (_, bufferedImage) = pair
 
-                    // 生成临时文件路径
+                    if (bufferedImage == null) {
+                        return@mapIndexed null
+                    }
+
                     val imagePath = tempDir / "image-$index.${genRequest.format}"
-                    val upscaledPath = tempDir / "image-upscayl-$index.${genRequest.format}"
-
                     ImageIO.write(bufferedImage, genRequest.format, imagePath.toFile())
 
-                    // 调用 upscayl
-                    var targetPath: okio.Path
+                    var targetPath: Path
                     val upscaylModel = genRequest.upscaylModel
                     val upscaylScale = genRequest.upscaylScale
-                    if (upscaylModel != null && upscaylScale != null) {
+                    if (upscaylModel != null && upscaylScale != null && upscaylScale > 1) {
+                        val upscaledPath = tempDir / "image-upscayl-$index.${genRequest.format}"
                         targetPath = upscaledPath
                         upscayl.input(imagePath.toString())
                             .output(upscaledPath.toString())
@@ -100,17 +163,30 @@ class GenerativeImageImpl(
                         targetPath = imagePath
                     }
 
+                    val key = "${tempDir.name}-${index}.${genRequest.format}"
+
+                    imageReqRecord.imageRef = key
+
                     val bytes = fs.read(targetPath) { readByteArray() }
-                    val key = tempDir.name + "." + genRequest.format
                     val uploadRequest = UploadRequest.fromBytes(bytes, key)
                     store.upload(uploadRequest) { builder ->
-                        builder.contentDisposition("attachment; filename=AIGI.${genRequest.format}")
+                        builder.contentDisposition("attachment; filename=aigi.${genRequest.format}")
                     }
-                    val url = cloudflareConfig.host + request.path
-                    GenResult.Group(text, url + "?ref=${key}")
+                    cloudflareConfig.host + "/api/generative-image?ref=${key}"
                 }
-                GenResult(groups)
+                watch.stop()
+                imageReqRecord.durationMs = watch.duration.toMillis()
+
+                val text = pairs.map { it.first }.firstOrNull { !it.isNullOrBlank() } ?: ""
+                GenResult(
+                    inputTokens = imageReqRecord.inputTokens,
+                    outputTokens = imageReqRecord.outputTokens,
+                    durationMs = imageReqRecord.durationMs.toInt(),
+                    images = images,
+                    text = text
+                )
             } finally {
+                generateImageReqRecordRepository.save(imageReqRecord)
                 try {
                     fs.list(tempDir).forEach { fs.delete(it) }
                     fs.delete(tempDir)
@@ -119,96 +195,149 @@ class GenerativeImageImpl(
                 }
             }
         }
-        watch.stop()
-        imageReqRecord.durationMs = watch.duration.toMillis()
-        generateImageReqRecordRepository.save(imageReqRecord)
         return genResult
     }
 
+    override suspend fun assessIntent(userMessage: String): IntentAssessment {
+        val schema = JsonSchema.builder()
+            .name("IntentAssessment")
+            .rootElement(
+                JsonObjectSchema.builder()
+                    .addBooleanProperty("generateIntent")
+                    .addStringProperty("guideMessage")
+                    .required("generateIntent")
+                    .build()
+            )
+            .build()
+
+        val responseFormat = ResponseFormat.builder()
+            .type(ResponseFormatType.JSON)
+            .jsonSchema(schema)
+            .build()
+
+        val systemPrompt = """
+            你是图像生成助手。请判断下面用户消息是否在表达“生成图片或修改图片”的意图。
+            仅返回 JSON：{"generateIntent": boolean, "guideMessage": string}
+            - 当 generateIntent 为 true 时，guideMessage 为空或省略。
+            - 当 generateIntent 为 false 时，guideMessage 用中文简洁地引导用户给出与生成/修改图片相关的内容，举1-2个示例。
+        """.trimIndent()
+
+        return try {
+            val chatResponse = gemini.chat(
+                ChatRequest.builder()
+                    .messages(
+                        SystemMessage.systemMessage(systemPrompt),
+                        UserMessage.from(userMessage)
+                    )
+                    .responseFormat(responseFormat)
+                    .build()
+            )
+
+            val json = chatResponse.aiMessage().text()
+            jsonMapper.readValue(json.toByteArray(), IntentAssessment::class.java)
+        } catch (e: Exception) {
+            log.warn("assessIntent fallback due to: ${e.message}")
+            IntentAssessment(
+                generateIntent = false,
+                guideMessage = "请描述你想生成或修改的图片，例如：‘生成一张海边日落的照片’或‘把我上传的头像放大到4倍并增强清晰度’。"
+            )
+        }
+    }
+
+    override suspend fun submitGenerateTask(
+        genRequest: GenRequest,
+        request: HttpRequest<*>,
+    ) {
+        withContext(Dispatchers.IO) {
+            val uid = securityService.authentication.get().name
+            generateTaskCache.cacheGenerateTaskStatue(uid, GenTaskStatue.PROCESSING)
+            scope.launch(currentCoroutineContext().minusKey(Job).minusKey(CoroutineDispatcher)) {
+                try {
+                    val result = generate(genRequest, request)
+                    generateTaskCache.cacheGenerateTaskResult(uid, result)
+                } catch (e: Exception) {
+                    log.error("生成失败: {}", e.message, e)
+                    generateTaskCache.cacheGenerateTaskStatue(uid, GenTaskStatue.FAILED)
+                }
+            }
+        }
+    }
+
+    override suspend fun getGenerateTaskResult(): GenTaskResult {
+        val uid = securityService.authentication.get().name
+        val cacheGenerateTaskResult = generateTaskCache.getGenerateTaskResult(uid)
+        val statue = generateTaskCache.getGenerateTaskStatue(uid)
+        return if (cacheGenerateTaskResult != null) {
+            generateTaskCache.clearAll(uid)
+            return GenTaskResult(
+                status = GenTaskStatue.COMPLETED,
+                result = cacheGenerateTaskResult
+            )
+        } else if (statue == null) {
+            GenTaskResult(
+                status = GenTaskStatue.NONE
+            )
+        } else {
+            GenTaskResult(
+                status = statue
+            )
+        }
+    }
+
+    private fun doConcurrentGenerate(
+        genRequest: GenRequest,
+        imageReqRecord: GenerateImageReqRecord,
+    ): List<Pair<String?, BufferedImage?>> {
+        val futures = (0 until genRequest.candidateCount).map {
+            CompletableFuture.supplyAsync({ doGenerate(genRequest, imageReqRecord) }, executor)
+        }.toList()
+        CompletableFuture.allOf(*futures.toTypedArray()).get()
+        return futures.map { it.get() }
+    }
+
     @Retryable(attempts = "3", delay = "500ms")
-    fun doGenerate(genRequest: GenRequest, imageReqRecord: GenerateImageReqRecord): List<Pair<String?, BufferedImage>> {
-        val pairs = nano.gen(
+    fun doGenerate(
+        genRequest: GenRequest,
+        imageReqRecord: GenerateImageReqRecord,
+    ): Pair<String?, BufferedImage?> {
+        val pair = nano.gen(
             genRequest.text!!,
             genRequest.image,
-            genRequest.candidateCount,
             genRequest.aspectRatio,
             genRequest.system,
             genRequest.temperature,
             genRequest.maxOutputTokens,
             genRequest.topP
         )
-        val usageMetadata = pairs.second
-        imageReqRecord.inputTokens = imageReqRecord.inputTokens + usageMetadata.promptTokenCount().get()
-        imageReqRecord.outputTokens = imageReqRecord.outputTokens + usageMetadata.candidatesTokenCount().get()
-        imageReqRecord.retryCount = imageReqRecord.retryCount + 1
-        return pairs.first
+        val usageMetadata = pair.second
+        synchronized(imageReqRecord) {
+            imageReqRecord.inputTokens = imageReqRecord.inputTokens + usageMetadata.promptTokenCount().getOrElse { 0 }
+            imageReqRecord.outputTokens =
+                imageReqRecord.outputTokens + usageMetadata.candidatesTokenCount().getOrElse { 0 }
+            imageReqRecord.retryCount = imageReqRecord.retryCount + 1
+        }
+        val generateResult = pair.first
+        val retry = generateResult.first == null && generateResult.second == null
+        if (retry) {
+            throw BusinessException("模型返回内容为空")
+        }
+        return generateResult
     }
 
-    override suspend fun preview(ref: String): String {
+    override suspend fun preview(ref: String, ip: String): String? {
+        val countImageRefBy = retrievalImageReqRecordRepository.countByImageRef(ref)
+        if (countImageRefBy > MAX_PRE_COUNT) {
+            return null
+        }
+        val imageRef = generateImageReqRecordRepository.findByImageRef(ref)
+        if (imageRef == null) {
+            return null
+        }
+        retrievalImageReqRecordRepository.save(RetrievalImageReqRecord(imageRef = ref, ip = ip))
         val presignRequest = PresignRequest
             .builder(ref, PresignRequest.Operation.DOWNLOAD)
             .build()
         val response = store.presign(presignRequest)
         return response.url.toString()
     }
-}
-
-@Serdeable
-data class GenRequest(
-    val text: String? = null,
-    var image: ByteArray? = null,
-    var candidateCount: Int = 1,
-    var aspectRatio: String? = null,
-    var system: String? = null,
-    var temperature: Float = 1f,
-    var maxOutputTokens: Int = 32768,
-    var topP: Float = 1f,
-    var format: String = "png",
-    var upscaylModel: String? = null,
-    var upscaylScale: Int? = null
-) {
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is GenRequest) return false
-
-        if (candidateCount != other.candidateCount) return false
-        if (temperature != other.temperature) return false
-        if (maxOutputTokens != other.maxOutputTokens) return false
-        if (topP != other.topP) return false
-        if (upscaylScale != other.upscaylScale) return false
-        if (text != other.text) return false
-        if (!image.contentEquals(other.image)) return false
-        if (aspectRatio != other.aspectRatio) return false
-        if (system != other.system) return false
-        if (format != other.format) return false
-        if (upscaylModel != other.upscaylModel) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = candidateCount
-        result = 31 * result + temperature.hashCode()
-        result = 31 * result + maxOutputTokens
-        result = 31 * result + topP.hashCode()
-        result = 31 * result + (upscaylScale ?: 0)
-        result = 31 * result + text.hashCode()
-        result = 31 * result + (image?.contentHashCode() ?: 0)
-        result = 31 * result + (aspectRatio?.hashCode() ?: 0)
-        result = 31 * result + (system?.hashCode() ?: 0)
-        result = 31 * result + format.hashCode()
-        result = 31 * result + (upscaylModel?.hashCode() ?: 0)
-        return result
-    }
-
-}
-
-data class GenResult(
-    val groups: List<Group>
-) {
-    data class Group(
-        val text: String? = null,
-        val url: String? = null
-    )
 }

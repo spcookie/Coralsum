@@ -1,0 +1,90 @@
+[versions]
+kotlin-plugin = "2.0.20"
+micronaut = "4.6.1"
+shadow = "8.3.9"
+langchain4j = "1.8.0"
+kotlin-lib = "1.9.25"
+okio = "3.9.1"
+google-genai = "1.25.0"
+resilience4j = "2.2.0"
+mapstruct = "1.5.5.Final"
+weixin-java-mp = "4.7.0"
+hutool = "5.8.40"
+commons-lang3 = "3.18.0"
+commons-collections4 = "4.4"
+guava = "33.0.0-jre"
+jobrunr = "8.3.0"
+objectstorage = "2.10.0"
+r2dbc-h2 = "1.1.0.RELEASE"
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin-plugin" }
+kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin-plugin" }
+kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin-plugin" }
+micronaut-application = { id = "io.micronaut.application", version.ref = "micronaut" }
+micronaut-test-resources = { id = "io.micronaut.test-resources", version.ref = "micronaut" }
+micronaut-aot = { id = "io.micronaut.aot", version.ref = "micronaut" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+
+[libraries]
+weixin-java-mp = { module = "com.github.binarywang:weixin-java-mp", version.ref = "weixin-java-mp" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core" }
+kotlinx-coroutines-reactor = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor" }
+reactor-kotlin-extensions = { module = "io.projectreactor.kotlin:reactor-kotlin-extensions" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+google-genai = { module = "com.google.genai:google-genai", version.ref = "google-genai" }
+langchain4j-google-ai-gemini = { module = "dev.langchain4j:langchain4j-google-ai-gemini", version.ref = "langchain4j" }
+langchain4j-http-client-jdk = { module = "dev.langchain4j:langchain4j-http-client-jdk", version.ref = "langchain4j" }
+micronaut-security-jwt = { module = "io.micronaut.security:micronaut-security-jwt" }
+micronaut-security = { module = "io.micronaut.security:micronaut-security" }
+micrometer-context-propagation = { module = "io.micrometer:context-propagation" }
+micronaut-aop = { module = "io.micronaut:micronaut-aop" }
+micronaut-jackson-databind = { module = "io.micronaut:micronaut-jackson-databind" }
+micronaut-retry = { module = "io.micronaut:micronaut-retry" }
+micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway" }
+micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari" }
+micronaut-cache-core = { module = "io.micronaut.cache:micronaut-cache-core" }
+micronaut-cache-caffeine = { module = "io.micronaut.cache:micronaut-cache-caffeine" }
+micronaut-data-r2dbc = { module = "io.micronaut.data:micronaut-data-r2dbc" }
+micronaut-kotlin-ext-fns = { module = "io.micronaut.kotlin:micronaut-kotlin-extension-functions" }
+micronaut-kotlin-runtime = { module = "io.micronaut.kotlin:micronaut-kotlin-runtime" }
+resilience4j-consumer = { module = "io.github.resilience4j:resilience4j-consumer", version.ref = "resilience4j" }
+resilience4j-kotlin = { module = "io.github.resilience4j:resilience4j-kotlin", version.ref = "resilience4j" }
+resilience4j-ratelimiter = { module = "io.github.resilience4j:resilience4j-ratelimiter", version.ref = "resilience4j" }
+resilience4j-reactor = { module = "io.github.resilience4j:resilience4j-reactor", version.ref = "resilience4j" }
+resilience4j-micronaut = { module = "io.github.resilience4j:resilience4j-micronaut", version.ref = "resilience4j" }
+micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json" }
+micronaut-objectstorage-aws = { module = "io.micronaut.objectstorage:micronaut-object-storage-aws", version.ref = "objectstorage" }
+micronaut-reactor = { module = "io.micronaut.reactor:micronaut-reactor" }
+micronaut-reactor-http-client = { module = "io.micronaut.reactor:micronaut-reactor-http-client" }
+micronaut-serde-jackson = { module = "io.micronaut.serde:micronaut-serde-jackson" }
+snakeyaml = { module = "org.yaml:snakeyaml" }
+micronaut-validation = { module = "io.micronaut.validation:micronaut-validation" }
+micronaut-objectstorage-local = { module = "io.micronaut.objectstorage:micronaut-object-storage-local", version.ref = "objectstorage" }
+jakarta-annotation-api = { module = "jakarta.annotation:jakarta.annotation-api" }
+jakarta-validation-api = { module = "jakarta.validation:jakarta.validation-api" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin-lib" }
+kotlin-stdlib-jdk8 = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", version.ref = "kotlin-lib" }
+jobrunr-micronaut-feature = { module = "org.jobrunr:jobrunr-micronaut-feature", version.ref = "jobrunr" }
+hutool-all = { module = "cn.hutool:hutool-all", version.ref = "hutool" }
+commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang3" }
+commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commons-collections4" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
+h2 = { module = "com.h2database:h2" }
+micronaut-openapi-annotations = { module = "io.micronaut.openapi:micronaut-openapi-annotations" }
+r2dbc-h2 = { module = "io.r2dbc:r2dbc-h2", version.ref = "r2dbc-h2" }
+logback-classic = { module = "ch.qos.logback:logback-classic" }
+jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
+micronaut-http-client = { module = "io.micronaut:micronaut-http-client" }
+assertj-core = { module = "org.assertj:assertj-core" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+postgresql = { module = "org.postgresql:postgresql" }
+jobrunr-micronaut-annotations = { module = "org.jobrunr:jobrunr-micronaut-annotations", version.ref = "jobrunr" }
+micronaut-data-processor = { module = "io.micronaut.data:micronaut-data-processor" }
+micronaut-http-validation = { module = "io.micronaut:micronaut-http-validation" }
+micronaut-openapi = { module = "io.micronaut.openapi:micronaut-openapi" }
+micronaut-serde-processor = { module = "io.micronaut.serde:micronaut-serde-processor" }
+micronaut-validation-processor = { module = "io.micronaut.validation:micronaut-validation-processor" }
+micronaut-security-annotations = { module = "io.micronaut.security:micronaut-security-annotations" }
+mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }

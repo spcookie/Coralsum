@@ -17,7 +17,14 @@ enum class UpscaylModel(val modelName: String) {
     ANIME_V3_X4("realesr-animevideov3-x4"),
     LSDIR_PLUS_C_X4("4xLSDIRplusC"),
     NMKD_SUPERSCALE_SP_178000_G_X4("4x_NMKD-Superscale-SP_178000_G"),
-    HFA2K_X4("4xHFA2k");
+    HFA2K_X4("4xHFA2k"),
+    UPSCAYL_STANDARD_4X("upscayl-standard-4x"),
+    UPSCAYL_LITE_4X("upscayl-lite-4x"),
+    DIGITAL_ART_4X("digital-art-4x"),
+    HIGH_FIDELITY_4X("high-fidelity-4x"),
+    REMACRI_4X("remacri-4x"),
+    ULTRAMIX_BALANCED_4X("ultramix-balanced-4x"),
+    ULTRASHARP_4X("ultrasharp-4x");
 
     override fun toString() = modelName
 }

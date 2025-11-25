@@ -17,6 +17,7 @@ repositories {
 }
 
 dependencies {
+    implementation(platform(libs.micronaut.platform))
     kapt(libs.micronaut.data.processor)
     kapt(libs.micronaut.http.validation)
     kapt(libs.micronaut.openapi)

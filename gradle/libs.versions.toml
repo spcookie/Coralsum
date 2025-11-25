@@ -74,6 +74,7 @@ mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
 h2 = { module = "com.h2database:h2" }
 micronaut-openapi-annotations = { module = "io.micronaut.openapi:micronaut-openapi-annotations" }
 r2dbc-h2 = { module = "io.r2dbc:r2dbc-h2", version.ref = "r2dbc-h2" }
+micronaut-platform = { module = "io.micronaut.platform:micronaut-platform", version = "4.10.2" }
 logback-classic = { module = "ch.qos.logback:logback-classic" }
 jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
 micronaut-http-client = { module = "io.micronaut:micronaut-http-client" }

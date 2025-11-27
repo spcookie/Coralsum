@@ -15,12 +15,15 @@ class NanoBanana(private val apiKey: String) : Closeable {
     private var client = Client.builder()
         .httpOptions(
             HttpOptions.builder()
-                .baseUrl(String.format("https://%s-aiplatform.googleapis.com", "us-central1"))
+//                .baseUrl(String.format("https://%s-aiplatform.googleapis.com", "us-central1"))
+//                .baseUrl("https://aiplatform.googleapis.com")
                 .apiVersion("v1")
                 .build()
         )
         .vertexAI(true)
         .apiKey(apiKey)
+//        .project("1046708816451")
+//        .location("global")
         .build()
 
     fun gen(
@@ -31,9 +34,11 @@ class NanoBanana(private val apiKey: String) : Closeable {
         temperature: Float = 1f,
         maxOutputTokens: Int = 32768,
         topP: Float = 1f,
+        imageSize: String = "1K",
     ): Pair<Pair<String?, BufferedImage?>, GenerateContentResponseUsageMetadata> {
         val contentConfig = GenerateContentConfig.builder()
-            .responseModalities("TEXT", "IMAGE").apply {
+            .responseModalities("TEXT", "IMAGE")
+            .apply {
                 if (system != null) {
                     systemInstruction(
                         Content.builder()
@@ -46,21 +51,23 @@ class NanoBanana(private val apiKey: String) : Closeable {
                     )
                 }
             }
-            .mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_HIGH).apply {
-                if (aspectRatio != null) {
-                    imageConfig(
-                        ImageConfig.builder()
-                            .aspectRatio(aspectRatio)
-                            .build()
-                    )
-                }
-            }
+            .mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_HIGH)
             .temperature(temperature)
             .topP(topP)
             .maxOutputTokens(maxOutputTokens)
+            .imageConfig(
+                ImageConfig.builder()
+                    .apply {
+                        if (aspectRatio != null) {
+                            aspectRatio(aspectRatio)
+                        }
+                        imageSize(imageSize)
+                    }
+                    .build()
+            )
             .build()
         val response = client.models.generateContent(
-            "gemini-2.5-flash-image",
+            "gemini-3-pro-image-preview",
             Content.builder()
                 .parts(
                     buildList {

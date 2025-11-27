@@ -40,9 +40,19 @@
     </div>
     <div v-if="!loading && images.length > 0" class="flex flex-wrap justify-center gap-4">
       <div v-for="(img, i) in images" :key="i"
-           class="rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[300px] md:w-[360px] lg:w-[420px]">
-        <img :src="img" class="w-full h-auto object-contain cursor-zoom-in" @click="openPreview(img)"
-             @error="onImgError($event, i)" @load="onImgLoad(i)"/>
+           class="rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[300px] md:w-[360px] lg:w-[420px] relative">
+        <div v-if="!loadedSet.has(i)" :style="skeletonAspectStyle" class="w-full">
+          <div
+              class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
+        </div>
+        <img
+            :class="loadedSet.has(i) ? 'opacity-100' : 'opacity-0'"
+            :src="img"
+            class="w-full h-auto object-contain cursor-zoom-in transition-opacity duration-200"
+            @click="openPreview(img)"
+            @error="onImgError($event, i)"
+            @load="onImgLoad(i)"
+        />
       </div>
     </div>
     <div v-else-if="showOverlay"
@@ -56,9 +66,8 @@
 </template>
 
 <script lang="ts" setup>
-import {ref, computed, watch, onUnmounted} from 'vue'
+import {computed, onUnmounted, ref, watch} from 'vue'
 import {Icon} from '@iconify/vue'
-import {NSpin, NSkeleton} from 'naive-ui'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {useSettingsStore} from '@/stores/settings'
 

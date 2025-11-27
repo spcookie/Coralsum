@@ -1,6 +1,6 @@
 package coralsum.service
 
-import coralsum.common.enums.GenTaskStatue
+import coralsum.common.enums.*
 import io.micronaut.http.HttpRequest
 import io.micronaut.serde.annotation.Serdeable
 import io.swagger.v3.oas.annotations.media.Schema
@@ -11,9 +11,6 @@ interface IGenerativeImage {
 
     suspend fun preview(ref: String, ip: String): String?
 
-    /**
-     * 使用 Gemini 判断用户消息是否为生成或修改图片相关的意图。
-     */
     suspend fun assessIntent(userMessage: String): IntentAssessment
 
     suspend fun submitGenerateTask(genRequest: GenRequest, request: HttpRequest<*>)
@@ -28,14 +25,15 @@ data class GenRequest(
     @Schema(description = "生成文本") val text: String? = null,
     @Schema(description = "参考图片字节") var image: ByteArray? = null,
     @Schema(description = "候选数量") var candidateCount: Int = 1,
-    @Schema(description = "宽高比") var aspectRatio: String? = null,
+    @Schema(description = "宽高比") var aspectRatio: AspectRatio? = null,
     @Schema(description = "系统提示") var system: String? = null,
     @Schema(description = "温度") var temperature: Float = 1f,
     @Schema(description = "最大输出tokens") var maxOutputTokens: Int = 32768,
     @Schema(description = "TopP") var topP: Float = 1f,
-    @Schema(description = "图片格式") var format: String = "png",
-    @Schema(description = "Upscayl模型") var upscaylModel: String? = null,
-    @Schema(description = "Upscayl倍数") var upscaylScale: Int? = null,
+    @Schema(description = "图片格式") var format: ImageFormat = ImageFormat.PNG,
+    @Schema(description = "Upscayl模型") var upscaylModel: UpscaylModel? = null,
+    @Schema(description = "Upscayl倍数") var upscaylScale: UpscaylScale? = null,
+    @Schema(description = "输出分辨率") var imageSize: ImageSize? = ImageSize.X1,
 ) {
 
     override fun equals(other: Any?): Boolean {
@@ -62,7 +60,7 @@ data class GenRequest(
         result = 31 * result + temperature.hashCode()
         result = 31 * result + maxOutputTokens
         result = 31 * result + topP.hashCode()
-        result = 31 * result + (upscaylScale ?: 0)
+        result = 31 * result + (upscaylScale?.hashCode() ?: 0)
         result = 31 * result + text.hashCode()
         result = 31 * result + (image?.contentHashCode() ?: 0)
         result = 31 * result + (aspectRatio?.hashCode() ?: 0)
@@ -84,11 +82,11 @@ data class GenResult(
     @Schema(description = "可选文本") val text: String? = null,
 )
 
-@Schema(description = "意图评估")
+//@Schema(description = "意图评估")
 @Serdeable
 data class IntentAssessment(
-    @Schema(description = "是否生成意图") val generateIntent: Boolean,
-    @Schema(description = "引导文案") val guideMessage: String? = null,
+    val generateIntent: Boolean,
+    val guideMessage: String? = null,
 )
 
 @Serdeable

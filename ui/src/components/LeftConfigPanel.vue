@@ -13,7 +13,8 @@
           </div>
         </n-tooltip>
       </div>
-      <n-input v-model:value="prompt" :autosize="{ minRows: 6, maxRows: 12 }" placeholder="写下你的文字需求（支持多行）"
+      <n-input v-model:value="prompt" :autosize="{ minRows: 6, maxRows: 12 }"
+               placeholder="请输入提示词（必填）：描述主体、风格、构图与色调"
                type="textarea"/>
     </div>
     <n-collapse :default-expanded-names="[]">
@@ -41,9 +42,17 @@
           </n-upload-dragger>
         </n-upload>
         <div v-if="uploadList.length > 0" class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
-          <div v-for="(it,i) in uploadList" :key="i" class="rounded overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-            <img :src="it.url" class="w-full h-28 object-cover"/>
-          </div>
+          <n-image-group>
+            <n-image
+                v-for="(it,i) in uploadList"
+                :key="i"
+                :class="selectedIndex===i ? 'ring-2 ring-emerald-500 rounded' : ''"
+                :img-props="{ class: 'rounded bg-neutral-100 dark:bg-neutral-800' }"
+                :src="it.url"
+                class="w-full"
+                @click="selectedIndex=i"
+            />
+          </n-image-group>
         </div>
       </n-collapse-item>
       <n-collapse-item name="sys">
@@ -60,7 +69,8 @@
             </n-tooltip>
           </div>
         </template>
-        <n-input v-model:value="systemPrompt" :autosize="{ minRows: 4, maxRows: 10 }" placeholder="系统提示词（支持多行）"
+        <n-input v-model:value="systemPrompt" :autosize="{ minRows: 4, maxRows: 10 }"
+                 placeholder="系统提示（可选）：约束整体风格、行为与安全策略"
                  type="textarea"/>
       </n-collapse-item>
     </n-collapse>
@@ -71,7 +81,7 @@
           <span>重置</span>
         </div>
       </n-button>
-      <n-button :disabled="generating" class="w-full justify-center" type="primary" @click="onGenerate">
+      <n-button :disabled="generating || promptEmpty" class="w-full justify-center" type="primary" @click="onGenerate">
         <div class="flex items-center gap-2">
           <Icon :class="generating ? 'animate-spin' : ''" :icon="generating ? 'mdi:loading' : 'mdi:magic-staff'"/>
           <span>生成</span>
@@ -155,7 +165,7 @@
           </div>
           <div class="text-[11px] text-neutral-500 dark:text-neutral-300">{{ settings.topP.toFixed(1) }}</div>
         </div>
-        <n-config-provider :theme-overrides="sliderThemeOverrides">
+        <n-config-provider :theme="settings.darkMode ? darkTheme : undefined" :theme-overrides="sliderThemeOverrides">
           <n-slider v-model:value="settings.topP" :max="1.0" :min="0.0" :step="0.1"/>
         </n-config-provider>
       </div>
@@ -172,7 +182,7 @@
           </div>
           <div class="text-[11px] text-neutral-500 dark:text-neutral-300">{{ settings.temperature.toFixed(1) }}</div>
         </div>
-        <n-config-provider :theme-overrides="sliderThemeOverrides">
+        <n-config-provider :theme="settings.darkMode ? darkTheme : undefined" :theme-overrides="sliderThemeOverrides">
           <n-slider v-model:value="settings.temperature" :max="2.0" :min="0.0" :step="0.1"/>
         </n-config-provider>
       </div>
@@ -193,7 +203,24 @@
         <n-radio-group v-model:value="settings.outputFormat">
           <n-radio-button value="PNG">PNG</n-radio-button>
           <n-radio-button value="JPG">JPG</n-radio-button>
-          <n-radio-button value="WEBP">WEBP</n-radio-button>
+        </n-radio-group>
+      </div>
+    </div>
+    <div class="space-y-2">
+      <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
+        <span>图片分辨率</span>
+        <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
+          <template #trigger>
+            <Icon class="text-neutral-400" icon="ph:info"/>
+          </template>
+          <div class="text-xs text-white">选择目标输出的基础分辨率尺寸，数值越大越清晰，耗时与消耗越高。</div>
+        </n-tooltip>
+      </div>
+      <div class="segmented radio-center">
+        <n-radio-group v-model:value="settings.imageSize">
+          <n-radio-button value="1K">1K</n-radio-button>
+          <n-radio-button value="2K">2K</n-radio-button>
+          <n-radio-button value="4K">4K</n-radio-button>
         </n-radio-group>
       </div>
     </div>
@@ -212,6 +239,7 @@
         <n-radio-group v-model:value="settings.resolution">
           <n-radio-button value="1x">1x</n-radio-button>
           <n-radio-button value="2x">2x</n-radio-button>
+          <n-radio-button value="3x">3x</n-radio-button>
           <n-radio-button value="4x">4x</n-radio-button>
         </n-radio-group>
       </div>
@@ -222,22 +250,27 @@
 </template>
 
 <script lang="ts" setup>
-import {ref, computed, watch} from 'vue'
+import {computed, ref} from 'vue'
 import {Icon} from '@iconify/vue'
 import {useSettingsStore} from '@/stores/settings'
+import {useUserStore} from '@/stores/user'
 import {
-  NUpload,
-  NUploadDragger,
+  darkTheme,
+  NButton,
   NCollapse,
   NCollapseItem,
+  NConfigProvider,
+  NImage,
+  NImageGroup,
   NInput,
-  NRadioGroup,
-  NRadioButton,
-  NSlider,
-  NButton,
   NModal,
+  NRadioButton,
+  NRadioGroup,
+  NSlider,
   NTooltip,
-  NConfigProvider
+  NUpload,
+  NUploadDragger,
+  useMessage
 } from 'naive-ui'
 
 const emit = defineEmits<{
@@ -245,13 +278,17 @@ const emit = defineEmits<{
 }>()
 const p = defineProps<{ generating?: boolean }>()
 const generating = computed(() => p.generating)
+const message = useMessage()
 
 const settings = useSettingsStore()
+const user = useUserStore()
 const prompt = ref('')
+const promptEmpty = computed(() => prompt.value.trim().length === 0)
 const systemPrompt = ref('')
 const files = ref<File[]>([])
 const uploadList = ref<any[]>([])
 const confirmReset = ref(false)
+const selectedIndex = ref<number | null>(null)
 
 function onUploadChange(list: any) {
   const fl = list?.fileList ?? []
@@ -267,6 +304,15 @@ function onReset() {
 }
 
 function onGenerate() {
+  if (promptEmpty.value) {
+    message.error('请填写提示词')
+    return
+  }
+  const pts = Number(user.points || 0)
+  if (pts <= 0) {
+    message.error('积分不足')
+    return
+  }
   emit('generate', {prompt: prompt.value, systemPrompt: systemPrompt.value, files: files.value})
 }
 
@@ -277,6 +323,7 @@ function doReset() {
   })
   uploadList.value = []
   files.value = []
+  selectedIndex.value = null
 }
 
 function handlePaste(e: ClipboardEvent) {
@@ -298,9 +345,13 @@ function handlePaste(e: ClipboardEvent) {
 }
 
 const sliderThemeOverrides = computed(() => ({
+  common: settings.darkMode
+      ? {primaryColor: '#2a947d', primaryColorSuppl: '#2a947d'}
+      : {primaryColor: '#18a058', primaryColorSuppl: '#36ad6a'},
   Slider: {
     railColor: settings.darkMode ? 'rgba(255,255,255,0.2)' : '#e5e7eb',
     railColorHover: settings.darkMode ? 'rgba(255,255,255,0.3)' : '#d1d5db',
+    railColorActive: settings.darkMode ? 'rgba(255,255,255,0.25)' : '#dbeafe',
     fillColor: settings.darkMode ? '#2a947d' : '#18a058',
     fillColorHover: settings.darkMode ? '#2a947d' : '#36ad6a',
     handleColor: settings.darkMode ? '#2a947d' : '#18a058',

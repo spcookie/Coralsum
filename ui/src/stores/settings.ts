@@ -1,8 +1,9 @@
 import {defineStore} from 'pinia'
 
 export type AspectRatio = 'auto' | '1:1' | '2:3' | '3:2' | '3:4' | '4:3' | '9:16' | '16:9' | '21:9'
-export type ResolutionScale = '1x' | '2x' | '4x'
-export type OutputFormat = 'PNG' | 'JPG' | 'WEBP'
+export type ResolutionScale = '1x' | '2x' | '3x' | '4x'
+export type OutputFormat = 'PNG' | 'JPG'
+export type ImageSize = '1K' | '2K' | '4K'
 
 export const useSettingsStore = defineStore('settings', {
     state: () => ({
@@ -13,6 +14,7 @@ export const useSettingsStore = defineStore('settings', {
         temperature: 0.7,
         resolution: '1x' as ResolutionScale,
         outputFormat: 'PNG' as OutputFormat,
+        imageSize: '1K' as ImageSize,
         darkMode: false
     }),
     actions: {
@@ -27,6 +29,7 @@ export const useSettingsStore = defineStore('settings', {
             this.temperature = 0.7
             this.resolution = '1x'
             this.outputFormat = 'PNG'
+            this.imageSize = '1K'
         }
     }
 })

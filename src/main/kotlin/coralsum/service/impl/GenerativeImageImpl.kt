@@ -2,12 +2,15 @@ package coralsum.service.impl
 
 import coralsum.cache.GenerateTaskCache
 import coralsum.common.enums.GenTaskStatue
+import coralsum.common.enums.ImageSize
+import coralsum.common.event.GenerativeImageCostEvent
 import coralsum.config.CloudflareConfig
 import coralsum.config.NanoConfig
 import coralsum.entity.GenerateImageReqRecord
 import coralsum.entity.RetrievalImageReqRecord
 import coralsum.excption.BusinessException
 import coralsum.repository.GenerateImageReqRecordRepository
+import coralsum.repository.OpenUserRepository
 import coralsum.repository.RetrievalImageReqRecordRepository
 import coralsum.service.*
 import coralsum.toolkit.NanoBanana
@@ -25,8 +28,10 @@ import dev.langchain4j.model.chat.request.json.JsonObjectSchema
 import dev.langchain4j.model.chat.request.json.JsonSchema
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import io.github.resilience4j.micronaut.annotation.RateLimiter
+import io.micronaut.context.event.ApplicationEventPublisher
 import io.micronaut.http.HttpRequest
 import io.micronaut.json.JsonMapper
+import io.micronaut.json.tree.JsonNode
 import io.micronaut.objectstorage.aws.AwsS3Operations
 import io.micronaut.objectstorage.request.PresignRequest
 import io.micronaut.objectstorage.request.UploadRequest
@@ -64,6 +69,9 @@ class GenerativeImageImpl(
     val generateImageReqRecordRepository: GenerateImageReqRecordRepository,
     val retrievalImageReqRecordRepository: RetrievalImageReqRecordRepository,
     val generateTaskCache: GenerateTaskCache,
+    val applicationEventPublisher: ApplicationEventPublisher<GenerativeImageCostEvent>,
+    val userPointsService: IUserPointsService,
+    val openUserRepository: OpenUserRepository,
 ) : IGenerativeImage {
 
     private lateinit var nano: NanoBanana
@@ -78,14 +86,15 @@ class GenerativeImageImpl(
         .httpClientBuilder(
             JdkHttpClientBuilder().httpClientBuilder(
                 HttpClient.newBuilder()
-                    .proxy(
-                        ProxySelector.of(
-                            InetSocketAddress(
-                                nanoConfig.proxyHost,
-                                nanoConfig.proxyPort
+                    .apply {
+                        val host = System.getProperty("http.proxyHost")
+                        val port = System.getProperty("http.proxyPort")?.toInt()
+                        if (host != null && port != null) {
+                            proxy(
+                                ProxySelector.of(InetSocketAddress(host, port))
                             )
-                        )
-                    )
+                        }
+                    }
             )
         )
         .maxRetries(2)
@@ -123,13 +132,18 @@ class GenerativeImageImpl(
 
     @RateLimiter(name = "callGenerateImage")
     override suspend fun generate(genRequest: GenRequest, request: HttpRequest<*>): GenResult {
+        val uid = securityService.authentication.get().name
+        val openUser = openUserRepository.findByUid(uid)
+        if (!userPointsService.hasEnoughPoints(openUser!!.id!!)) {
+            throw BusinessException("积分不足")
+        }
         val watch = StopWatch.createStarted()
         val conf = jsonMapper.writeValueAsString(genRequest.copy(text = null, image = null))
         val imageReqRecord = GenerateImageReqRecord(
             requestText = genRequest.text,
             requestImage = null,
             requestConfig = conf,
-            userCode = securityService.authentication.get().name,
+            userCode = uid,
         )
         val genResult = withContext(Dispatchers.IO) {
             val fs = FileSystem.SYSTEM
@@ -137,6 +151,7 @@ class GenerativeImageImpl(
             try {
                 val pairs = doConcurrentGenerate(genRequest, imageReqRecord)
 
+                imageReqRecord.imageSize = IntArray(pairs.size)
                 val images = pairs.mapIndexed { index, pair ->
                     val (_, bufferedImage) = pair
 
@@ -144,33 +159,36 @@ class GenerativeImageImpl(
                         return@mapIndexed null
                     }
 
-                    val imagePath = tempDir / "image-$index.${genRequest.format}"
-                    ImageIO.write(bufferedImage, genRequest.format, imagePath.toFile())
+                    val imagePath = tempDir / "image-$index.${genRequest.format.ext}"
+                    ImageIO.write(bufferedImage, genRequest.format.ext, imagePath.toFile())
 
                     var targetPath: Path
                     val upscaylModel = genRequest.upscaylModel
                     val upscaylScale = genRequest.upscaylScale
-                    if (upscaylModel != null && upscaylScale != null && upscaylScale > 1) {
-                        val upscaledPath = tempDir / "image-upscayl-$index.${genRequest.format}"
+                    if (upscaylModel != null && upscaylScale != null && upscaylScale.scale > 1) {
+                        val upscaledPath = tempDir / "image-upscayl-$index.${genRequest.format.ext}"
                         targetPath = upscaledPath
                         upscayl.input(imagePath.toString())
                             .output(upscaledPath.toString())
-                            .model(upscaylModel)
-                            .scale(upscaylScale)
-                            .format(genRequest.format)
+                            .model(upscaylModel.modelName)
+                            .scale(upscaylScale.scale)
+                            .format(genRequest.format.ext)
                             .run()
                     } else {
                         targetPath = imagePath
                     }
 
-                    val key = "${tempDir.name}-${index}.${genRequest.format}"
+                    val key = "${tempDir.name}-${index}.${genRequest.format.ext}"
 
                     imageReqRecord.imageRef = key
 
                     val bytes = fs.read(targetPath) { readByteArray() }
+
+                    imageReqRecord.imageSize!![index] = bytes.size
+
                     val uploadRequest = UploadRequest.fromBytes(bytes, key)
                     store.upload(uploadRequest) { builder ->
-                        builder.contentDisposition("attachment; filename=aigi.${genRequest.format}")
+                        builder.contentDisposition("attachment; filename=aigi.${genRequest.format.ext}")
                     }
                     cloudflareConfig.host + "/api/generative-image?ref=${key}"
                 }
@@ -187,6 +205,15 @@ class GenerativeImageImpl(
                 )
             } finally {
                 generateImageReqRecordRepository.save(imageReqRecord)
+                applicationEventPublisher.publishEvent(
+                    GenerativeImageCostEvent(
+                        uid = imageReqRecord.userCode!!,
+                        inputTokens = imageReqRecord.inputTokens,
+                        outputTokens = imageReqRecord.outputTokens,
+                        scale = (genRequest.upscaylScale?.scale ?: 1) - 1,
+                        imageSize = (imageReqRecord.imageSize?.sum() ?: 0)
+                    )
+                )
                 try {
                     fs.list(tempDir).forEach { fs.delete(it) }
                     fs.delete(tempDir)
@@ -234,7 +261,12 @@ class GenerativeImageImpl(
             )
 
             val json = chatResponse.aiMessage().text()
-            jsonMapper.readValue(json.toByteArray(), IntentAssessment::class.java)
+            val node = jsonMapper.readValue(json, JsonNode::class.java)
+            IntentAssessment(
+                node["generateIntent"].booleanValue,
+                node["guideMessage"]?.stringValue ?: ""
+            )
+//            jsonMapper.readValue(json.toByteArray(), IntentAssessment::class.java)
         } catch (e: Exception) {
             log.warn("assessIntent fallback due to: ${e.message}")
             IntentAssessment(
@@ -303,11 +335,12 @@ class GenerativeImageImpl(
         val pair = nano.gen(
             genRequest.text!!,
             genRequest.image,
-            genRequest.aspectRatio,
+            genRequest.aspectRatio?.ratio,
             genRequest.system,
             genRequest.temperature,
             genRequest.maxOutputTokens,
-            genRequest.topP
+            genRequest.topP,
+            genRequest.imageSize?.size ?: ImageSize.X1.size
         )
         val usageMetadata = pair.second
         synchronized(imageReqRecord) {

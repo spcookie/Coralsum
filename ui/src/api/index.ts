@@ -11,7 +11,8 @@ export interface GenerateRequest {
         topP: number
         temperature: number
         resolution: '1x' | '2x' | '4x'
-        outputFormat: 'PNG' | 'JPG' | 'WEBP'
+        outputFormat: 'PNG' | 'JPG'
+        imageSize: '1K' | '2K' | '4K'
     }
 }
 
@@ -39,7 +40,9 @@ export async function getProfile() {
         name: data.nick_name,
         email: data.source_code,
         tier: data.tier,
-        points: data.permanent_points + data.subscribe_points,
+        permanentPoints: Number(data.permanent_points || 0),
+        subscribePoints: Number(data.subscribe_points || 0),
+        points: Number(data.permanent_points || 0) + Number(data.subscribe_points || 0),
     }
 }
 
@@ -81,15 +84,18 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
     fd.append('temperature', String(temp))
     fd.append('topP', String(topp))
     fd.append('format', req.config.outputFormat)
-    const scaleMap: Record<string, string> = {'1x': 'X1', '2x': 'X2', '4x': 'X4'}
+    const scaleMap: Record<string, string> = {'1x': 'X1', '2x': 'X2', '3x': 'X3', '4x': 'X4'}
     const sc = scaleMap[req.config.resolution]
     if (sc) fd.append('upscaylScale', sc)
+    const sizeMap: Record<string, string> = {'1K': 'X1', '2K': 'X2', '4K': 'X4'}
+    const sz = sizeMap[req.config.imageSize]
+    if (sz) fd.append('imageSize', sz)
     const user = useUserStore()
     const headers: any = {'X-API-Version': 'v1'}
     if (user?.token) headers.Authorization = `Bearer ${user.token}`
     await http.post('/generative-image/submit-task', fd, {headers})
     const intervalMs = 1500
-    const maxAttempts = Math.ceil((1000 * 60 * 3) / intervalMs)
+    const maxAttempts = Math.ceil((1000 * 60 * 5) / intervalMs)
     for (let i = 0; i < maxAttempts; i++) {
         await new Promise((r) => setTimeout(r, intervalMs))
         const {data} = await http.get('/generative-image/get-task-result', {headers})
@@ -114,22 +120,21 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
     throw {message: '生成超时，请稍后重试', status: 504}
 }
 
+export async function assessIntent(text: string): Promise<{ generateIntent: boolean; guideMessage: string }> {
+    const headers: any = {'X-API-Version': 'v1', 'Content-Type': 'text/plain'}
+    const {data} = await http.post('/generative-image/assess-intent', text, {headers})
+    return {
+        generateIntent: data.generate_intent,
+        guideMessage: data.guide_message
+    }
+}
+
 export async function register(email: string, password: string, code: string) {
     const {data} = await http.post('/auth/register', {email, password, code})
     return data
 }
 
-export async function fetchHistoryList() {
-    const {data} = await http.get('/history/list')
-    if (Array.isArray(data)) return data
-    if (data && Array.isArray((data as any).list)) return (data as any).list
-    return []
-}
-
-export async function fetchHistoryImages(id: string): Promise<string[]> {
-    const {data} = await http.get('/history/images', {params: {id}})
-    return Array.isArray(data) ? data : []
-}
+// 历史记录模块已移除
 
 export async function redeemPoints(email: string, key: string): Promise<{ pointsAdded: number; points: number }> {
     const {data} = await http.post('/points/redeem', {email, key})

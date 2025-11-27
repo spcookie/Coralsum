@@ -14,6 +14,8 @@ export const useUserStore = defineStore('user', {
     state: () => ({
         name: '',
         points: 0,
+        permanentPoints: 0,
+        subscribePoints: 0,
         tier: 'FREE' as UserTier,
         email: '',
         token: '',
@@ -34,10 +36,20 @@ export const useUserStore = defineStore('user', {
         addPoints(p: number) {
             this.points += p
         },
-        setProfile(payload: { email: string; name: string; points: number; tier: UserTier; token?: string }) {
+        setProfile(payload: {
+            email: string;
+            name: string;
+            points?: number;
+            permanentPoints?: number;
+            subscribePoints?: number;
+            tier: UserTier;
+            token?: string
+        }) {
             this.email = payload.email
             this.name = payload.name
-            this.points = payload.points
+            if (typeof payload.points === 'number') this.points = payload.points
+            this.permanentPoints = payload.permanentPoints ?? this.permanentPoints
+            this.subscribePoints = payload.subscribePoints ?? this.subscribePoints
             this.tier = payload.tier
             if (payload.token && payload.token.length > 0) {
                 this.token = payload.token

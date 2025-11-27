@@ -7,6 +7,7 @@ import io.micronaut.data.annotation.*
 import io.micronaut.data.model.naming.NamingStrategies
 import io.micronaut.security.annotation.CreatedBy
 import io.micronaut.security.annotation.UpdatedBy
+import java.math.BigDecimal
 import java.time.LocalDateTime
 
 @MappedEntity(value = "user_points", namingStrategy = NamingStrategies.UnderScoreSeparatedLowerCase::class)
@@ -19,9 +20,9 @@ data class UserPoints(
     @field:MappedProperty(value = "open_user_id")
     var openUser: OpenUser? = null,
 
-    var permanentPoints: Int = 0,
+    var permanentPoints: BigDecimal = BigDecimal.ZERO,
 
-    var subscribePoints: Int = 0,
+    var subscribePoints: BigDecimal = BigDecimal.ZERO,
 
     var subscribeExpireTime: LocalDateTime? = null,
 

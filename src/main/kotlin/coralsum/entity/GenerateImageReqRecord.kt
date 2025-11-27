@@ -30,6 +30,9 @@ data class GenerateImageReqRecord(
 
     var imageRef: String? = null,
 
+    @field:TypeDef(type = DataType.INTEGER_ARRAY)
+    var imageSize: IntArray? = null,
+
     var inputTokens: Int = 0,
 
     var outputTokens: Int = 0,
@@ -46,7 +49,7 @@ data class GenerateImageReqRecord(
     var createBy: String? = null,
 
     @field:UpdatedBy
-    var updateBy: String? = null
+    var updateBy: String? = null,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

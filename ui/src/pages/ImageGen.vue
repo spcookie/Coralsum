@@ -3,55 +3,36 @@
     <LeftConfigPanel :generating="loading" @generate="doGenerate"/>
     <div class="flex-1 flex flex-col md:h-full h-auto overflow-y-auto glass bg-white/40 dark:bg-black/30">
       <RightResultPanel :loading="loading" :result="result"/>
-      <div class="mt-2">
-        <div class="sticky bottom-0 z-10">
-          <div
-              class="flex items-center justify-between px-3 py-2 glass bg-white/40 dark:bg-black/30 border-t border-neutral-200 dark:border-neutral-800">
-            <div class="flex items-center gap-2 text-sm">
-              <Icon icon="ph:clock-counter-clockwise"/>
-              <span>历史记录</span>
-            </div>
-            <n-button quaternary size="small" @click="onToggleHistory">
-              <div class="flex items-center gap-1.5 text-[11px] sm:text-xs">
-                <Icon :class="historyLoading ? 'animate-spin' : ''"
-                      :icon="historyLoading ? 'mdi:loading' : (showHistory ? 'mdi:chevron-down' : 'mdi:chevron-up')"/>
-                <span>{{ showHistory ? '收起' : '展开' }}</span>
-              </div>
-            </n-button>
-          </div>
-        </div>
-        <HistoryList v-if="showHistory" :showHeader="false"/>
-      </div>
+      <!-- 历史记录模块已移除 -->
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import {onMounted, ref, watch} from 'vue'
-import {Icon} from '@iconify/vue'
 import LeftConfigPanel from '@/components/LeftConfigPanel.vue'
 import RightResultPanel from '@/components/RightResultPanel.vue'
-import HistoryList from '@/components/HistoryList.vue'
 import {useSettingsStore} from '@/stores/settings'
-import {useHistoryStore} from '@/stores/history'
-import {fetchHistoryList, generate, refreshUserInfoByEmail, getGenerateTaskResult} from '@/api'
+import {assessIntent, generate, getGenerateTaskResult, refreshUserInfoByEmail} from '@/api'
 import {useUserStore} from '@/stores/user'
-import {NButton, useMessage} from 'naive-ui'
+import {useMessage} from 'naive-ui'
 
 const settings = useSettingsStore()
-const history = useHistoryStore()
 const user = useUserStore()
 const result = ref<any>()
 const loading = ref(false)
 const message = useMessage()
-const showHistory = ref(false)
-const historyLoading = ref(false)
 const polling = ref(false)
 
 async function doGenerate(payload: { prompt: string; systemPrompt?: string; files: File[] }) {
   result.value = undefined
   loading.value = true
   try {
+    const intent = await assessIntent(payload.prompt)
+    if (!intent.generateIntent) {
+      result.value = {images: [], text: intent.guideMessage, inputTokens: 0, outputTokens: 0, durationMs: 0}
+      return
+    }
     if (!user.profileReady) {
       message.error('请先登录')
       user.requireLogin()
@@ -67,11 +48,10 @@ async function doGenerate(payload: { prompt: string; systemPrompt?: string; file
         topP: settings.topP,
         temperature: settings.temperature,
         resolution: settings.resolution,
-        outputFormat: settings.outputFormat
+        outputFormat: settings.outputFormat,
+        imageSize: settings.imageSize
       }
     })
-    const list = await fetchHistoryList()
-    history.setItems(list.map(it => ({...it, expanded: false, loading: false, error: ''})))
     if (user.email) {
       const u = await refreshUserInfoByEmail()
       user.setProfile({...u, token: user.token})
@@ -93,28 +73,7 @@ async function doGenerate(payload: { prompt: string; systemPrompt?: string; file
   }
 }
 
-async function onToggleHistory() {
-  if (!showHistory.value) {
-    try {
-      historyLoading.value = true
-      const list = await fetchHistoryList()
-      history.setItems(list.map(it => ({...it, expanded: false, loading: false, error: ''})))
-    } catch (e: any) {
-      const status = e?.status
-      if (status === 401 || status === 403) {
-        message.error('未登录或未授权，请先登录')
-        user.requireLogin()
-      } else if (status === 500) {
-        message.error('服务异常，请稍后重试')
-      } else {
-        message.error(e?.message || '加载历史记录失败')
-      }
-    } finally {
-      historyLoading.value = false
-    }
-  }
-  showHistory.value = !showHistory.value
-}
+// 历史记录模块已移除
 
 async function syncGenerateStatus() {
   try {
@@ -143,7 +102,7 @@ async function pollTaskResultLoop() {
   try {
     loading.value = true
     const intervalMs = 1500
-    const maxAttempts = Math.ceil((1000 * 60 * 3) / intervalMs)
+    const maxAttempts = Math.ceil((1000 * 60 * 5) / intervalMs)
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise(r => setTimeout(r, intervalMs))
       const res = await getGenerateTaskResult()

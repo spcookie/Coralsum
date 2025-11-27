@@ -1,5 +1,6 @@
 package coralsum.service.impl
 
+import coralsum.common.enums.MembershipTier
 import coralsum.common.enums.UserSource
 import coralsum.common.response.ProfileResponse
 import coralsum.repository.OpenUserRepository
@@ -7,6 +8,8 @@ import coralsum.repository.OutletUserRepository
 import coralsum.repository.UserPointsRepository
 import coralsum.service.IWebUserService
 import jakarta.inject.Singleton
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 @Singleton
 class WebUserServiceImpl(
@@ -21,9 +24,15 @@ class WebUserServiceImpl(
         return ProfileResponse(
             nickName = outletWeb?.nickName ?: "",
             sourceCode = outletWeb?.sourceCode ?: "",
-            permanentPoints = userPoints?.permanentPoints ?: 0,
-            subscribePoints = userPoints?.subscribePoints ?: 0,
-            tier = userPoints?.tier ?: coralsum.common.enums.MembershipTier.FREE
+            permanentPoints = ((userPoints?.permanentPoints ?: BigDecimal.ZERO).setScale(
+                2,
+                RoundingMode.HALF_UP
+            ) * 100.toBigDecimal()).toInt(),
+            subscribePoints = ((userPoints?.subscribePoints ?: BigDecimal.ZERO).setScale(
+                2,
+                RoundingMode.HALF_UP
+            ) * 100.toBigDecimal()).toInt(),
+            tier = userPoints?.tier ?: MembershipTier.FREE
         )
     }
 }

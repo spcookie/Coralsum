@@ -1,10 +1,7 @@
 package coralsum.controller
 
 import coralsum.common.dto.Res
-import coralsum.common.enums.AspectRatio
-import coralsum.common.enums.ImageFormat
-import coralsum.common.enums.UpscaylModel
-import coralsum.common.enums.UpscaylScale
+import coralsum.common.enums.*
 import coralsum.common.response.GenResultResponse
 import coralsum.common.response.GenTaskResultResponse
 import coralsum.common.response.IntentAssessmentResponse
@@ -66,21 +63,23 @@ class GenerativeImageController(
         @Parameter(description = "图片格式") @Part format: ImageFormat?,
         @Parameter(description = "Upscayl模型") @Part upscaylModel: UpscaylModel?,
         @Parameter(description = "Upscayl倍数") @Part upscaylScale: UpscaylScale?,
+        @Parameter(description = "图片分辨率") @Part imageSize: ImageSize?,
         request: HttpRequest<*>,
     ): Res<GenResultResponse> {
         val result = service.generate(
             GenRequest(
-                text,
-                completedFileUpload?.bytes,
-                candidateCount ?: 1,
-                aspectRatio?.ratio ?: AspectRatio.R1_1.ratio,
-                system,
-                temperature ?: 0.5f,
-                maxOutputTokens ?: 32768,
-                topP ?: 1f,
-                format?.ext ?: ImageFormat.PNG.ext,
-                upscaylModel?.modelName ?: UpscaylModel.HIGH_FIDELITY_4X.modelName,
-                upscaylScale?.scale ?: UpscaylScale.X2.scale
+                text = text,
+                image = completedFileUpload?.bytes,
+                candidateCount = candidateCount ?: 1,
+                aspectRatio = aspectRatio ?: AspectRatio.R1_1,
+                system = system,
+                temperature = temperature ?: 0.5f,
+                maxOutputTokens = maxOutputTokens ?: 32768,
+                topP = topP ?: 1f,
+                format = format ?: ImageFormat.PNG,
+                upscaylModel = upscaylModel ?: UpscaylModel.HIGH_FIDELITY_4X,
+                upscaylScale = upscaylScale ?: UpscaylScale.X1,
+                imageSize = imageSize ?: ImageSize.X1
             ),
             request
         )
@@ -142,21 +141,23 @@ class GenerativeImageController(
         @Parameter(description = "图片格式") @Part format: ImageFormat?,
         @Parameter(description = "Upscayl模型") @Part upscaylModel: UpscaylModel?,
         @Parameter(description = "Upscayl倍数") @Part upscaylScale: UpscaylScale?,
+        @Parameter(description = "图片分辨率") @Part imageSize: ImageSize?,
         request: HttpRequest<*>,
     ): Res<Unit> {
         service.submitGenerateTask(
             GenRequest(
-                text,
-                completedFileUpload?.bytes,
-                candidateCount ?: 1,
-                aspectRatio?.ratio ?: AspectRatio.R1_1.ratio,
-                system,
-                temperature ?: 0.5f,
-                maxOutputTokens ?: 32768,
-                topP ?: 1f,
-                format?.ext ?: ImageFormat.PNG.ext,
-                upscaylModel?.modelName ?: UpscaylModel.HIGH_FIDELITY_4X.modelName,
-                upscaylScale?.scale ?: UpscaylScale.X2.scale
+                text = text,
+                image = completedFileUpload?.bytes,
+                candidateCount = candidateCount ?: 1,
+                aspectRatio = aspectRatio ?: AspectRatio.R1_1,
+                system = system,
+                temperature = temperature ?: 0.5f,
+                maxOutputTokens = maxOutputTokens ?: 32768,
+                topP = topP ?: 1f,
+                format = format ?: ImageFormat.PNG,
+                upscaylModel = upscaylModel ?: UpscaylModel.HIGH_FIDELITY_4X,
+                upscaylScale = upscaylScale ?: UpscaylScale.X1,
+                imageSize = imageSize ?: ImageSize.X1
             ),
             request
         )

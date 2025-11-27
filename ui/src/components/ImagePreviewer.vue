@@ -44,15 +44,16 @@
            @wheel.prevent="onWheel">
         <img ref="imgRef" :src="src" :style="imgStyle" class="absolute top-1/2 left-1/2 will-change-transform"
              draggable="false" @load="onImgLoad"/>
+        <n-spin v-if="imgLoading" class="absolute inset-0 grid place-items-center" size="large"/>
       </div>
     </div>
   </n-modal>
 </template>
 
 <script lang="ts" setup>
-import {ref, computed, watch, onMounted} from 'vue'
+import {computed, onMounted, ref, watch} from 'vue'
 import {Icon} from '@iconify/vue'
-import {useMessage, NButton, NModal} from 'naive-ui'
+import {NButton, NModal, NSpin, useMessage} from 'naive-ui'
 
 const props = defineProps<{ modelValue: boolean; src: string }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
@@ -60,6 +61,7 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
 const message = useMessage()
 const canvasRef = ref<HTMLElement | null>(null)
 const imgRef = ref<HTMLImageElement | null>(null)
+const imgLoading = ref(true)
 const scale = ref(1)
 const tx = ref(0)
 const ty = ref(0)
@@ -143,6 +145,7 @@ function fitToContainer() {
 
 function onImgLoad() {
   fitToContainer()
+  imgLoading.value = false
 }
 
 async function fetchBlob(url: string) {
@@ -196,9 +199,13 @@ async function downloadImage() {
 
 watch(() => props.modelValue, v => {
   if (v) {
+    imgLoading.value = true
     reset();
     fitToContainer()
   }
+})
+watch(() => props.src, () => {
+  imgLoading.value = true
 })
 onMounted(() => {
   if (props.modelValue) {

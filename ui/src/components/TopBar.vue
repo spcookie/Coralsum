@@ -9,10 +9,18 @@
       <div class="hidden sm:flex items-center gap-2">
         <Icon class="text-lg" icon="mdi:account"/>
         <span>{{ displayName }}</span>
-        <div class="flex items-center gap-1">
-          <Icon class="text-yellow-500 text-base" icon="material-symbols:bolt-rounded"/>
-          <span>{{ user.points }}</span>
-        </div>
+        <n-tooltip placement="bottom" trigger="hover">
+          <template #trigger>
+            <div class="flex items-center gap-1">
+              <Icon class="text-yellow-500 text-base" icon="material-symbols:bolt-rounded"/>
+              <span>{{ user.points }}</span>
+            </div>
+          </template>
+          <div class="text-xs text-white space-y-1">
+            <div>订阅积分：{{ user.subscribePoints }}</div>
+            <div>永久积分：{{ user.permanentPoints }}</div>
+          </div>
+        </n-tooltip>
         <n-tag :color="tierTagStyle" size="small">{{ user.tier }}</n-tag>
       </div>
       <div class="flex items-center gap-2">
@@ -107,10 +115,21 @@ import {Icon} from '@iconify/vue'
 import {useSettingsStore} from '@/stores/settings'
 import {useUserStore} from '@/stores/user'
 import type {FormInst, FormRules} from 'naive-ui'
-import {NButton, NCollapse, NCollapseItem, NForm, NFormItem, NInput, NModal, NSwitch, NTag, useMessage} from 'naive-ui'
+import {
+  NButton,
+  NCollapse,
+  NCollapseItem,
+  NForm,
+  NFormItem,
+  NInput,
+  NModal,
+  NSwitch,
+  NTag,
+  NTooltip,
+  useMessage
+} from 'naive-ui'
 import {
   changePassword,
-  fetchHistoryList,
   getProfile,
   login as apiLogin,
   redeemPoints,
@@ -118,13 +137,11 @@ import {
   sendEmailCode,
   updateProfileName
 } from '@/api'
-import {useHistoryStore} from '@/stores/history'
 
 const settings = useSettingsStore()
 const router = useRouter()
 const user = useUserStore()
 const message = useMessage()
-const history = useHistoryStore()
 // 使用全局用户 Store 控制登录弹窗
 const loginForm = reactive({email: '', password: ''})
 const formRef = ref<FormInst | null>(null)
@@ -208,8 +225,7 @@ async function login() {
     loginForm.email = ''
     loginForm.password = ''
     message.success('登录成功')
-    const list = await fetchHistoryList()
-    history.setItems(list.map(it => ({...it, expanded: false, loading: false, error: ''})))
+    // 历史记录模块已移除
   } catch (e: any) {
     const status = e?.status
     if (status === 401 || status === 403) {
@@ -260,8 +276,9 @@ async function saveProfile() {
     }
 
     if (doName) {
-      const info = await updateProfileName(user.email, newName)
-      user.setProfile(info)
+      await updateProfileName(user.email, newName)
+      const latest = await refreshUserInfoByEmail()
+      user.setProfile({...latest})
     }
 
     if (!hasPwdInput && !doName) {
@@ -316,8 +333,12 @@ function redeemMobile() {
 
 onMounted(async () => {
   user.init()
-  if (!user.profileReady) user.requireLogin()
-  document.documentElement.classList.toggle('dark', settings.darkMode)
+  try {
+    const profile = await getProfile()
+    user.setProfile({...profile, token: user.token})
+  } catch {
+    if (!user.profileReady) user.requireLogin()
+  }
 })
 </script>
 

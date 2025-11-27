@@ -7,7 +7,7 @@ micronaut:
     netty:
       access-logger:
         enabled: true
-        logger-name: request-access-logger
+        logger-name: request-access
         log-format: common
     port: 8080
   http:
@@ -34,9 +34,9 @@ micronaut:
         mapping: /**
   caches:
     generate-task-result:
-      expire-after-access: 4m
+      expire-after-access: 5m
     generate-task-statue:
-      expire-after-access: 4m
+      expire-after-access: 5m
   security:
     authentication: bearer
     reject-not-found: true

@@ -4,6 +4,7 @@ import coralsum.common.enums.MembershipTier
 import coralsum.common.enums.SubscribeStatus
 import coralsum.common.enums.SubscribeType
 import io.micronaut.data.annotation.*
+import io.micronaut.data.model.DataType
 import io.micronaut.data.model.naming.NamingStrategies
 import io.micronaut.security.annotation.CreatedBy
 import io.micronaut.security.annotation.UpdatedBy
@@ -20,8 +21,10 @@ data class UserPoints(
     @field:MappedProperty(value = "open_user_id")
     var openUser: OpenUser? = null,
 
+    @field:TypeDef(type = DataType.BIGDECIMAL)
     var permanentPoints: BigDecimal = BigDecimal.ZERO,
 
+    @field:TypeDef(type = DataType.BIGDECIMAL)
     var subscribePoints: BigDecimal = BigDecimal.ZERO,
 
     var subscribeExpireTime: LocalDateTime? = null,

@@ -15,15 +15,15 @@ import reactor.core.publisher.Mono
 
 @Singleton
 class BasicAuthenticationProvider(
-    val outletUserRepository: OutletUserRepository
+    val outletUserRepository: OutletUserRepository,
 ) : HttpRequestReactiveAuthenticationProvider<Any> {
     override fun authenticate(
         requestContext: HttpRequest<Any>?,
-        authenticationRequest: AuthenticationRequest<String, String>
+        authenticationRequest: AuthenticationRequest<String, String>,
     ): Publisher<AuthenticationResponse> {
         return Mono.deferContextual { ctx ->
             mono(ReactorContext(ctx)) {
-                if (authenticationRequest.secret.isBlank() || authenticationRequest.identity.isBlank()) {
+                val user = if (authenticationRequest.secret.isBlank() || authenticationRequest.identity.isBlank()) {
                     null
                 } else {
                     try {
@@ -40,20 +40,20 @@ class BasicAuthenticationProvider(
                         )
                     }
                 }
-            }.map {
-                if (it == null) {
+                if (user == null) {
                     AuthenticationResponse.failure(AuthenticationFailureReason.USER_NOT_FOUND)
                 } else {
                     AuthenticationResponse.success(
-                        it.openUser!!.uid,
-                        it.openUser.assignRoleList() ?: emptyList(),
+                        user.openUser!!.uid,
+                        user.openUser.assignRoleList() ?: emptyList(),
                         mapOf(
-                            "outlet_user_source" to it.userSource,
-                            "outlet_user_source_code" to it.sourceCode
+                            "outlet_user_source" to user.userSource,
+                            "outlet_user_source_code" to user.sourceCode
                         )
                     )
                 }
             }
+
         }
 
     }

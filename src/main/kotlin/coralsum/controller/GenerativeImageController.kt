@@ -64,22 +64,24 @@ class GenerativeImageController(
         @Parameter(description = "Upscayl模型") @Part upscaylModel: UpscaylModel?,
         @Parameter(description = "Upscayl倍数") @Part upscaylScale: UpscaylScale?,
         @Parameter(description = "图片分辨率") @Part imageSize: ImageSize?,
+        @Parameter(description = "媒体分辨率") @Part mediaResolution: MediaResolution?,
         request: HttpRequest<*>,
     ): Res<GenResultResponse> {
         val result = service.generate(
-            GenRequest(
-                text = text,
-                image = completedFileUpload?.bytes,
-                candidateCount = candidateCount ?: 1,
-                aspectRatio = aspectRatio ?: AspectRatio.R1_1,
-                system = system,
-                temperature = temperature ?: 0.5f,
-                maxOutputTokens = maxOutputTokens ?: 32768,
-                topP = topP ?: 1f,
-                format = format ?: ImageFormat.PNG,
-                upscaylModel = upscaylModel ?: UpscaylModel.HIGH_FIDELITY_4X,
-                upscaylScale = upscaylScale ?: UpscaylScale.X1,
-                imageSize = imageSize ?: ImageSize.X1
+            buildGenRequest(
+                text,
+                completedFileUpload,
+                candidateCount,
+                aspectRatio,
+                system,
+                temperature,
+                maxOutputTokens,
+                topP,
+                format,
+                upscaylModel,
+                upscaylScale,
+                imageSize,
+                mediaResolution
             ),
             request
         )
@@ -142,27 +144,59 @@ class GenerativeImageController(
         @Parameter(description = "Upscayl模型") @Part upscaylModel: UpscaylModel?,
         @Parameter(description = "Upscayl倍数") @Part upscaylScale: UpscaylScale?,
         @Parameter(description = "图片分辨率") @Part imageSize: ImageSize?,
+        @Parameter(description = "媒体分辨率") @Part mediaResolution: MediaResolution?,
         request: HttpRequest<*>,
     ): Res<Unit> {
         service.submitGenerateTask(
-            GenRequest(
-                text = text,
-                image = completedFileUpload?.bytes,
-                candidateCount = candidateCount ?: 1,
-                aspectRatio = aspectRatio ?: AspectRatio.R1_1,
-                system = system,
-                temperature = temperature ?: 0.5f,
-                maxOutputTokens = maxOutputTokens ?: 32768,
-                topP = topP ?: 1f,
-                format = format ?: ImageFormat.PNG,
-                upscaylModel = upscaylModel ?: UpscaylModel.HIGH_FIDELITY_4X,
-                upscaylScale = upscaylScale ?: UpscaylScale.X1,
-                imageSize = imageSize ?: ImageSize.X1
+            buildGenRequest(
+                text,
+                completedFileUpload,
+                candidateCount,
+                aspectRatio,
+                system,
+                temperature,
+                maxOutputTokens,
+                topP,
+                format,
+                upscaylModel,
+                upscaylScale,
+                imageSize,
+                mediaResolution
             ),
             request
         )
         return Res.success()
     }
+
+    private fun buildGenRequest(
+        text: String,
+        completedFileUpload: CompletedFileUpload?,
+        candidateCount: Int?,
+        aspectRatio: AspectRatio?,
+        system: String?,
+        temperature: Float?,
+        maxOutputTokens: Int?,
+        topP: Float?,
+        format: ImageFormat?,
+        upscaylModel: UpscaylModel?,
+        upscaylScale: UpscaylScale?,
+        imageSize: ImageSize?,
+        mediaResolution: MediaResolution?,
+    ): GenRequest = GenRequest(
+        text = text,
+        image = completedFileUpload?.bytes,
+        candidateCount = candidateCount ?: 1,
+        aspectRatio = aspectRatio ?: AspectRatio.R1_1,
+        system = system,
+        temperature = temperature ?: 0.5f,
+        maxOutputTokens = maxOutputTokens ?: 32768,
+        topP = topP ?: 1f,
+        format = format ?: ImageFormat.PNG,
+        upscaylModel = upscaylModel ?: UpscaylModel.HIGH_FIDELITY_4X,
+        upscaylScale = upscaylScale ?: UpscaylScale.X1,
+        imageSize = imageSize ?: ImageSize.X1,
+        mediaResolution = mediaResolution ?: MediaResolution.AUTO
+    )
 
     @Secured(SecurityRule.IS_AUTHENTICATED)
     @Version("v1")

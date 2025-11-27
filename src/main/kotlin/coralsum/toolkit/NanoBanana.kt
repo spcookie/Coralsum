@@ -9,21 +9,22 @@ import java.io.ByteArrayInputStream
 import java.io.Closeable
 import javax.imageio.ImageIO
 import kotlin.jvm.optionals.getOrElse
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.DurationUnit
 
 class NanoBanana(private val apiKey: String) : Closeable {
 
     private var client = Client.builder()
         .httpOptions(
             HttpOptions.builder()
-//                .baseUrl(String.format("https://%s-aiplatform.googleapis.com", "us-central1"))
+                .baseUrl(String.format("https://%s-aiplatform.googleapis.com", "us-central1"))
 //                .baseUrl("https://aiplatform.googleapis.com")
-                .apiVersion("v1")
+//                .apiVersion("v1")
+                .timeout(5.minutes.toInt(DurationUnit.MILLISECONDS))
                 .build()
         )
-        .vertexAI(true)
+//        .vertexAI(true)
         .apiKey(apiKey)
-//        .project("1046708816451")
-//        .location("global")
         .build()
 
     fun gen(
@@ -35,6 +36,7 @@ class NanoBanana(private val apiKey: String) : Closeable {
         maxOutputTokens: Int = 32768,
         topP: Float = 1f,
         imageSize: String = "1K",
+        mediaResolution: String = "AUTO",
     ): Pair<Pair<String?, BufferedImage?>, GenerateContentResponseUsageMetadata> {
         val contentConfig = GenerateContentConfig.builder()
             .responseModalities("TEXT", "IMAGE")
@@ -50,8 +52,24 @@ class NanoBanana(private val apiKey: String) : Closeable {
                             .build()
                     )
                 }
+                when (mediaResolution) {
+                    "AUTO" -> {
+                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_UNSPECIFIED)
+                    }
+
+                    "LOW" -> {
+                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_LOW)
+                    }
+
+                    "MEDIUM" -> {
+                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_MEDIUM)
+                    }
+
+                    "HIGH" -> {
+                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_HIGH)
+                    }
+                }
             }
-            .mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_HIGH)
             .temperature(temperature)
             .topP(topP)
             .maxOutputTokens(maxOutputTokens)
@@ -67,7 +85,7 @@ class NanoBanana(private val apiKey: String) : Closeable {
             )
             .build()
         val response = client.models.generateContent(
-            "gemini-3-pro-image-preview",
+            "gemini-2.5-flash-image",
             Content.builder()
                 .parts(
                     buildList {

@@ -21,7 +21,9 @@
             <div>永久积分：{{ user.permanentPoints }}</div>
           </div>
         </n-tooltip>
-        <n-tag :color="tierTagStyle" size="small">{{ user.tier }}</n-tag>
+        <n-tag :color="tierTagStyle" class="inline-flex items-center justify-center leading-none" size="small">
+          {{ user.tier }}
+        </n-tag>
       </div>
       <div class="flex items-center gap-2">
         <n-button circle class="sm:hidden" quaternary size="small" @click="user.requireProfile()">
@@ -51,7 +53,9 @@
         <Icon class="text-yellow-500" icon="material-symbols:bolt-rounded"/>
         <span>{{ user.points }}</span>
       </div>
-      <n-tag :color="tierTagStyle" size="small">{{ user.tier }}</n-tag>
+      <n-tag :color="tierTagStyle" class="inline-flex items-center justify-center leading-none" size="small">
+        {{ user.tier }}
+      </n-tag>
     </div>
   </div>
   <n-modal v-model:show="user.showProfileModal" :style="{ width: '520px', maxWidth: '92vw' }" preset="card"
@@ -276,8 +280,7 @@ async function saveProfile() {
     }
 
     if (doName) {
-      await updateProfileName(user.email, newName)
-      const latest = await refreshUserInfoByEmail()
+      const latest = await updateProfileName(newName)
       user.setProfile({...latest})
     }
 

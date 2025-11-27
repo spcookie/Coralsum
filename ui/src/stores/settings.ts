@@ -4,17 +4,19 @@ export type AspectRatio = 'auto' | '1:1' | '2:3' | '3:2' | '3:4' | '4:3' | '9:16
 export type ResolutionScale = '1x' | '2x' | '3x' | '4x'
 export type OutputFormat = 'PNG' | 'JPG'
 export type ImageSize = '1K' | '2K' | '4K'
+export type MediaResolution = 'auto' | 'low' | 'medium' | 'high'
 
 export const useSettingsStore = defineStore('settings', {
     state: () => ({
         candidateRadio: 1 as 1 | 2 | 3 | 4,
         aspectRatio: 'auto' as AspectRatio,
         candidateSlider: 0,
-        topP: 1.0,
-        temperature: 0.7,
+        topP: 0.95,
+        temperature: 1.0,
         resolution: '1x' as ResolutionScale,
         outputFormat: 'PNG' as OutputFormat,
         imageSize: '1K' as ImageSize,
+        mediaResolution: 'auto' as MediaResolution,
         darkMode: false
     }),
     actions: {
@@ -25,11 +27,12 @@ export const useSettingsStore = defineStore('settings', {
             this.candidateRadio = 1
             this.aspectRatio = 'auto'
             this.candidateSlider = 0
-            this.topP = 1.0
-            this.temperature = 0.7
+            this.topP = 0.95
+            this.temperature = 1.0
             this.resolution = '1x'
             this.outputFormat = 'PNG'
             this.imageSize = '1K'
+            this.mediaResolution = 'auto'
         }
     }
 })

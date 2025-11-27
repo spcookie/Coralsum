@@ -31,7 +31,7 @@
     </div>
     <div v-if="loading" class="flex flex-wrap justify-center gap-4">
       <div v-for="i in settings.candidateRadio" :key="i"
-           class="rounded overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[300px] md:w-[360px] lg:w-[420px]">
+           class="rounded overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[300px] md:w-[380px] lg:w-[480px] xl:w-[560px]">
         <div :style="skeletonAspectStyle" class="w-full">
           <div
               class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
@@ -40,7 +40,7 @@
     </div>
     <div v-if="!loading && images.length > 0" class="flex flex-wrap justify-center gap-4">
       <div v-for="(img, i) in images" :key="i"
-           class="rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[300px] md:w-[360px] lg:w-[420px] relative">
+           class="rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[300px] md:w-[380px] lg:w-[480px] xl:w-[560px] relative">
         <div v-if="!loadedSet.has(i)" :style="skeletonAspectStyle" class="w-full">
           <div
               class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>

@@ -81,20 +81,24 @@ class UserPointsServiceImpl(
         val cost = COEFFICIENT * EXCHANGE_RATE *
                 (event.inputTokens.toBigDecimal() * INPUT_TOKEN_UNIT
                         + event.outputTokens.toBigDecimal() * OUTPUT_TOKEN_UNIT
-                        + SCALE_UNIT * (event.scale - 1).toBigDecimal()
+                        + SCALE_UNIT * event.scale.toBigDecimal()
                         + SIZE_UNIT * event.imageSize.toBigDecimal() / 1024.toBigDecimal() / 1024.toBigDecimal())
+        if (cost <= 0.toBigDecimal()) {
+            log.error("Invalid cost: $cost")
+            return
+        }
         runBlocking {
             try {
                 val openUser = openUserRepository.findByUid(event.uid)!!
                 val userPoints = getOrCreateByOpenUserId(openUser.id!!)
 
                 if (userPoints.subscribePoints >= cost) {
-                    userPoints.subscribePoints = userPoints.subscribePoints - cost
+                    userPoints.subscribePoints -= cost
                     userPointsRepository.update(userPoints)
                 } else {
                     userPoints.subscribePoints = 0.toBigDecimal()
                     val remaining = cost - userPoints.subscribePoints
-                    userPoints.permanentPoints = userPoints.permanentPoints - remaining
+                    userPoints.permanentPoints -= remaining
                     userPointsRepository.update(userPoints)
                 }
             } catch (e: Exception) {

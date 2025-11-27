@@ -35,4 +35,15 @@ class WebUserServiceImpl(
             tier = userPoints?.tier ?: MembershipTier.FREE
         )
     }
+
+    override suspend fun updateNickName(uid: String, nickName: String): Boolean {
+        val openUser = openUserRepository.findByUid(uid) ?: return false
+        val outletWeb =
+            outletUserRepository.findByOpenUserIdAndUserSource(openUser.id!!, UserSource.WEB) ?: return false
+        val sanitized = nickName.trim()
+        if (sanitized.isEmpty()) return false
+        val updated = outletWeb.copy(nickName = sanitized)
+        outletUserRepository.save(updated)
+        return true
+    }
 }

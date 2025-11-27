@@ -13,8 +13,8 @@
           </div>
         </n-tooltip>
       </div>
-      <n-input v-model:value="prompt" :autosize="{ minRows: 6, maxRows: 12 }"
-               placeholder="请输入提示词（必填）：描述主体、风格、构图与色调"
+      <n-input v-model:value="prompt" :autosize="{ minRows: 6, maxRows: 12 }" :disabled="generating"
+               placeholder="用文字描述你想要的图像：主体、风格、构图、色调"
                type="textarea"/>
     </div>
     <n-collapse :default-expanded-names="[]">
@@ -32,7 +32,7 @@
             </n-tooltip>
           </div>
         </template>
-        <n-upload :default-file-list="uploadList" multiple @change="onUploadChange">
+        <n-upload :default-file-list="uploadList" :disabled="generating" multiple @change="onUploadChange">
           <n-upload-dragger @paste.prevent="handlePaste">
             <div
                 class="flex flex-col items-center justify-center py-10 border border-dashed rounded-xl border-neutral-300 dark:border-neutral-700 text-neutral-500 bg-neutral-50/60 dark:bg-neutral-900/30">
@@ -69,13 +69,13 @@
             </n-tooltip>
           </div>
         </template>
-        <n-input v-model:value="systemPrompt" :autosize="{ minRows: 4, maxRows: 10 }"
-                 placeholder="系统提示（可选）：约束整体风格、行为与安全策略"
+        <n-input v-model:value="systemPrompt" :autosize="{ minRows: 4, maxRows: 10 }" :disabled="generating"
+                 placeholder="为模型设定整体规则与偏好：风格、约束、安全"
                  type="textarea"/>
       </n-collapse-item>
     </n-collapse>
     <div class="grid grid-cols-2 gap-3">
-      <n-button class="w-full justify-center" tertiary type="warning" @click="onReset">
+      <n-button :disabled="generating" class="w-full justify-center" tertiary type="warning" @click="onReset">
         <div class="flex items-center gap-2">
           <Icon icon="mdi:reload"/>
           <span>重置</span>
@@ -83,7 +83,7 @@
       </n-button>
       <n-button :disabled="generating || promptEmpty" class="w-full justify-center" type="primary" @click="onGenerate">
         <div class="flex items-center gap-2">
-          <Icon :class="generating ? 'animate-spin' : ''" :icon="generating ? 'mdi:loading' : 'mdi:magic-staff'"/>
+          <Icon :class="generating ? 'animate-spin' : ''" :icon="generating ? 'mdi:loading' : 'ph:sparkle'"/>
           <span>生成</span>
         </div>
       </n-button>
@@ -99,7 +99,7 @@
         </n-tooltip>
       </div>
       <div class="segmented radio-center">
-        <n-radio-group v-model:value="settings.candidateRadio">
+        <n-radio-group v-model:value="settings.candidateRadio" :disabled="generating">
           <n-radio-button :value="1">1</n-radio-button>
           <n-radio-button :value="2">2</n-radio-button>
           <n-radio-button :value="3">3</n-radio-button>
@@ -107,7 +107,23 @@
         </n-radio-group>
       </div>
     </div>
-    <div class="space-y-2">
+    <n-collapse :default-expanded-names="[]">
+      <n-collapse-item name="advanced">
+        <template #header>
+          <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
+            <span>高级配置</span>
+            <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
+              <template #trigger>
+                <Icon class="text-neutral-400" icon="ph:info"/>
+              </template>
+              <div class="text-xs text-white">
+                折叠以管理宽高比、温度、媒体分辨率、思考等级、图片分辨率、核采样、输出格式与超分辨率。
+              </div>
+            </n-tooltip>
+          </div>
+        </template>
+        <div class="space-y-6">
+          <div class="space-y-2">
       <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
         <span>图片宽高比</span>
         <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
@@ -120,130 +136,179 @@
         </n-tooltip>
       </div>
       <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
-        <n-button :type="settings.aspectRatio==='auto'?'primary':'default'" class="w-full" size="small"
+        <n-button :disabled="generating" :type="settings.aspectRatio==='auto'?'primary':'default'" class="w-full"
+                  size="small"
                   @click="settings.aspectRatio='auto'">自动
         </n-button>
-        <n-button :type="settings.aspectRatio==='1:1'?'primary':'default'" class="w-full" size="small"
+        <n-button :disabled="generating" :type="settings.aspectRatio==='1:1'?'primary':'default'" class="w-full"
+                  size="small"
                   @click="settings.aspectRatio='1:1'">1:1
         </n-button>
-        <n-button :type="settings.aspectRatio==='2:3'?'primary':'default'" class="w-full" size="small"
+        <n-button :disabled="generating" :type="settings.aspectRatio==='2:3'?'primary':'default'" class="w-full"
+                  size="small"
                   @click="settings.aspectRatio='2:3'">2:3
         </n-button>
-        <n-button :type="settings.aspectRatio==='3:2'?'primary':'default'" class="w-full" size="small"
+        <n-button :disabled="generating" :type="settings.aspectRatio==='3:2'?'primary':'default'" class="w-full"
+                  size="small"
                   @click="settings.aspectRatio='3:2'">3:2
         </n-button>
-        <n-button :type="settings.aspectRatio==='3:4'?'primary':'default'" class="w-full" size="small"
+        <n-button :disabled="generating" :type="settings.aspectRatio==='3:4'?'primary':'default'" class="w-full"
+                  size="small"
                   @click="settings.aspectRatio='3:4'">3:4
         </n-button>
-        <n-button :type="settings.aspectRatio==='4:3'?'primary':'default'" class="w-full" size="small"
+        <n-button :disabled="generating" :type="settings.aspectRatio==='4:3'?'primary':'default'" class="w-full"
+                  size="small"
                   @click="settings.aspectRatio='4:3'">4:3
         </n-button>
-        <n-button :type="settings.aspectRatio==='9:16'?'primary':'default'" class="w-full" size="small"
+        <n-button :disabled="generating" :type="settings.aspectRatio==='9:16'?'primary':'default'" class="w-full"
+                  size="small"
                   @click="settings.aspectRatio='9:16'">9:16
         </n-button>
-        <n-button :type="settings.aspectRatio==='16:9'?'primary':'default'" class="w-full" size="small"
+        <n-button :disabled="generating" :type="settings.aspectRatio==='16:9'?'primary':'default'" class="w-full"
+                  size="small"
                   @click="settings.aspectRatio='16:9'">16:9
         </n-button>
-        <n-button :type="settings.aspectRatio==='21:9'?'primary':'default'" class="w-full" size="small"
+        <n-button :disabled="generating" :type="settings.aspectRatio==='21:9'?'primary':'default'" class="w-full"
+                  size="small"
                   @click="settings.aspectRatio='21:9'">21:9
         </n-button>
       </div>
-    </div>
-    <div class="space-y-3">
-      <div>
-        <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center justify-between">
-          <div class="flex items-center gap-1">
-            <span>核采样</span>
-            <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
-              <template #trigger>
-                <Icon class="text-neutral-400" icon="ph:info"/>
-              </template>
-              <div class="text-xs text-white">
-                核采样阈值，控制输出多样性；值越大越丰富，越小越保守。可按需微调以平衡质量与多样性。
+          </div>
+          <div class="space-y-2">
+            <div>
+              <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center justify-between">
+                <div class="flex items-center gap-1">
+                  <span>温度</span>
+                  <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
+                    <template #trigger>
+                      <Icon class="text-neutral-400" icon="ph:info"/>
+                    </template>
+                    <div class="text-xs text-white">温度控制随机性；低温更稳定、可控，高温更有创意、发散。推荐
+                      ≥1.0，以获得更丰富的创意与细节。
+                    </div>
+                  </n-tooltip>
+                </div>
+                <div class="text-[11px] text-neutral-500 dark:text-neutral-300">{{
+                    settings.temperature.toFixed(1)
+                  }}
+                </div>
               </div>
-            </n-tooltip>
+              <n-config-provider :theme="settings.darkMode ? darkTheme : undefined"
+                                 :theme-overrides="sliderThemeOverrides">
+                <n-slider v-model:value="settings.temperature" :disabled="generating" :max="2.0" :min="0.0"
+                          :step="0.1"/>
+              </n-config-provider>
+            </div>
           </div>
-          <div class="text-[11px] text-neutral-500 dark:text-neutral-300">{{ settings.topP.toFixed(1) }}</div>
+          <div class="space-y-2">
+            <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
+              <span>媒体分辨率</span>
+              <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
+                <template #trigger>
+                  <Icon class="text-neutral-400" icon="ph:info"/>
+                </template>
+                <div class="text-xs text-white">
+                  精细控制多模态视觉解析。分辨率越高，越有助于读取小字与识别细节，但会增加令牌消耗与生成时延。
+                </div>
+              </n-tooltip>
+            </div>
+            <div class="segmented radio-center">
+              <n-radio-group v-model:value="settings.mediaResolution" :disabled="generating">
+                <n-radio-button value="auto">自动</n-radio-button>
+                <n-radio-button value="low">低</n-radio-button>
+                <n-radio-button value="medium">中</n-radio-button>
+                <n-radio-button value="high">高</n-radio-button>
+              </n-radio-group>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
+              <span>图片分辨率</span>
+              <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
+                <template #trigger>
+                  <Icon class="text-neutral-400" icon="ph:info"/>
+                </template>
+                <div class="text-xs text-white">选择目标输出的基础分辨率尺寸，数值越大越清晰，耗时与消耗越高。</div>
+              </n-tooltip>
+            </div>
+            <div class="segmented radio-center">
+              <n-radio-group v-model:value="settings.imageSize" :disabled="generating">
+                <n-radio-button value="1K">1K</n-radio-button>
+                <n-radio-button value="2K">2K</n-radio-button>
+                <n-radio-button value="4K">4K</n-radio-button>
+              </n-radio-group>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <div>
+              <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center justify-between">
+                <div class="flex items-center gap-1">
+                  <span>核采样</span>
+                  <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
+                    <template #trigger>
+                      <Icon class="text-neutral-400" icon="ph:info"/>
+                    </template>
+                    <div class="text-xs text-white">
+                      核采样阈值，控制输出多样性；值越大越丰富，越小越保守。可按需微调以平衡质量与多样性。
+                    </div>
+                  </n-tooltip>
+                </div>
+                <div class="text-[11px] text-neutral-500 dark:text-neutral-300">{{ settings.topP.toFixed(2) }}</div>
+              </div>
+              <n-config-provider :theme="settings.darkMode ? darkTheme : undefined"
+                                 :theme-overrides="sliderThemeOverrides">
+                <n-slider v-model:value="settings.topP" :disabled="generating" :max="1.0" :min="0.0" :step="0.05"/>
+              </n-config-provider>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
+              <span>输出格式</span>
+              <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
+                <template #trigger>
+                  <Icon class="text-neutral-400" icon="ph:info"/>
+                </template>
+                <div class="text-xs text-white">选择最终图片编码格式：PNG（无损、支持透明）、JPG（体积更小）。</div>
+              </n-tooltip>
+            </div>
+            <div class="segmented radio-center">
+              <n-radio-group v-model:value="settings.outputFormat" :disabled="generating">
+                <n-radio-button value="PNG">PNG</n-radio-button>
+                <n-radio-button value="JPG">JPG</n-radio-button>
+              </n-radio-group>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
+              <span>超分辨率</span>
+              <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
+                <template #trigger>
+                  <Icon class="text-neutral-400" icon="ph:info"/>
+                </template>
+                <div class="text-xs text-white">使用 AI
+                  对图像进行超分与细节重建，使画面更清晰锐利；倍率越高耗时与消耗越大。
+                </div>
+              </n-tooltip>
+              <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
+                <template #trigger>
+                  <Icon class="text-amber-500" icon="ph:warning"/>
+                </template>
+                <div class="text-xs text-white">高倍率将显著增加计算开销与等待时长，建议按需选择并优先尝试较低倍率。</div>
+              </n-tooltip>
+            </div>
+            <div class="segmented radio-center">
+              <n-radio-group v-model:value="settings.resolution" :disabled="generating">
+                <n-radio-button value="1x">1x</n-radio-button>
+                <n-radio-button value="2x">2x</n-radio-button>
+                <n-radio-button value="3x">3x</n-radio-button>
+                <n-radio-button value="4x">4x</n-radio-button>
+              </n-radio-group>
+            </div>
+          </div>
         </div>
-        <n-config-provider :theme="settings.darkMode ? darkTheme : undefined" :theme-overrides="sliderThemeOverrides">
-          <n-slider v-model:value="settings.topP" :max="1.0" :min="0.0" :step="0.1"/>
-        </n-config-provider>
-      </div>
-      <div>
-        <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center justify-between">
-          <div class="flex items-center gap-1">
-            <span>温度</span>
-            <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
-              <template #trigger>
-                <Icon class="text-neutral-400" icon="ph:info"/>
-              </template>
-              <div class="text-xs text-white">温度控制随机性；低温更稳定、可控，高温更有创意、发散。推荐 0.6–0.9。</div>
-            </n-tooltip>
-          </div>
-          <div class="text-[11px] text-neutral-500 dark:text-neutral-300">{{ settings.temperature.toFixed(1) }}</div>
-        </div>
-        <n-config-provider :theme="settings.darkMode ? darkTheme : undefined" :theme-overrides="sliderThemeOverrides">
-          <n-slider v-model:value="settings.temperature" :max="2.0" :min="0.0" :step="0.1"/>
-        </n-config-provider>
-      </div>
-    </div>
-    <div class="space-y-2">
-      <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
-        <span>输出格式</span>
-        <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
-          <template #trigger>
-            <Icon class="text-neutral-400" icon="ph:info"/>
-          </template>
-          <div class="text-xs text-white">
-            选择最终图片编码格式：PNG（无损、支持透明）、JPG（体积更小）、WEBP（高压缩比与较好质量）。
-          </div>
-        </n-tooltip>
-      </div>
-      <div class="segmented radio-center">
-        <n-radio-group v-model:value="settings.outputFormat">
-          <n-radio-button value="PNG">PNG</n-radio-button>
-          <n-radio-button value="JPG">JPG</n-radio-button>
-        </n-radio-group>
-      </div>
-    </div>
-    <div class="space-y-2">
-      <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
-        <span>图片分辨率</span>
-        <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
-          <template #trigger>
-            <Icon class="text-neutral-400" icon="ph:info"/>
-          </template>
-          <div class="text-xs text-white">选择目标输出的基础分辨率尺寸，数值越大越清晰，耗时与消耗越高。</div>
-        </n-tooltip>
-      </div>
-      <div class="segmented radio-center">
-        <n-radio-group v-model:value="settings.imageSize">
-          <n-radio-button value="1K">1K</n-radio-button>
-          <n-radio-button value="2K">2K</n-radio-button>
-          <n-radio-button value="4K">4K</n-radio-button>
-        </n-radio-group>
-      </div>
-    </div>
-    <div class="space-y-2">
-      <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
-        <span>超分辨率</span>
-        <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
-          <template #trigger>
-            <Icon class="text-neutral-400" icon="ph:info"/>
-          </template>
-          <div class="text-xs text-white">使用 AI 对图像进行超分与细节重建，使画面更清晰锐利；倍率越高耗时与消耗越大。
-          </div>
-        </n-tooltip>
-      </div>
-      <div class="segmented radio-center">
-        <n-radio-group v-model:value="settings.resolution">
-          <n-radio-button value="1x">1x</n-radio-button>
-          <n-radio-button value="2x">2x</n-radio-button>
-          <n-radio-button value="3x">3x</n-radio-button>
-          <n-radio-button value="4x">4x</n-radio-button>
-        </n-radio-group>
-      </div>
-    </div>
+      </n-collapse-item>
+    </n-collapse>
     <n-modal v-model:show="confirmReset" content="是否重置所有配置？" negative-text="取消" positive-text="确认"
              preset="dialog" title="确认重置" @positive-click="doReset"/>
   </div>
@@ -291,6 +356,7 @@ const confirmReset = ref(false)
 const selectedIndex = ref<number | null>(null)
 
 function onUploadChange(list: any) {
+  if (generating.value) return
   const fl = list?.fileList ?? []
   for (const it of fl) {
     if (!it.url && it.file) it.url = URL.createObjectURL(it.file)
@@ -327,6 +393,7 @@ function doReset() {
 }
 
 function handlePaste(e: ClipboardEvent) {
+  if (generating.value) return
   const items = e.clipboardData?.items || []
   const pastedFiles: File[] = []
   for (let i = 0; i < items.length; i++) {

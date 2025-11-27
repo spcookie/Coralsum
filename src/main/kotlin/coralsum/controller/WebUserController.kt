@@ -1,10 +1,13 @@
 package coralsum.controller
 
 import coralsum.common.dto.Res
+import coralsum.common.request.UpdateProfileRequest
 import coralsum.common.response.ProfileResponse
 import coralsum.service.IWebUserService
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
+import io.micronaut.http.annotation.Put
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.rules.SecurityRule
@@ -29,6 +32,21 @@ class WebUserController(
     )
     suspend fun getProfile(authentication: Authentication): Res<ProfileResponse> {
         val uid = authentication.name ?: return Res.fail("未登录")
+        val resp = webUserService.profile(uid) ?: return Res.fail("用户不存在")
+        return Res.success(resp)
+    }
+
+    @Put("/profile")
+    @Operation(summary = "更新个人档案", description = "修改当前认证用户的档案信息（仅昵称）")
+    @ApiResponse(
+        responseCode = "200", description = "更新成功", content = [
+            Content(schema = Schema(implementation = ProfileResponse::class))
+        ]
+    )
+    suspend fun updateProfile(authentication: Authentication, @Body req: UpdateProfileRequest): Res<ProfileResponse> {
+        val uid = authentication.name ?: return Res.fail("未登录")
+        val ok = webUserService.updateNickName(uid, req.nickName)
+        if (!ok) return Res.fail("更新失败")
         val resp = webUserService.profile(uid) ?: return Res.fail("用户不存在")
         return Res.success(resp)
     }

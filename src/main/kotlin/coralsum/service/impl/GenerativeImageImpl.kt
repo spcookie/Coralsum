@@ -3,9 +3,10 @@ package coralsum.service.impl
 import coralsum.cache.GenerateTaskCache
 import coralsum.common.enums.GenTaskStatue
 import coralsum.common.enums.ImageSize
+import coralsum.common.enums.MediaResolution
 import coralsum.common.event.GenerativeImageCostEvent
 import coralsum.config.CloudflareConfig
-import coralsum.config.NanoConfig
+import coralsum.config.GoogleConfig
 import coralsum.entity.GenerateImageReqRecord
 import coralsum.entity.RetrievalImageReqRecord
 import coralsum.excption.BusinessException
@@ -62,7 +63,7 @@ import kotlin.jvm.optionals.getOrElse
 @Singleton
 class GenerativeImageImpl(
     val store: AwsS3Operations,
-    val nanoConfig: NanoConfig,
+    val googleConfig: GoogleConfig,
     val cloudflareConfig: CloudflareConfig,
     val securityService: SecurityService,
     val jsonMapper: JsonMapper,
@@ -78,27 +79,7 @@ class GenerativeImageImpl(
 
     private lateinit var upscayl: Upscayl
 
-    private val gemini: ChatModel = GoogleAiGeminiChatModel.builder()
-        .apiKey(System.getenv("GEMINI_AI_KEY"))
-        .supportedCapabilities(Capability.RESPONSE_FORMAT_JSON_SCHEMA)
-        .modelName("gemini-2.5-flash-lite")
-        .logRequestsAndResponses(true)
-        .httpClientBuilder(
-            JdkHttpClientBuilder().httpClientBuilder(
-                HttpClient.newBuilder()
-                    .apply {
-                        val host = System.getProperty("http.proxyHost")
-                        val port = System.getProperty("http.proxyPort")?.toInt()
-                        if (host != null && port != null) {
-                            proxy(
-                                ProxySelector.of(InetSocketAddress(host, port))
-                            )
-                        }
-                    }
-            )
-        )
-        .maxRetries(2)
-        .build()
+    private lateinit var gemini: ChatModel
 
     companion object {
         @JvmStatic
@@ -121,8 +102,42 @@ class GenerativeImageImpl(
 
     @PostConstruct
     fun init() {
-        nano = NanoBanana(nanoConfig.apiKey)
-        upscayl = Upscayl(Path(System.getProperty("user.dir")).resolve("upscayl-bin").toString())
+        nano = NanoBanana(googleConfig.vertxApiKey)
+        val userDir = System.getProperty("user.dir")
+        val libsDir = Path(userDir).resolve("libs")
+        val osName = System.getProperty("os.name").lowercase()
+        val candidates = listOf(
+            libsDir.resolve("win").resolve("upscayl-bin.exe"),
+            libsDir.resolve("mac").resolve("upscayl-bin"),
+            Path(userDir).resolve("upscayl-bin"),
+            Path(userDir).resolve("upscayl-bin.exe")
+        )
+        val executable = candidates.firstOrNull { it.toFile().exists() } ?: libsDir.resolve(
+            if (osName.contains("win")) "win/upscayl-bin.exe" else "mac/upscayl-bin"
+        )
+        upscayl = Upscayl(executable.toAbsolutePath().toString())
+
+        gemini = GoogleAiGeminiChatModel.builder()
+            .apiKey(googleConfig.geminiApiKey)
+            .supportedCapabilities(Capability.RESPONSE_FORMAT_JSON_SCHEMA)
+            .modelName("gemini-2.5-flash-lite")
+            .logRequestsAndResponses(true)
+            .httpClientBuilder(
+                JdkHttpClientBuilder().httpClientBuilder(
+                    HttpClient.newBuilder()
+                        .apply {
+                            val host = System.getProperty("http.proxyHost")
+                            val port = System.getProperty("http.proxyPort")?.toInt()
+                            if (host != null && port != null) {
+                                proxy(
+                                    ProxySelector.of(InetSocketAddress(host, port))
+                                )
+                            }
+                        }
+                )
+            )
+            .maxRetries(2)
+            .build()
     }
 
     @PreDestroy
@@ -340,14 +355,14 @@ class GenerativeImageImpl(
             genRequest.temperature,
             genRequest.maxOutputTokens,
             genRequest.topP,
-            genRequest.imageSize?.size ?: ImageSize.X1.size
+            genRequest.imageSize?.size ?: ImageSize.X1.size,
+            genRequest.mediaResolution?.name ?: MediaResolution.AUTO.name
         )
         val usageMetadata = pair.second
         synchronized(imageReqRecord) {
-            imageReqRecord.inputTokens = imageReqRecord.inputTokens + usageMetadata.promptTokenCount().getOrElse { 0 }
-            imageReqRecord.outputTokens =
-                imageReqRecord.outputTokens + usageMetadata.candidatesTokenCount().getOrElse { 0 }
-            imageReqRecord.retryCount = imageReqRecord.retryCount + 1
+            imageReqRecord.inputTokens += usageMetadata.promptTokenCount().getOrElse { 0 }
+            imageReqRecord.outputTokens += usageMetadata.candidatesTokenCount().getOrElse { 0 }
+            imageReqRecord.retryCount += 1
         }
         val generateResult = pair.first
         val retry = generateResult.first == null && generateResult.second == null

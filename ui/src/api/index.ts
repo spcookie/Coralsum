@@ -13,6 +13,7 @@ export interface GenerateRequest {
         resolution: '1x' | '2x' | '4x'
         outputFormat: 'PNG' | 'JPG'
         imageSize: '1K' | '2K' | '4K'
+        mediaResolution: 'auto' | 'low' | 'medium' | 'high'
     }
 }
 
@@ -50,9 +51,17 @@ export async function refreshUserInfoByEmail() {
     return await getProfile()
 }
 
-export async function updateProfileName(email: string, name: string) {
-    const {data} = await http.post('/user/update-name', {email, name})
-    return data
+export async function updateProfileName(name: string) {
+    const headers: any = {'X-API-Version': 'v1'}
+    const {data} = await http.put('/web/profile', {nick_name: name}, {headers})
+    return {
+        name: data.nick_name,
+        email: data.source_code,
+        tier: data.tier,
+        permanentPoints: Number(data.permanent_points || 0),
+        subscribePoints: Number(data.subscribe_points || 0),
+        points: Number(data.permanent_points || 0) + Number(data.subscribe_points || 0),
+    }
 }
 
 export async function changePassword(email: string, oldPassword: string, newPassword: string, code: string) {
@@ -90,6 +99,10 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
     const sizeMap: Record<string, string> = {'1K': 'X1', '2K': 'X2', '4K': 'X4'}
     const sz = sizeMap[req.config.imageSize]
     if (sz) fd.append('imageSize', sz)
+    const mrMap: Record<string, string> = {auto: 'AUTO', low: 'LOW', medium: 'MEDIUM', high: 'HIGH'}
+    const mr = mrMap[req.config.mediaResolution]
+    if (mr) fd.append('mediaResolution', mr)
+    
     const user = useUserStore()
     const headers: any = {'X-API-Version': 'v1'}
     if (user?.token) headers.Authorization = `Bearer ${user.token}`

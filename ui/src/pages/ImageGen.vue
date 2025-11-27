@@ -16,6 +16,7 @@ import {useSettingsStore} from '@/stores/settings'
 import {assessIntent, generate, getGenerateTaskResult, refreshUserInfoByEmail} from '@/api'
 import {useUserStore} from '@/stores/user'
 import {useMessage} from 'naive-ui'
+import {addHistoryFromResult} from '@/utils/indexedDb'
 
 const settings = useSettingsStore()
 const user = useUserStore()
@@ -49,12 +50,33 @@ async function doGenerate(payload: { prompt: string; systemPrompt?: string; file
         temperature: settings.temperature,
         resolution: settings.resolution,
         outputFormat: settings.outputFormat,
-        imageSize: settings.imageSize
+        imageSize: settings.imageSize,
+        mediaResolution: settings.mediaResolution
       }
     })
     if (user.email) {
       const u = await refreshUserInfoByEmail()
       user.setProfile({...u, token: user.token})
+    }
+    if (result.value) {
+      try {
+        await addHistoryFromResult(user.email || '', {
+          prompt: payload.prompt,
+          systemPrompt: payload.systemPrompt,
+          config: {
+            candidateRadio: settings.candidateRadio,
+            aspectRatio: settings.aspectRatio,
+            topP: settings.topP,
+            temperature: settings.temperature,
+            resolution: settings.resolution,
+            outputFormat: settings.outputFormat,
+            imageSize: settings.imageSize,
+            mediaResolution: settings.mediaResolution
+          },
+          result: result.value
+        })
+      } catch {
+      }
     }
   } catch (e: any) {
     const msg = e?.message || '服务异常'
@@ -109,6 +131,31 @@ async function pollTaskResultLoop() {
       if (res.status === 'COMPLETED' && res.result) {
         result.value = res.result
         loading.value = false
+        try {
+          const u = await refreshUserInfoByEmail()
+          user.setProfile({...u, token: user.token})
+        } catch {
+        }
+        if (result.value) {
+          try {
+            await addHistoryFromResult(user.email || '', {
+              prompt: '',
+              systemPrompt: undefined,
+              config: {
+                candidateRadio: settings.candidateRadio,
+                aspectRatio: settings.aspectRatio,
+                topP: settings.topP,
+                temperature: settings.temperature,
+                resolution: settings.resolution,
+                outputFormat: settings.outputFormat,
+                imageSize: settings.imageSize,
+                mediaResolution: settings.mediaResolution
+              },
+              result: result.value
+            })
+          } catch {
+          }
+        }
         return
       }
       if (res.status === 'FAILED' || res.status === 'FAIL') {

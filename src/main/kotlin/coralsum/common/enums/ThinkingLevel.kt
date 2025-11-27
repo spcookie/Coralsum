@@ -1,0 +1,1 @@
+package coralsum.common.enums

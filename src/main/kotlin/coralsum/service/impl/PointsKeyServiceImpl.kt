@@ -2,6 +2,7 @@ package coralsum.service.impl
 
 import cn.hutool.core.util.RandomUtil
 import com.fasterxml.jackson.databind.ObjectMapper
+import coralsum.common.dto.PageResp
 import coralsum.common.enums.MembershipTier
 import coralsum.common.enums.SubscribeStatus
 import coralsum.common.enums.SubscribeType
@@ -16,6 +17,8 @@ import coralsum.repository.PointsKeyConfigRepository
 import coralsum.repository.PointsKeyRepository
 import coralsum.service.IPointsKeyService
 import coralsum.service.IUserPointsService
+import io.micronaut.data.model.Pageable
+import io.micronaut.data.model.Sort
 import jakarta.inject.Singleton
 import kotlinx.coroutines.flow.toList
 import java.math.BigDecimal
@@ -81,6 +84,43 @@ class PointsKeyServiceImpl(
 
     override suspend fun listKeys(): List<PointsKey> {
         return pointsKeyRepository.findAll().toList()
+    }
+
+    override suspend fun listConfigsPaged(
+        page: Int,
+        size: Int,
+        name: String?,
+        sortBy: String?,
+        order: String?,
+    ): PageResp<PointsKeyConfig> {
+        val p = if (page > 0) page else 1
+        val s = if (size > 0) size else 10
+        val sortProp = when (sortBy?.lowercase()) {
+            "start", "validfrom" -> "validFrom"
+            "end", "validto" -> "validTo"
+            else -> "id"
+        }
+        val dir = if ((order ?: "desc").equals("asc", true)) Sort.Order.Direction.ASC else Sort.Order.Direction.DESC
+        val pageable = Pageable.from(p - 1, s, Sort.of(Sort.Order(sortProp, dir, false)))
+        val pageData = if (!name.isNullOrBlank()) {
+            pointsKeyConfigRepository.findByNameContains(name.trim(), pageable)
+        } else {
+            pointsKeyConfigRepository.findAll(pageable)
+        }
+        return PageResp(items = pageData.content, page = p, size = s, total = pageData.totalSize)
+    }
+
+    override suspend fun listKeysPaged(page: Int, size: Int, key: String?, order: String?): PageResp<PointsKey> {
+        val p = if (page > 0) page else 1
+        val s = if (size > 0) size else 10
+        val dir = if ((order ?: "desc").equals("asc", true)) Sort.Order.Direction.ASC else Sort.Order.Direction.DESC
+        val pageable = Pageable.from(p - 1, s, Sort.of(Sort.Order("usedTime", dir, false)))
+        val pageData = if (!key.isNullOrBlank()) {
+            pointsKeyRepository.findByKeyCodeContains(key.trim(), pageable)
+        } else {
+            pointsKeyRepository.findAll(pageable)
+        }
+        return PageResp(items = pageData.content, page = p, size = s, total = pageData.totalSize)
     }
 
     override suspend fun toggleKeys(req: ToggleKeysReq) {

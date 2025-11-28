@@ -20,19 +20,19 @@
     </n-tooltip>
     <n-tooltip v-if="user.profileReady" placement="right">
       <template #trigger>
-        <n-button circle quaternary @click="openHistory">
-          <Icon class="text-xl" icon="mdi:history"/>
-        </n-button>
-      </template>
-      历史记录
-    </n-tooltip>
-    <n-tooltip v-if="user.profileReady" placement="right">
-      <template #trigger>
         <n-button circle quaternary @click="showRedeem = true">
           <Icon class="text-xl" icon="mdi:key"/>
         </n-button>
       </template>
       兑换密钥
+    </n-tooltip>
+    <n-tooltip v-if="user.profileReady" placement="right">
+      <template #trigger>
+        <n-button circle quaternary @click="openHistory">
+          <Icon class="text-xl" icon="mdi:history"/>
+        </n-button>
+      </template>
+      历史记录
     </n-tooltip>
 
     <n-tooltip v-if="!user.profileReady" placement="right">
@@ -280,8 +280,13 @@ watch(() => showHistory.value, (v) => {
 })
 
 function toggle(id: string) {
-  if (expanded.value.has(id)) expanded.value.delete(id)
-  else expanded.value.add(id)
+  if (expanded.value.has(id)) {
+    expanded.value.delete(id)
+  } else {
+    expanded.value.clear()
+    expanded.value.add(id)
+  }
+  expanded.value = new Set(expanded.value)
 }
 
 function openPreview(src: string) {

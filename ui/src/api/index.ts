@@ -183,8 +183,14 @@ export async function createPointsKeyConfig(payload: {
     return data
 }
 
-export async function listPointsKeyConfigs() {
-    const {data} = await http.get('/ctl/points-keys/configs')
+export async function listPointsKeyConfigs(params?: {
+    page?: number
+    size?: number
+    name?: string
+    sortBy?: 'id' | 'start' | 'end'
+    order?: 'asc' | 'desc'
+}) {
+    const {data} = await http.get('/ctl/points-keys/configs', {params})
     return data
 }
 
@@ -193,8 +199,13 @@ export async function generatePointsKeys(configId: number, count: number) {
     return data
 }
 
-export async function listPointsKeys() {
-    const {data} = await http.get('/ctl/points-keys/keys')
+export async function listPointsKeys(params?: {
+    page?: number
+    size?: number
+    key?: string
+    order?: 'asc' | 'desc'
+}) {
+    const {data} = await http.get('/ctl/points-keys/keys', {params})
     return data
 }
 

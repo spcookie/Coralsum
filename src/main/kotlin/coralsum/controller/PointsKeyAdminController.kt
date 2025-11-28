@@ -6,10 +6,7 @@ import coralsum.common.request.GeneratePointsKeysReq
 import coralsum.common.request.ToggleKeysReq
 import coralsum.repository.OpenUserRepository
 import coralsum.service.IPointsKeyService
-import io.micronaut.http.annotation.Body
-import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Get
-import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.*
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import io.micronaut.security.utils.SecurityService
@@ -38,10 +35,16 @@ class PointsKeyAdminController(
     }
 
     @Get("/configs")
-    suspend fun listConfigs(): Res<Any> {
+    suspend fun listConfigs(
+        @QueryValue(defaultValue = "1") page: Int,
+        @QueryValue(defaultValue = "10") size: Int,
+        @QueryValue(defaultValue = "") name: String?,
+        @QueryValue(defaultValue = "id") sortBy: String?,
+        @QueryValue(defaultValue = "desc") order: String?,
+    ): Res<Any> {
         requireCtl()
-        val list = pointsKeyService.listConfigs()
-        return Res.success(list)
+        val res = pointsKeyService.listConfigsPaged(page, size, name, sortBy, order)
+        return Res.success(res)
     }
 
     @Post("/generate")
@@ -52,10 +55,15 @@ class PointsKeyAdminController(
     }
 
     @Get("/keys")
-    suspend fun listKeys(): Res<Any> {
+    suspend fun listKeys(
+        @QueryValue(defaultValue = "1") page: Int,
+        @QueryValue(defaultValue = "10") size: Int,
+        @QueryValue(defaultValue = "") key: String?,
+        @QueryValue(defaultValue = "desc") order: String?,
+    ): Res<Any> {
         requireCtl()
-        val list = pointsKeyService.listKeys()
-        return Res.success(list)
+        val res = pointsKeyService.listKeysPaged(page, size, key, order)
+        return Res.success(res)
     }
 
     @Post("/toggle")

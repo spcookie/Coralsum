@@ -9,13 +9,15 @@ interface IGenerativeImage {
 
     suspend fun generate(genRequest: GenRequest, request: HttpRequest<*>): GenResult
 
-    suspend fun preview(ref: String, ip: String): String?
+    suspend fun preview(ref: String, ip: String, token: String? = null): String?
 
     suspend fun assessIntent(userMessage: String): IntentAssessment
 
     suspend fun submitGenerateTask(genRequest: GenRequest, request: HttpRequest<*>)
 
     suspend fun getGenerateTaskResult(): GenTaskResult
+
+    suspend fun linkPage(ref: String): LinkPage?
 
 }
 
@@ -93,10 +95,18 @@ data class GenResult(
     @field:Schema(description = "输出tokens") val outputTokens: Int,
     @field:Schema(description = "耗时毫秒") val durationMs: Int,
     @field:Schema(description = "图片链接列表") val images: List<String?>,
+    @field:Schema(description = "分享页面链接列表") val linkImages: List<String?> = emptyList(),
     @field:Schema(description = "可选文本") val text: String? = null,
 )
 
-//@Schema(description = "意图评估")
+@Serdeable
+data class LinkPage(
+    val src: String,
+    val time: String,
+    val user: String,
+)
+
+@Schema(description = "意图评估")
 @Serdeable
 data class IntentAssessment(
     val generateIntent: Boolean,

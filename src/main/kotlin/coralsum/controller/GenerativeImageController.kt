@@ -27,6 +27,10 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.NotEmpty
+import kotlinx.coroutines.reactor.awaitSingle
+import org.reactivestreams.Publisher
+import org.slf4j.LoggerFactory
+import reactor.core.publisher.Flux
 import java.net.URI
 
 @Validated
@@ -37,6 +41,7 @@ class GenerativeImageController(
     val convert: GenerativeConvert,
     val addressResolver: HttpClientAddressResolver,
 ) {
+    private val log = LoggerFactory.getLogger(GenerativeImageController::class.java)
 
     @Secured(SecurityRule.IS_AUTHENTICATED)
     @Version("v1")
@@ -52,7 +57,7 @@ class GenerativeImageController(
     )
     @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
     suspend fun generate(
-        @Parameter(description = "参考图片文件") @Part("image") images: List<CompletedFileUpload>?,
+        @Parameter(description = "参考图片文件") @Part("image") images: Publisher<CompletedFileUpload>?,
         @Parameter(description = "生成文本", required = true) @Part @NotEmpty text: String,
         @Parameter(description = "系统提示") @Part system: String?,
         @Parameter(description = "宽高比") @Part aspectRatio: AspectRatio?,
@@ -67,10 +72,12 @@ class GenerativeImageController(
         @Parameter(description = "媒体分辨率") @Part mediaResolution: MediaResolution?,
         request: HttpRequest<*>,
     ): Res<GenResultResponse> {
+        val imgs = images?.let { Flux.from(it).collectList().awaitSingle() }
+        log.info("接收图片数量: {}", imgs?.size ?: 0)
         val result = service.generate(
             buildGenRequest(
                 text,
-                images,
+                imgs,
                 candidateCount,
                 aspectRatio,
                 system,
@@ -92,9 +99,13 @@ class GenerativeImageController(
     @Version("v1")
     @Get
     @Operation(summary = "预览链接跳转", description = "根据引用标识返回图片URL重定向")
-    suspend fun preview(@QueryValue ref: String, request: HttpRequest<*>): HttpResponse<*> {
+    suspend fun preview(
+        @QueryValue ref: String,
+        @QueryValue("pt") token: String?,
+        request: HttpRequest<*>,
+    ): HttpResponse<*> {
         val ip = addressResolver.resolve(request)
-        val url = service.preview(ref, ip)
+        val url = service.preview(ref, ip, token)
         return if (url == null) {
             HttpResponse.notFound<Any>()
         } else {
@@ -103,13 +114,35 @@ class GenerativeImageController(
         }
     }
 
-    @Secured(SecurityRule.IS_ANONYMOUS)
+    @Secured(SecurityRule.IS_AUTHENTICATED)
+    @Version("v1")
+    @Get("/link")
+    @Produces(MediaType.TEXT_HTML)
+    @Operation(summary = "图片预览页面", description = "根据引用标识返回图片HTML页面")
+    suspend fun link(
+        @QueryValue ref: String,
+        request: HttpRequest<*>,
+    ): HttpResponse<io.micronaut.views.ModelAndView<Map<String, Any>>> {
+        val page =
+            service.linkPage(ref) ?: return HttpResponse.notFound<io.micronaut.views.ModelAndView<Map<String, Any>>>()
+        val mv = io.micronaut.views.ModelAndView(
+            "image-link",
+            mapOf<String, Any>("src" to page.src, "time" to page.time, "user" to page.user)
+        )
+        return HttpResponse.ok(mv)
+    }
+
+    @Secured(SecurityRule.IS_AUTHENTICATED)
     @Version("v1")
     @Get("/bytes")
     @Operation(summary = "预览图片字节", description = "服务端读取并返回图片字节")
-    suspend fun previewBytes(@QueryValue ref: String, request: HttpRequest<*>): HttpResponse<ByteArray> {
+    suspend fun previewBytes(
+        @QueryValue ref: String,
+        @QueryValue("pt") token: String?,
+        request: HttpRequest<*>,
+    ): HttpResponse<ByteArray> {
         val ip = addressResolver.resolve(request)
-        val url = service.preview(ref, ip) ?: return HttpResponse.notFound()
+        val url = service.preview(ref, ip, token) ?: return HttpResponse.notFound()
         val bytes = try {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 java.net.URL(url).openStream().use { it.readBytes() }
@@ -155,7 +188,7 @@ class GenerativeImageController(
     @Operation(summary = "提交生成任务", description = "提交异步图片生成任务")
     @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
     suspend fun submitGenerateTask(
-        @Parameter(description = "参考图片文件") @Part("image") images: List<CompletedFileUpload>?,
+        @Part("image") images: Publisher<CompletedFileUpload>?,
         @Parameter(description = "生成文本", required = true) @Part @NotEmpty text: String,
         @Parameter(description = "系统提示") @Part system: String?,
         @Parameter(description = "宽高比") @Part aspectRatio: AspectRatio?,
@@ -170,10 +203,11 @@ class GenerativeImageController(
         @Parameter(description = "媒体分辨率") @Part mediaResolution: MediaResolution?,
         request: HttpRequest<*>,
     ): Res<Unit> {
+        val imgs = images?.let { Flux.from(it).collectList().awaitSingle() }
         service.submitGenerateTask(
             buildGenRequest(
                 text,
-                images,
+                imgs,
                 candidateCount,
                 aspectRatio,
                 system,

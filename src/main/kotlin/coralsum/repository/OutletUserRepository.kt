@@ -21,4 +21,7 @@ interface OutletUserRepository : CoroutineCrudRepository<OutletUser, Long> {
 
     @Join(value = "openUser")
     suspend fun findByOpenUserIdAndUserSource(openUserId: Long, userSource: UserSource): OutletUser?
+
+    @Join(value = "openUser")
+    suspend fun findAllByNickNameAndUserSource(nickName: String, userSource: UserSource): List<OutletUser>
 }

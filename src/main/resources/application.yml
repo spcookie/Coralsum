@@ -2,8 +2,10 @@ micronaut:
   application:
     name: coralsum
   server:
+    max-request-size: 73400320
     multipart:
-      max-file-size: 10485760 # 50M
+      enabled: true
+      max-file-size: 52428800
     netty:
       access-logger:
         enabled: true
@@ -65,7 +67,7 @@ micronaut:
               jws-algorithm: HS256
       generator:
         access-token:
-          expiration: 3600
+          expiration: 43200
     endpoints:
       login:
         enabled: true
@@ -146,3 +148,5 @@ resilience4j:
     instances:
       callGenerateImage:
         baseConfig: default
+preview:
+  ttlSeconds: 1500

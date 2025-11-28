@@ -9,6 +9,15 @@
       </template>
       用户信息
     </n-tooltip>
+
+    <n-tooltip v-if="user.profileReady && (user.permissions || []).includes('CTL')" placement="right">
+      <template #trigger>
+        <n-button circle quaternary @click="onCtlPage ? goHome() : goCtlKeys()">
+          <Icon :icon="onCtlPage ? 'mdi:image' : 'mdi:key-chain'" class="text-xl"/>
+        </n-button>
+      </template>
+      {{ onCtlPage ? '图片生成' : '密钥管理' }}
+    </n-tooltip>
     <n-tooltip v-if="user.profileReady" placement="right">
       <template #trigger>
         <n-button circle quaternary @click="openHistory">
@@ -154,19 +163,31 @@
 </template>
 
 <script lang="ts" setup>
-import {ref, watch} from 'vue'
+import {computed, ref, watch} from 'vue'
 import {Icon} from '@iconify/vue'
 import {useUserStore} from '@/stores/user'
 import {NButton, NInput, NModal, NSpin, NTooltip, useMessage} from 'naive-ui'
 import {redeemPoints} from '@/api'
 import {deleteHistory, listHistory} from '@/utils/indexedDb'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
+import {useRoute, useRouter} from 'vue-router'
 
 const user = useUserStore()
 const message = useMessage()
+const router = useRouter()
+const route = useRoute()
+const onCtlPage = computed(() => route.name === 'ctl-keys')
 
 function openProfile() {
   user.requireProfile()
+}
+
+function goCtlKeys() {
+  router.push('/ctl/keys')
+}
+
+function goHome() {
+  router.push('/')
 }
 
 const showRedeem = ref(false)

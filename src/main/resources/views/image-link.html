@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1" name="viewport"/>
+    <title>图片预览</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        .container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #0b1020;
+        }
+
+        .wrap {
+            max-width: 92vw;
+            max-height: 92vh;
+        }
+
+        img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="wrap">
+        <img alt="image" th:src="${src}"/>
+        <div style="margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 12px; color: #e5e7eb; font-size: 13px;">
+            <span th:text="${time}"></span>
+            <span>•</span>
+            <span th:text="${user}"></span>
+        </div>
+    </div>
+</div>
+</body>
+</html>

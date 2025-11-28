@@ -41,6 +41,15 @@
     <div v-if="!loading && images.length > 0" class="flex flex-wrap justify-center gap-3">
       <div v-for="(img, i) in images" :key="i"
            class="rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px] relative">
+        <div
+            :style="document.documentElement.classList.contains('dark')
+              ? 'background-color: rgba(59,130,246,0.85); color: #fff; border: 1px solid rgba(0,0,0,0.40)'
+              : 'background-color: rgba(37,99,235,0.90); color: #fff; border: 1px solid rgba(255,255,255,0.70)'
+            "
+            class="img-badge"
+        >
+          {{ i + 1 }}
+        </div>
         <div v-if="!loadedSet.has(i)" :style="skeletonAspectStyle" class="w-full">
           <div
               class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
@@ -53,6 +62,19 @@
             @error="onImgError($event, i)"
             @load="onImgLoad(i)"
         />
+        <div class="absolute inset-x-0 bottom-0">
+          <div class="h-12 bg-gradient-to-t from-black/65 to-transparent flex items-center justify-center">
+            <button
+                class="px-3 py-1.5 rounded-full bg-white/90 dark:bg-white/80 text-neutral-800 shadow-sm border border-white/60 hover:bg-white"
+                title="复制分享链接" @click.stop="onShare(i)">
+              <Icon class="text-[1rem]" icon="ph:share"/>
+            </button>
+          </div>
+          <div v-if="shareIndex === i"
+               class="absolute left-1/2 -translate-x-1/2 -translate-y-2 bottom-12 px-3 py-1.5 rounded bg-neutral-800 text-white text-xs shadow">
+            {{ shareTip }}
+          </div>
+        </div>
       </div>
     </div>
     <div v-else-if="showOverlay"
@@ -76,6 +98,7 @@ export interface Result {
   outputTokens: number
   durationMs: number
   images: string[]
+  linkImages?: string[]
   text?: string
 }
 
@@ -145,6 +168,8 @@ function themedPlaceholderImage(index: number) {
 
 const previewShow = ref(false)
 const previewSrc = ref('')
+const shareIndex = ref<number | null>(null)
+const shareTip = ref('')
 
 function openPreview(src: string) {
   previewSrc.value = src;
@@ -159,6 +184,21 @@ function onImgError(e: Event, i: number) {
 
 function onImgLoad(i: number) {
   loadedSet.value.add(i)
+}
+
+async function onShare(i: number) {
+  const link = props.result?.linkImages?.[i] ?? images.value[i]
+  if (!link) return
+  try {
+    await navigator.clipboard.writeText(link)
+    shareTip.value = '分享链接已复制，可直接发送'
+  } catch {
+    shareTip.value = '复制失败，请手动复制链接'
+  }
+  shareIndex.value = i
+  setTimeout(() => {
+    if (shareIndex.value === i) shareIndex.value = null
+  }, 1600)
 }
 
 watch(images, () => {

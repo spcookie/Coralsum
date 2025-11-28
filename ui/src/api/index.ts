@@ -10,7 +10,7 @@ export interface GenerateRequest {
         aspectRatio: string
         topP: number
         temperature: number
-        resolution: '1x' | '2x' | '4x'
+        resolution: '1x' | '3x' | '2x' | '4x'
         outputFormat: 'PNG' | 'JPG'
         imageSize: '1K' | '2K' | '4K'
         mediaResolution: 'auto' | 'low' | 'medium' | 'high'
@@ -25,8 +25,11 @@ export interface GenerateResponse {
     text?: string
 }
 
-export async function sendEmailCode(email: string): Promise<{ ok: true; code: string }> {
-    const {data} = await http.post('/auth/send-code', {email})
+export async function sendEmailCode(email: string, purpose?: 'REGISTER' | 'RESET'): Promise<{
+    ok: true;
+    code: string
+}> {
+    const {data} = await http.post('/auth/send-code', {email, purpose})
     return data
 }
 
@@ -38,6 +41,8 @@ export async function login(email: string, password: string) {
 export async function getProfile() {
     const {data} = await http.get('/web/profile', {headers: {'X-API-Version': 'v1'}})
     return {
+        uid: data.uid,
+        permissions: Array.isArray(data.permissions) ? data.permissions : [],
         name: data.nick_name,
         email: data.source_code,
         tier: data.tier,
@@ -55,6 +60,8 @@ export async function updateProfileName(name: string) {
     const headers: any = {'X-API-Version': 'v1'}
     const {data} = await http.put('/web/profile', {nick_name: name}, {headers})
     return {
+        uid: data.uid,
+        permissions: Array.isArray(data.permissions) ? data.permissions : [],
         name: data.nick_name,
         email: data.source_code,
         tier: data.tier,
@@ -73,7 +80,7 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
     const fd = new FormData()
     if (Array.isArray(req.inputImages) && req.inputImages.length > 0) {
         for (const f of req.inputImages) {
-            if (f) fd.append('image', f)
+            if (f) fd.append('image', f, (f as any).name || 'image')
         }
     }
     fd.append('text', req.prompt)
@@ -150,10 +157,49 @@ export async function register(email: string, password: string, code: string) {
     return data
 }
 
+export async function resetPassword(email: string, newPassword: string, code: string) {
+    const {data} = await http.post('/auth/reset-password', {email, newPassword, code})
+    return data
+}
+
 // 历史记录模块已移除
 
 export async function redeemPoints(email: string, key: string): Promise<{ pointsAdded: number; points: number }> {
     const {data} = await http.post('/points/redeem', {email, key})
+    return data
+}
+
+// CTL 管理接口
+export async function createPointsKeyConfig(payload: {
+    name: string
+    permanentPoints?: number
+    subscribePoints?: number
+    subscribeType?: string
+    subscribeDurationDays?: number
+    validFrom?: string
+    validTo?: string
+}) {
+    const {data} = await http.post('/ctl/points-keys/config', payload)
+    return data
+}
+
+export async function listPointsKeyConfigs() {
+    const {data} = await http.get('/ctl/points-keys/configs')
+    return data
+}
+
+export async function generatePointsKeys(configId: number, count: number) {
+    const {data} = await http.post('/ctl/points-keys/generate', {configId, count})
+    return data
+}
+
+export async function listPointsKeys() {
+    const {data} = await http.get('/ctl/points-keys/keys')
+    return data
+}
+
+export async function togglePointsKeys(ids: number[], enabled: boolean) {
+    const {data} = await http.post('/ctl/points-keys/toggle', {ids, enabled})
     return data
 }
 

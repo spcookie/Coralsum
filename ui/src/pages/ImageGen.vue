@@ -8,19 +8,18 @@
       <div class="shrink-0 py-2">
         <div class="flex flex-col items-center justify-center text-sm text-neutral-600 dark:text-neutral-300">
           <div class="flex items-center justify-center">
-            <span class="mr-1">Power by</span>
+            <span class="mr-1">Powered by</span>
             <svg aria-hidden="true" class="mx-1 w-5 h-5 text-red-500 animate-heart-bounce" fill="currentColor"
                  viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path
                   d="M12 21l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 4 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.18L12 21z"/>
             </svg>
-            <span class="ml-1 font-medium">Spcookie.</span>
+            <span class="ml-1 font-medium">Vue.js | Micronaut</span>
           </div>
           <div class="mt-1 w-full px-4 text-center break-words text-xs text-neutral-500 dark:text-neutral-400">
-            Copyright © 2025 Spcookie. 本项目开源，采用
+            Copyright © 2025 Spcookie. 项目开源，采用
             <a class="underline" href="https://opensource.org/licenses/MIT" rel="noopener noreferrer" target="_blank">MIT
               许可证</a>。
-            欢迎贡献。
           </div>
         </div>
       </div>

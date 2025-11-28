@@ -23,7 +23,7 @@ class NanoBanana(private val apiKey: String) : Closeable {
                 .timeout(5.minutes.toInt(DurationUnit.MILLISECONDS))
                 .build()
         )
-//        .vertexAI(true)
+        .vertexAI(false)
         .apiKey(apiKey)
         .build()
 
@@ -52,21 +52,23 @@ class NanoBanana(private val apiKey: String) : Closeable {
                             .build()
                     )
                 }
-//                when (mediaResolution) {
-//                    "AUTO" -> {
-//                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_UNSPECIFIED)
-//                    }
+//                if (images != null) {
+//                    when (mediaResolution) {
+//                        "AUTO" -> {
+//                            mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_UNSPECIFIED)
+//                        }
 //
-//                    "LOW" -> {
-//                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_LOW)
-//                    }
+//                        "LOW" -> {
+//                            mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_LOW)
+//                        }
 //
-//                    "MEDIUM" -> {
-//                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_MEDIUM)
-//                    }
+//                        "MEDIUM" -> {
+//                            mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_MEDIUM)
+//                        }
 //
-//                    "HIGH" -> {
-//                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_HIGH)
+//                        "HIGH" -> {
+//                            mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_HIGH)
+//                        }
 //                    }
 //                }
             }

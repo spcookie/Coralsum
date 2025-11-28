@@ -12,6 +12,8 @@ function simpleFingerprint() {
 
 export const useUserStore = defineStore('user', {
     state: () => ({
+        uid: '',
+        permissions: [] as string[],
         name: '',
         points: 0,
         permanentPoints: 0,
@@ -37,6 +39,8 @@ export const useUserStore = defineStore('user', {
             this.points += p
         },
         setProfile(payload: {
+            uid?: string;
+            permissions?: string[];
             email: string;
             name: string;
             points?: number;
@@ -45,6 +49,8 @@ export const useUserStore = defineStore('user', {
             tier: UserTier;
             token?: string
         }) {
+            if (payload.uid) this.uid = payload.uid
+            if (Array.isArray(payload.permissions)) this.permissions = payload.permissions
             this.email = payload.email
             this.name = payload.name
             if (typeof payload.points === 'number') this.points = payload.points

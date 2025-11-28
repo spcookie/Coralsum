@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.micronaut.serde.jackson)
     implementation(libs.micronaut.validation)
     implementation(libs.micronaut.objectstorage.local)
+    implementation("io.micronaut.views:micronaut-views-thymeleaf")
     implementation(libs.resilience4j.consumer)
     implementation(libs.resilience4j.kotlin)
     implementation(libs.resilience4j.ratelimiter)

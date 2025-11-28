@@ -1,5 +1,8 @@
 package coralsum.service.impl
 
+import cn.hutool.core.codec.Base64
+import cn.hutool.crypto.digest.HMac
+import cn.hutool.crypto.digest.HmacAlgorithm
 import coralsum.cache.GenerateTaskCache
 import coralsum.common.enums.GenTaskStatue
 import coralsum.common.enums.ImageSize
@@ -7,11 +10,13 @@ import coralsum.common.enums.MediaResolution
 import coralsum.common.event.GenerativeImageCostEvent
 import coralsum.config.CloudflareConfig
 import coralsum.config.GoogleConfig
+import coralsum.config.PreviewConfig
 import coralsum.entity.GenerateImageReqRecord
 import coralsum.entity.RetrievalImageReqRecord
 import coralsum.excption.BusinessException
 import coralsum.repository.GenerateImageReqRecordRepository
 import coralsum.repository.OpenUserRepository
+import coralsum.repository.OutletUserRepository
 import coralsum.repository.RetrievalImageReqRecordRepository
 import coralsum.service.*
 import coralsum.toolkit.NanoBanana
@@ -59,6 +64,8 @@ import javax.imageio.ImageIO
 import kotlin.io.path.Path
 import kotlin.io.path.createTempDirectory
 import kotlin.jvm.optionals.getOrElse
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.toJavaDuration
 
 @Singleton
 class GenerativeImageImpl(
@@ -74,6 +81,8 @@ class GenerativeImageImpl(
     val applicationEventPublisher: ApplicationEventPublisher<GenerativeImageCostEvent>,
     val userPointsService: IUserPointsService,
     val openUserRepository: OpenUserRepository,
+    val outletUserRepository: OutletUserRepository,
+    val previewConfig: PreviewConfig,
 ) : IGenerativeImage {
 
     private lateinit var nano: NanoBanana
@@ -135,6 +144,7 @@ class GenerativeImageImpl(
                                 )
                             }
                         }
+                        .connectTimeout(1.minutes.toJavaDuration())
                 )
             )
             .maxRetries(2)
@@ -211,11 +221,13 @@ class GenerativeImageImpl(
                 imageReqRecord.durationMs = watch.duration.toMillis()
 
                 val text = pairs.map { it.first }.firstOrNull { !it.isNullOrBlank() } ?: ""
+                val linkImages = refs.map { cloudflareConfig.host + "/api/generative-image/link?ref=" + it }
                 GenResult(
                     inputTokens = imageReqRecord.inputTokens,
                     outputTokens = imageReqRecord.outputTokens,
                     durationMs = imageReqRecord.durationMs.toInt(),
                     images = images,
+                    linkImages = linkImages,
                     text = text
                 )
             } finally {
@@ -296,7 +308,7 @@ class GenerativeImageImpl(
             log.warn("assessIntent fallback due to: ${e.message}")
             IntentAssessment(
                 generateIntent = false,
-                guideMessage = "请描述你想生成或修改的图片，例如：‘生成一张海边日落的照片’或‘把我上传的头像放大到4倍并增强清晰度’。"
+                guideMessage = ""
             )
         }
     }
@@ -382,20 +394,63 @@ class GenerativeImageImpl(
         return generateResult
     }
 
-    override suspend fun preview(ref: String, ip: String): String? {
+    private fun sign(ref: String, uid: String, exp: Long): String {
+        val hmac = HMac(HmacAlgorithm.HmacSHA256, previewConfig.secret.toByteArray())
+        val data = "$ref|$uid|$exp"
+        return Base64.encode(hmac.digest(data))
+    }
+
+    private fun verifyToken(ref: String, token: String?): String? {
+        if (token.isNullOrBlank()) return null
+        val parts = token.split(":")
+        if (parts.size != 3) return null
+        val uid = parts[0]
+        val exp = parts[1].toLongOrNull() ?: return null
+        val sig = parts[2]
+        if (System.currentTimeMillis() > exp) return null
+        val expect = sign(ref, uid, exp)
+        return if (expect == sig) uid else null
+    }
+
+    override suspend fun preview(ref: String, ip: String, token: String?): String? {
+        val tokenUid = verifyToken(ref, token)
+        val uid = if (securityService.authentication.isPresent) securityService.authentication.get().name else null
         val countImageRefBy = retrievalImageReqRecordRepository.countByImageRef(ref)
-        if (countImageRefBy > MAX_PRE_COUNT) {
-            return null
-        }
-        val imageRef = generateImageReqRefRepository.findByImageRef(ref)
-        if (imageRef == null) {
-            return null
+        if (countImageRefBy > MAX_PRE_COUNT) return null
+        val imageRef = generateImageReqRefRepository.findByImageRef(ref) ?: return null
+        val record = generateImageReqRecordRepository.findById(imageRef.recordId) ?: return null
+        if (tokenUid == null) {
+            if (uid == null || record.userCode != uid) return null
+        } else {
+            if (record.userCode != tokenUid) return null
         }
         retrievalImageReqRecordRepository.save(RetrievalImageReqRecord(imageRef = ref, ip = ip))
-        val presignRequest = PresignRequest
-            .builder(ref, PresignRequest.Operation.DOWNLOAD)
-            .build()
+        val presignRequest = PresignRequest.builder(ref, PresignRequest.Operation.DOWNLOAD).build()
         val response = store.presign(presignRequest)
         return response.url.toString()
+    }
+
+    override suspend fun linkPage(ref: String): LinkPage? {
+        val uid = securityService.authentication.get().name
+        val imageRef = generateImageReqRefRepository.findByImageRef(ref) ?: return null
+        val record = generateImageReqRecordRepository.findById(imageRef.recordId) ?: return null
+        if (record.userCode != uid) return null
+        val exp = System.currentTimeMillis() + previewConfig.ttlSeconds * 1000
+        val token = sign(ref, uid, exp)
+        val src = "/api/generative-image?ref=" + ref + "&pt=" + "$uid:$exp:$token"
+        val time = record.createTime?.let {
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(it)
+        } ?: ""
+        val user = record.userCode?.let { code ->
+            val openUser = openUserRepository.findByUid(code)
+            if (openUser != null) {
+                val outletWeb = outletUserRepository.findByOpenUserIdAndUserSource(
+                    openUser.id!!,
+                    coralsum.common.enums.UserSource.WEB
+                )
+                outletWeb?.nickName ?: ""
+            } else ""
+        } ?: ""
+        return LinkPage(src = src, time = time, user = user)
     }
 }

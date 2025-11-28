@@ -9,6 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/geist-mono": "^5.2.6",
+    "@fontsource/jetbrains-mono": "^5.0.8",
+    "@iconify-json/material-symbols": "^1.2.48",
+    "@iconify-json/mdi": "^1.2.3",
+    "@iconify-json/ph": "^1.2.2",
+    "@iconify-json/solar": "^1.2.5",
+    "@iconify/iconify": "^3.1.1",
     "@iconify/vue": "^4.1.1",
     "axios": "^1.13.2",
     "mockjs": "^1.1.0",

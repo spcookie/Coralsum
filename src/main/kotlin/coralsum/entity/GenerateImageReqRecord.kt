@@ -28,8 +28,6 @@ data class GenerateImageReqRecord(
 
     var retryCount: Int = 0,
 
-
-
     var inputTokens: Int = 0,
 
     var outputTokens: Int = 0,

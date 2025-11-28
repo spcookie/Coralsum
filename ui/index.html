@@ -4,51 +4,210 @@
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Coralsum AI 生图</title>
-    <style>
-        @font-face {
-            font-family: 'JetBrains Mono';
-            font-style: normal;
-            font-weight: 400;
-            src: url('https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.8/files/jetbrains-mono-latin-400-normal.woff2') format('woff2');
-            font-display: swap;
-        }
+    <script>
+        (function applyEarlyDark() {
+            try {
+                var html = document.documentElement
+                var raw = localStorage.getItem('pinia_settings')
+                if (raw) {
+                    var saved = JSON.parse(raw || '{}')
+                    if (saved && typeof saved.darkMode !== 'undefined') {
+                        html.classList.toggle('dark', !!saved.darkMode)
+                        return
+                    }
+                }
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    html.classList.add('dark')
+                }
+            } catch {
+            }
+        })()
+    </script>
 
-        @font-face {
-            font-family: 'JetBrains Mono';
-            font-style: normal;
-            font-weight: 500;
-            src: url('https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.8/files/jetbrains-mono-latin-500-normal.woff2') format('woff2');
-            font-display: swap;
-        }
-
-        @font-face {
-            font-family: 'JetBrains Mono';
-            font-style: normal;
-            font-weight: 600;
-            src: url('https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.8/files/jetbrains-mono-latin-600-normal.woff2') format('woff2');
-            font-display: swap;
-        }
-    </style>
-    <style>
-        @font-face {
-            font-family: 'Geist Mono';
-            font-style: normal;
-            font-weight: 500;
-            src: url('https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@5.2.6/files/geist-mono-latin-500-normal.woff2') format('woff2');
-            font-display: swap;
-        }
-
-        @font-face {
-            font-family: 'Geist Mono';
-            font-style: normal;
-            font-weight: 600;
-            src: url('https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@5.2.6/files/geist-mono-latin-600-normal.woff2') format('woff2');
-            font-display: swap;
-        }
-    </style>
 </head>
 <body>
 <div id="app"></div>
-<script src="/src/main.ts" type="module"></script>
+<style>
+    html.preload-block #app {
+        opacity: 0;
+    }
+
+    html.preload-block, html.preload-block body {
+        background: var(--pl-base);
+    }
+
+    :root {
+        --pl-base: #ffffff;
+        --pl-bg1: rgba(59, 130, 246, 0.14);
+        --pl-bg2: rgba(236, 72, 153, 0.16);
+        --pl-bg3: rgba(99, 102, 241, 0.14);
+        --pl-text: #111827;
+        --pl-dot1: #3b82f6;
+        --pl-dot2: #ec4899;
+        --pl-dot3: #6366f1
+    }
+
+    .dark {
+        --pl-base: #0b0b0b;
+        --pl-bg1: rgba(59, 130, 246, 0.20);
+        --pl-bg2: rgba(236, 72, 153, 0.22);
+        --pl-bg3: rgba(99, 102, 241, 0.20);
+        --pl-text: #e5e7eb;
+        --pl-dot1: #60a5fa;
+        --pl-dot2: #f472b6;
+        --pl-dot3: #818cf8
+    }
+
+    .preload-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+        background: radial-gradient(1000px 400px at 20% 0%, var(--pl-bg1), transparent 60%),
+        radial-gradient(800px 300px at 80% 20%, var(--pl-bg2), transparent 60%),
+        radial-gradient(900px 500px at 50% 90%, var(--pl-bg3), transparent 60%);
+        background-color: var(--pl-base);
+        color: var(--pl-text)
+    }
+
+    .loader {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px
+    }
+
+    .loader .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--pl-dot1);
+        opacity: 0.85;
+        animation: pulse 1.2s ease-in-out infinite
+    }
+
+    .loader .dot:nth-child(2) {
+        background: var(--pl-dot2);
+        animation-delay: 0.15s
+    }
+
+    .loader .dot:nth-child(3) {
+        background: var(--pl-dot3);
+        animation-delay: 0.30s
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(0.75);
+            opacity: 0.6
+        }
+        50% {
+            transform: scale(1);
+            opacity: 1
+        }
+    }
+
+    .brand {
+        font: 500 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        letter-spacing: 0.02em;
+        color: var(--pl-text)
+    }
+</style>
+<div id="preload-overlay" class="preload-overlay">
+    <div class="loader">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+    </div>
+    <div class="brand">Coralsum AI 生图</div>
+</div>
+<script type="module">
+    const html = document.documentElement
+    html.classList.add('preload-block')
+    try {
+        const raw = localStorage.getItem('pinia_settings')
+        if (raw) {
+            const saved = JSON.parse(raw)
+            const dark = !!saved?.darkMode
+            html.classList.toggle('dark', dark)
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            html.classList.add('dark')
+        }
+    } catch {
+    }
+
+    async function waitFonts() {
+        try {
+            if ('fonts' in document && document.fonts && typeof document.fonts.load === 'function') {
+                await Promise.all([
+                    document.fonts.load('500 1em "Geist Mono"'),
+                    document.fonts.load('400 1em "JetBrains Mono"'),
+                    document.fonts.load('500 1em "JetBrains Mono"'),
+                    document.fonts.load('600 1em "JetBrains Mono"')
+                ])
+            } else if (document.fonts && typeof document.fonts.ready?.then === 'function') {
+                await document.fonts.ready
+            }
+        } catch {
+        }
+    }
+
+    function waitStyles() {
+        return new Promise(resolve => {
+            const links = new Set()
+            let errored = new Set()
+            const done = () => {
+                obs.disconnect();
+                resolve(undefined)
+            }
+
+            function track(link) {
+                if (link && link.rel === 'stylesheet') {
+                    links.add(link)
+                    if (!link.sheet) {
+                        link.addEventListener('load', check, {once: true})
+                        link.addEventListener('error', () => {
+                            errored.add(link);
+                            check()
+                        }, {once: true})
+                    }
+                }
+            }
+
+            function check() {
+                for (const l of links) {
+                    if (!l.sheet && !errored.has(l)) return
+                }
+                done()
+            }
+
+            document.head.querySelectorAll('link[rel="stylesheet"]').forEach(track)
+            const obs = new MutationObserver(muts => {
+                for (const m of muts) {
+                    m.addedNodes.forEach(n => {
+                        if (n.nodeType === 1 && n.tagName === 'LINK') track(n)
+                    })
+                }
+                check()
+            })
+            obs.observe(document.head, {childList: true})
+            check()
+        })
+    }
+
+    async function bootstrap() {
+        const appImport = import('/src/main.ts').catch(e => console.error('app import failed', e))
+        const stylesReady = waitStyles()
+        await Promise.allSettled([appImport, stylesReady])
+        await waitFonts().catch(e => console.error('fonts wait failed', e))
+        const overlay = document.getElementById('preload-overlay')
+        if (overlay) overlay.style.display = 'none'
+        html.classList.remove('preload-block')
+    }
+
+    bootstrap()
+</script>
 </body>
 </html>

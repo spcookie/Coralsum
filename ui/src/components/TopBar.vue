@@ -13,7 +13,7 @@
           <template #trigger>
             <div class="flex items-center gap-1">
               <Icon class="text-yellow-500 text-base" icon="material-symbols:bolt-rounded"/>
-              <span class="inline-block underline underline-offset-2 decoration-[1px] decoration-dashed">
+              <span class="inline-block underline underline-offset-2 decoration-[1px] decoration-solid">
                 <n-number-animation :active="true" :duration="800" :from="prevPoints" :precision="0" :to="user.points"/>
               </span>
             </div>
@@ -60,7 +60,7 @@
       <span class="truncate max-w-[40vw] font-bold text-neutral-700 dark:text-neutral-200">{{ displayName }}</span>
       <div v-if="user.profileReady" class="flex items-center gap-1">
         <Icon class="text-yellow-500" icon="material-symbols:bolt-rounded"/>
-        <span class="inline-block underline underline-offset-2 decoration-[1px] decoration-dashed">
+        <span class="inline-block underline underline-offset-2 decoration-[1px] decoration-solid">
           <n-number-animation :active="true" :duration="800" :from="prevPoints" :precision="0" :to="user.points"/>
         </span>
       </div>
@@ -114,7 +114,10 @@
           <n-input v-model:value="loginForm.password" maxlength="16" placeholder="密码" type="password"/>
         </n-form-item>
         <div class="flex gap-2 justify-between items-center">
-          <n-button quaternary @click="goRegister">注册</n-button>
+          <div class="flex gap-2">
+            <n-button quaternary @click="goRegister">注册</n-button>
+            <n-button quaternary @click="goForgot">忘记密码</n-button>
+          </div>
           <div class="flex gap-2">
             <n-button :disabled="!loginValid" type="primary" @click="login">登录</n-button>
           </div>
@@ -221,7 +224,7 @@ async function sendCode() {
     message.error('邮箱格式不正确');
     return
   }
-  await sendEmailCode(targetEmail)
+  await sendEmailCode(targetEmail, 'RESET')
 }
 
 async function login() {
@@ -262,6 +265,11 @@ function goRegister() {
   router.push('/register')
 }
 
+function goForgot() {
+  user.showLoginModal = false
+  router.push('/forgot')
+}
+
 async function saveProfile() {
   if (!user.profileReady) {
     message.error('请先登录')
@@ -294,8 +302,9 @@ async function saveProfile() {
     }
 
     if (doName) {
-      const latest = await updateProfileName(newName)
-      user.setProfile({...latest})
+      await updateProfileName(newName)
+      const refreshed = await getProfile()
+      user.setProfile({...refreshed})
     }
 
     if (!hasPwdInput && !doName) {

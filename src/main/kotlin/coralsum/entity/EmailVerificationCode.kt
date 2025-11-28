@@ -1,31 +1,26 @@
 package coralsum.entity
 
-import coralsum.common.enums.UserSource
 import io.micronaut.data.annotation.*
 import io.micronaut.data.model.naming.NamingStrategies
 import io.micronaut.security.annotation.CreatedBy
 import io.micronaut.security.annotation.UpdatedBy
 import java.time.LocalDateTime
 
-@MappedEntity(value = "outlet_user", namingStrategy = NamingStrategies.UnderScoreSeparatedLowerCase::class)
-data class OutletUser(
+@MappedEntity(value = "email_verification_code", namingStrategy = NamingStrategies.UnderScoreSeparatedLowerCase::class)
+data class EmailVerificationCode(
     @field:Id
     @field:GeneratedValue(GeneratedValue.Type.AUTO)
     val id: Long? = null,
 
-    @field:Relation(value = Relation.Kind.MANY_TO_ONE)
-    @field:MappedProperty(value = "open_user_id")
-    val openUser: OpenUser? = null,
+    val email: String,
 
-    val userSource: UserSource? = null,
+    val code: String,
 
-    val nickName: String? = null,
+    val purpose: String,
 
-    val nickTag: Int? = null,
+    val expireTime: LocalDateTime,
 
-    val sourceCode: String? = null,
-
-    val secret: String? = null,
+    val used: Boolean = false,
 
     @field:DateCreated
     val createTime: LocalDateTime? = null,

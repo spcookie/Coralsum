@@ -64,5 +64,14 @@ export const useUserStore = defineStore('user', {
         requireProfile() {
             this.showProfileModal = true
         }
+        ,
+        logout() {
+            try {
+                localStorage.removeItem('pinia_user')
+            } catch {
+            }
+            this.$reset()
+            this.showLoginModal = true
+        }
     }
 })

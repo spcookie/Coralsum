@@ -71,8 +71,11 @@ export async function changePassword(email: string, oldPassword: string, newPass
 
 export async function generate(req: GenerateRequest): Promise<GenerateResponse> {
     const fd = new FormData()
-    const file = Array.isArray(req.inputImages) && req.inputImages.length > 0 ? req.inputImages[0] : null
-    if (file) fd.append('image', file)
+    if (Array.isArray(req.inputImages) && req.inputImages.length > 0) {
+        for (const f of req.inputImages) {
+            if (f) fd.append('image', f)
+        }
+    }
     fd.append('text', req.prompt)
     if (req.systemPrompt) fd.append('system', req.systemPrompt)
     const arMap: Record<string, string> = {

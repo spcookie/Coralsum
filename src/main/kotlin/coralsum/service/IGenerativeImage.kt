@@ -23,7 +23,7 @@ interface IGenerativeImage {
 @Serdeable
 data class GenRequest(
     @field:Schema(description = "生成文本") val text: String? = null,
-    @field:Schema(description = "参考图片字节") var image: ByteArray? = null,
+    @field:Schema(description = "参考图片字节列表") var images: List<ByteArray>? = null,
     @field:Schema(description = "候选数量") var candidateCount: Int = 1,
     @field:Schema(description = "宽高比") var aspectRatio: AspectRatio? = null,
     @field:Schema(description = "系统提示") var system: String? = null,
@@ -48,7 +48,16 @@ data class GenRequest(
         if (upscaylScale != other.upscaylScale) return false
         if (mediaResolution != other.mediaResolution) return false
         if (text != other.text) return false
-        if (!image.contentEquals(other.image)) return false
+        val thisImages = images
+        val otherImages = other.images
+        if (thisImages == null && otherImages != null) return false
+        if (thisImages != null && otherImages == null) return false
+        if (thisImages != null && otherImages != null) {
+            if (thisImages.size != otherImages.size) return false
+            for (i in thisImages.indices) {
+                if (!thisImages[i].contentEquals(otherImages[i])) return false
+            }
+        }
         if (aspectRatio != other.aspectRatio) return false
         if (system != other.system) return false
         if (format != other.format) return false
@@ -65,7 +74,9 @@ data class GenRequest(
         result = 31 * result + (upscaylScale?.hashCode() ?: 0)
         result = 31 * result + (mediaResolution?.hashCode() ?: 0)
         result = 31 * result + text.hashCode()
-        result = 31 * result + (image?.contentHashCode() ?: 0)
+        result = 31 * result + (
+                images?.fold(1) { acc, bytes -> 31 * acc + bytes.contentHashCode() } ?: 0
+                )
         result = 31 * result + (aspectRatio?.hashCode() ?: 0)
         result = 31 * result + (system?.hashCode() ?: 0)
         result = 31 * result + format.hashCode()

@@ -10,9 +10,20 @@ micronaut:
         logger-name: request-access
         log-format: common
     port: 8080
+    cors:
+      enabled: true
+      configurations:
+        web:
+          allowed-origins:
+            - "*"
+          allowed-methods:
+            - "*"
+          allowed-headers:
+            - "*"
+          max-age: 3600
   http:
     client:
-      read-timeout: 3m
+      read-timeout: 5m
   metrics:
     enabled: true
   object-storage:

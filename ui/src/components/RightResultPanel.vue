@@ -1,21 +1,21 @@
 <template>
   <div class="flex-1 p-4 space-y-4">
-    <div v-if="!showOverlay" class="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs">
+    <div v-if="!showOverlay" class="flex flex-wrap items-center gap-1 sm:gap-1.5 text-[10px] sm:text-[11px]">
       <div
-          class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-        <Icon class="text-[0.85rem]" icon="ph:code"/>
+          class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+        <Icon class="text-[0.75rem]" icon="ph:code"/>
         <span class="font-medium">输入</span>
         <span class="font-semibold tabular-nums">{{ formatTokens(result?.inputTokens ?? 0) }}</span>
       </div>
       <div
-          class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800">
-        <Icon class="text-[0.85rem]" icon="ph:sparkle"/>
+          class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800">
+        <Icon class="text-[0.75rem]" icon="ph:sparkle"/>
         <span class="font-medium">输出</span>
         <span class="font-semibold tabular-nums">{{ formatTokens(result?.outputTokens ?? 0) }}</span>
       </div>
       <div
-          class="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
-        <Icon class="text-[0.85rem]" icon="ph:timer"/>
+          class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
+        <Icon class="text-[0.75rem]" icon="ph:timer"/>
         <span class="font-medium">耗时</span>
         <span class="font-semibold tabular-nums">{{ result ? formatDuration(result.durationMs) : '-' }}</span>
       </div>
@@ -25,22 +25,22 @@
       <div>{{ result?.text }}</div>
     </div>
     <div v-if="allImagesLoaded"
-         class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[12px]">
-      <Icon class="text-[0.95rem]" icon="ph:warning"/>
-      <span>图片预览链接有效时间为30分钟，且仅有 5 次有效预览次数，请注意保存图片</span>
+         class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[11px]">
+      <Icon class="text-[0.85rem]" icon="ph:warning"/>
+      <span>图片预览链接有效时间为 30 分钟，且仅有 5 次有效预览次数，请注意保存图片！</span>
     </div>
-    <div v-if="loading" class="flex flex-wrap justify-center gap-4">
+    <div v-if="loading" class="flex flex-wrap justify-center gap-3">
       <div v-for="i in settings.candidateRadio" :key="i"
-           class="rounded overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[300px] md:w-[380px] lg:w-[480px] xl:w-[560px]">
+           class="rounded overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px]">
         <div :style="skeletonAspectStyle" class="w-full">
           <div
               class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
         </div>
       </div>
     </div>
-    <div v-if="!loading && images.length > 0" class="flex flex-wrap justify-center gap-4">
+    <div v-if="!loading && images.length > 0" class="flex flex-wrap justify-center gap-3">
       <div v-for="(img, i) in images" :key="i"
-           class="rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[300px] md:w-[380px] lg:w-[480px] xl:w-[560px] relative">
+           class="rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px] relative">
         <div v-if="!loadedSet.has(i)" :style="skeletonAspectStyle" class="w-full">
           <div
               class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>

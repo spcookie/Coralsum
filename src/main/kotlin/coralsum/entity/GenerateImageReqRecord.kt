@@ -28,10 +28,7 @@ data class GenerateImageReqRecord(
 
     var retryCount: Int = 0,
 
-    var imageRef: String? = null,
 
-    @field:TypeDef(type = DataType.INTEGER_ARRAY)
-    var imageSize: IntArray? = null,
 
     var inputTokens: Int = 0,
 
@@ -64,7 +61,7 @@ data class GenerateImageReqRecord(
         if (requestText != other.requestText) return false
         if (!requestImage.contentEquals(other.requestImage)) return false
         if (requestConfig != other.requestConfig) return false
-        if (imageRef != other.imageRef) return false
+
         if (createTime != other.createTime) return false
         if (updateTime != other.updateTime) return false
         if (createBy != other.createBy) return false
@@ -83,7 +80,7 @@ data class GenerateImageReqRecord(
         result = 31 * result + (requestText?.hashCode() ?: 0)
         result = 31 * result + (requestImage?.contentHashCode() ?: 0)
         result = 31 * result + (requestConfig?.hashCode() ?: 0)
-        result = 31 * result + (imageRef?.hashCode() ?: 0)
+
         result = 31 * result + (createTime?.hashCode() ?: 0)
         result = 31 * result + (updateTime?.hashCode() ?: 0)
         result = 31 * result + (createBy?.hashCode() ?: 0)

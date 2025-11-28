@@ -68,6 +68,7 @@ class GenerativeImageImpl(
     val securityService: SecurityService,
     val jsonMapper: JsonMapper,
     val generateImageReqRecordRepository: GenerateImageReqRecordRepository,
+    val generateImageReqRefRepository: coralsum.repository.GenerateImageReqRefRepository,
     val retrievalImageReqRecordRepository: RetrievalImageReqRecordRepository,
     val generateTaskCache: GenerateTaskCache,
     val applicationEventPublisher: ApplicationEventPublisher<GenerativeImageCostEvent>,
@@ -102,7 +103,7 @@ class GenerativeImageImpl(
 
     @PostConstruct
     fun init() {
-        nano = NanoBanana(googleConfig.vertxApiKey)
+        nano = NanoBanana(googleConfig.geminiApiKey)
         val userDir = System.getProperty("user.dir")
         val libsDir = Path(userDir).resolve("libs")
         val osName = System.getProperty("os.name").lowercase()
@@ -153,7 +154,7 @@ class GenerativeImageImpl(
             throw BusinessException("积分不足")
         }
         val watch = StopWatch.createStarted()
-        val conf = jsonMapper.writeValueAsString(genRequest.copy(text = null, image = null))
+        val conf = jsonMapper.writeValueAsString(genRequest.copy(text = null, images = null))
         val imageReqRecord = GenerateImageReqRecord(
             requestText = genRequest.text,
             requestImage = null,
@@ -163,10 +164,10 @@ class GenerativeImageImpl(
         val genResult = withContext(Dispatchers.IO) {
             val fs = FileSystem.SYSTEM
             val tempDir = createTempDirectory("coralsum-").toAbsolutePath().toString().toPath()
+            val refs = mutableListOf<String>()
+            val sizes = mutableListOf<Int>()
             try {
                 val pairs = doConcurrentGenerate(genRequest, imageReqRecord)
-
-                imageReqRecord.imageSize = IntArray(pairs.size)
                 val images = pairs.mapIndexed { index, pair ->
                     val (_, bufferedImage) = pair
 
@@ -194,12 +195,11 @@ class GenerativeImageImpl(
                     }
 
                     val key = "${tempDir.name}-${index}.${genRequest.format.ext}"
-
-                    imageReqRecord.imageRef = key
+                    refs.add(key)
 
                     val bytes = fs.read(targetPath) { readByteArray() }
 
-                    imageReqRecord.imageSize!![index] = bytes.size
+                    sizes.add(bytes.size)
 
                     val uploadRequest = UploadRequest.fromBytes(bytes, key)
                     store.upload(uploadRequest) { builder ->
@@ -219,14 +219,24 @@ class GenerativeImageImpl(
                     text = text
                 )
             } finally {
-                generateImageReqRecordRepository.save(imageReqRecord)
+                val saved = generateImageReqRecordRepository.save(imageReqRecord)
+                val recordId = saved.id!!
+                for ((i, ref) in refs.withIndex()) {
+                    generateImageReqRefRepository.save(
+                        coralsum.entity.GenerateImageReqRef(
+                            recordId = recordId,
+                            imageRef = ref,
+                            imageSize = sizes.getOrNull(i)
+                        )
+                    )
+                }
                 applicationEventPublisher.publishEvent(
                     GenerativeImageCostEvent(
                         uid = imageReqRecord.userCode!!,
                         inputTokens = imageReqRecord.inputTokens,
                         outputTokens = imageReqRecord.outputTokens,
                         scale = (genRequest.upscaylScale?.scale ?: 1) - 1,
-                        imageSize = (imageReqRecord.imageSize?.sum() ?: 0)
+                        imageSize = sizes.sum()
                     )
                 )
                 try {
@@ -349,7 +359,7 @@ class GenerativeImageImpl(
     ): Pair<String?, BufferedImage?> {
         val pair = nano.gen(
             genRequest.text!!,
-            genRequest.image,
+            genRequest.images,
             genRequest.aspectRatio?.ratio,
             genRequest.system,
             genRequest.temperature,
@@ -377,7 +387,7 @@ class GenerativeImageImpl(
         if (countImageRefBy > MAX_PRE_COUNT) {
             return null
         }
-        val imageRef = generateImageReqRecordRepository.findByImageRef(ref)
+        val imageRef = generateImageReqRefRepository.findByImageRef(ref)
         if (imageRef == null) {
             return null
         }

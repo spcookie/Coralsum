@@ -17,9 +17,9 @@ class NanoBanana(private val apiKey: String) : Closeable {
     private var client = Client.builder()
         .httpOptions(
             HttpOptions.builder()
-                .baseUrl(String.format("https://%s-aiplatform.googleapis.com", "us-central1"))
+//                .baseUrl(String.format("https://%s-aiplatform.googleapis.com", "us-central1"))
 //                .baseUrl("https://aiplatform.googleapis.com")
-//                .apiVersion("v1")
+//                .apiVersion("v1alpha")
                 .timeout(5.minutes.toInt(DurationUnit.MILLISECONDS))
                 .build()
         )
@@ -29,7 +29,7 @@ class NanoBanana(private val apiKey: String) : Closeable {
 
     fun gen(
         text: String,
-        image: ByteArray? = null,
+        images: List<ByteArray>? = null,
         aspectRatio: String? = null,
         system: String? = null,
         temperature: Float = 1f,
@@ -52,23 +52,23 @@ class NanoBanana(private val apiKey: String) : Closeable {
                             .build()
                     )
                 }
-                when (mediaResolution) {
-                    "AUTO" -> {
-                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_UNSPECIFIED)
-                    }
-
-                    "LOW" -> {
-                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_LOW)
-                    }
-
-                    "MEDIUM" -> {
-                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_MEDIUM)
-                    }
-
-                    "HIGH" -> {
-                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_HIGH)
-                    }
-                }
+//                when (mediaResolution) {
+//                    "AUTO" -> {
+//                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_UNSPECIFIED)
+//                    }
+//
+//                    "LOW" -> {
+//                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_LOW)
+//                    }
+//
+//                    "MEDIUM" -> {
+//                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_MEDIUM)
+//                    }
+//
+//                    "HIGH" -> {
+//                        mediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_HIGH)
+//                    }
+//                }
             }
             .temperature(temperature)
             .topP(topP)
@@ -83,24 +83,32 @@ class NanoBanana(private val apiKey: String) : Closeable {
                     }
                     .build()
             )
+            .tools(
+                Tool.builder()
+                    .googleSearch(GoogleSearch.builder().build())
+                    .build()
+            )
             .build()
         val response = client.models.generateContent(
-            "gemini-2.5-flash-image",
+//            "gemini-2.5-flash-image",
+            "gemini-3-pro-image-preview",
             Content.builder()
                 .parts(
                     buildList {
-                        add(
-                            Part.builder().text(text).build()
-                        )
-                        if (image != null) {
+                        add(Part.builder().text(text).build())
+                        images?.forEach { img ->
                             add(
                                 Part.builder().inlineData(
-                                    Blob.builder().data(image)
-                                        .mimeType("image/" + FileTypeUtil.getType(image.inputStream())).build()
+                                    Blob.builder().data(img)
+                                        .mimeType("image/" + FileTypeUtil.getType(img.inputStream())).build()
                                 ).build()
                             )
                         }
-                    }).role("user").build(), contentConfig
+                    }
+                )
+                .role("user")
+                .build(),
+            contentConfig
         )
         val result = response.candidates()
             .map { candidates ->

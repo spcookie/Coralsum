@@ -1,50 +1,88 @@
 <template>
-  <n-modal :closable="false" :mask-closable="true" :show="modelValue" :show-icon="false" :style="modalStyle"
-           :trap-focus="false" class="image-previewer-modal" preset="card" @update:show="onVisibleChange">
-    <div class="flex flex-col gap-3 select-none">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="flex items-center gap-2 flex-wrap">
-          <n-button size="small" tertiary @click="zoomOut">
+  <n-modal
+      :closable="false"
+      :mask-closable="true"
+      :show="modelValue"
+      :show-icon="false"
+      :style="fullscreenModalStyle"
+      :trap-focus="false"
+      class="image-previewer-modal fullscreen"
+      @update:show="onVisibleChange"
+  >
+    <div class="relative w-[100vw] h-[100vh] select-none">
+      <div class="absolute top-4 right-4 z-10">
+        <n-button circle class="close-btn" size="small" strong @click="close">
+          <Icon icon="mdi:close"/>
+        </n-button>
+      </div>
+      <div class="absolute top-8 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+        <div class="scale-indicator px-3 py-1 rounded-md text-xs">缩放 {{ (scale * 100).toFixed(0) }}%</div>
+      </div>
+      <div
+          ref="canvasRef"
+          class="absolute inset-0 overflow-hidden bg-transparent"
+          @pointerdown="onPointerDown"
+          @pointerleave="onPointerLeave"
+          @pointermove="onPointerMove"
+          @pointerup="onPointerUp"
+          @wheel.prevent="onWheel"
+      >
+        <img
+            ref="imgRef"
+            :src="src"
+            :style="imgStyle"
+            class="absolute top-1/2 left-1/2 will-change-transform"
+            draggable="false"
+            @load="onImgLoad"
+        />
+        <n-spin v-if="imgLoading" class="absolute inset-0 grid place-items-center" size="large"/>
+      </div>
+
+      <div class="pointer-events-none absolute bottom-0 left-0 w-full p-4 pb-12">
+        <div class="pointer-events-auto mx-auto max-w-4xl flex flex-wrap items-center justify-center gap-2">
+          <n-button class="control-btn" size="small" strong @click="zoomOut">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:magnify-minus-outline"/>
-              <span>缩小</span></div>
+              <span>缩小</span>
+            </div>
           </n-button>
-          <n-button size="small" tertiary @click="zoomIn">
+          <n-button class="control-btn" size="small" strong @click="zoomIn">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:magnify-plus-outline"/>
-              <span>放大</span></div>
+              <span>放大</span>
+            </div>
           </n-button>
-          <n-button size="small" tertiary @click="reset">
+          <n-button class="control-btn" size="small" strong @click="reset">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:restart"/>
-              <span>重置</span></div>
+              <span>重置</span>
+            </div>
           </n-button>
-          <n-button size="small" tertiary @click="copyImage">
+          <n-button class="control-btn" size="small" strong @click="rotateLeft">
+            <div class="flex items-center gap-1">
+              <Icon icon="mdi:rotate-left"/>
+              <span>左旋</span>
+            </div>
+          </n-button>
+          <n-button class="control-btn" size="small" strong @click="rotateRight">
+            <div class="flex items-center gap-1">
+              <Icon icon="mdi:rotate-right"/>
+              <span>右旋</span>
+            </div>
+          </n-button>
+          <n-button class="control-btn" size="small" strong @click="copyImage">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:content-copy"/>
-              <span>复制</span></div>
+              <span>复制</span>
+            </div>
           </n-button>
-          <n-button size="small" tertiary @click="downloadImage">
+          <n-button class="control-btn" size="small" strong @click="downloadImage">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:download"/>
-              <span>下载</span></div>
+              <span>下载</span>
+            </div>
           </n-button>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
-          <div class="text-xs text-neutral-500">缩放 {{ (scale * 100).toFixed(0) }}%</div>
-          <n-button quaternary size="small" @click="close">
-            <div class="flex items-center gap-1">
-              <Icon icon="mdi:close"/>
-              <span>关闭预览</span></div>
-          </n-button>
-        </div>
-      </div>
-      <div ref="canvasRef" class="relative h-[70vh] w-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 rounded"
-           @pointerdown="onPointerDown" @pointerleave="onPointerUp" @pointermove="onPointerMove" @pointerup="onPointerUp"
-           @wheel.prevent="onWheel">
-        <img ref="imgRef" :src="src" :style="imgStyle" class="absolute top-1/2 left-1/2 will-change-transform"
-             draggable="false" @load="onImgLoad"/>
-        <n-spin v-if="imgLoading" class="absolute inset-0 grid place-items-center" size="large"/>
       </div>
     </div>
   </n-modal>
@@ -66,16 +104,18 @@ const scale = ref(1)
 const tx = ref(0)
 const ty = ref(0)
 const dragging = ref(false)
+const moved = ref(false)
+const rotation = ref(0)
 const startX = ref(0)
 const startY = ref(0)
 
 const imgStyle = computed(() => ({
-  transform: `translate(-50%, -50%) translate(${tx.value}px, ${ty.value}px) scale(${scale.value})`,
+  transform: `translate(-50%, -50%) translate(${tx.value}px, ${ty.value}px) scale(${scale.value}) rotate(${rotation.value}deg)`,
   cursor: dragging.value ? 'grabbing' : 'grab',
   userSelect: 'none'
 }))
 
-const modalStyle = {width: 'min(96vw, 1100px)', margin: '24px auto'}
+const fullscreenModalStyle = {width: '100vw', height: '100vh', margin: '0', padding: '0', background: 'transparent'}
 
 function clampScale(v: number) {
   return Math.min(6, Math.max(0.1, v))
@@ -93,6 +133,7 @@ function reset() {
   scale.value = 1;
   tx.value = 0;
   ty.value = 0
+  rotation.value = 0
 }
 
 function zoomIn() {
@@ -108,10 +149,19 @@ function onWheel(e: WheelEvent) {
   scale.value = clampScale(scale.value + delta)
 }
 
+function rotateLeft() {
+  rotation.value -= 90
+}
+
+function rotateRight() {
+  rotation.value += 90
+}
+
 function onPointerDown(e: PointerEvent) {
   dragging.value = true;
   startX.value = e.clientX;
   startY.value = e.clientY;
+  moved.value = false;
   (e.target as HTMLElement).setPointerCapture?.(e.pointerId)
 }
 
@@ -123,9 +173,16 @@ function onPointerMove(e: PointerEvent) {
   startY.value = e.clientY;
   tx.value += dx;
   ty.value += dy
+  if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved.value = true
 }
 
-function onPointerUp() {
+function onPointerUp(e: PointerEvent) {
+  dragging.value = false
+  const target = e.target as HTMLElement
+  if (!moved.value && target === canvasRef.value) close()
+}
+
+function onPointerLeave() {
   dragging.value = false
 }
 
@@ -216,7 +273,51 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.n-modal .n-card__content {
-  height: auto;
+:deep(.n-modal-mask) {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+:deep(.n-modal) {
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+:deep(.control-btn.n-button) {
+  background-color: rgba(128, 128, 128, 0.3) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.control-btn.n-button:hover) {
+  background-color: rgba(128, 128, 128, 0.4) !important;
+}
+
+:deep(.control-btn.n-button .n-button__content) {
+  color: #fff !important;
+}
+
+:deep(.close-btn.n-button) {
+  background-color: rgba(128, 128, 128, 0.3) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.close-btn.n-button:hover) {
+  background-color: rgba(128, 128, 128, 0.4) !important;
+}
+
+:deep(.control-btn.n-button .n-button__border),
+:deep(.close-btn.n-button .n-button__border) {
+  display: none !important;
+}
+
+.scale-indicator {
+  background-color: rgba(0, 0, 0, 0.9);
+  color: rgba(255, 255, 255, 0.85);
 }
 </style>

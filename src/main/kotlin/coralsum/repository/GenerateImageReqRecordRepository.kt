@@ -11,8 +11,6 @@ import java.time.LocalDateTime
 interface GenerateImageReqRecordRepository : CoroutineCrudRepository<GenerateImageReqRecord, Long> {
     suspend fun findByUserCode(userCode: String): List<GenerateImageReqRecord>
 
-    @Query("SELECT * FROM generate_image_req_record WHERE image_ref IS NOT NULL AND create_time < :cutoff")
+    @Query("SELECT * FROM generate_image_req_record WHERE create_time < :cutoff AND id IN (SELECT record_id FROM generate_image_req_ref)")
     suspend fun findExpiredBefore(cutoff: LocalDateTime): List<GenerateImageReqRecord>
-
-    suspend fun findByImageRef(imageRef: String): GenerateImageReqRecord?
 }

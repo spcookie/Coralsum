@@ -43,7 +43,7 @@ class GenerativeImageController(
     @Post(consumes = ["multipart/form-data"])
     @Operation(
         summary = "生成图片",
-        description = "根据文本与可选图片生成结果，支持宽高比、采样、格式与放大设置"
+        description = "根据文本与可选图片（支持多张）生成结果，支持宽高比、采样、格式与放大设置"
     )
     @ApiResponse(
         responseCode = "200", description = "生成成功", content = [
@@ -52,7 +52,7 @@ class GenerativeImageController(
     )
     @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
     suspend fun generate(
-        @Parameter(description = "参考图片文件") @Part("image") completedFileUpload: CompletedFileUpload?,
+        @Parameter(description = "参考图片文件") @Part("image") images: List<CompletedFileUpload>?,
         @Parameter(description = "生成文本", required = true) @Part @NotEmpty text: String,
         @Parameter(description = "系统提示") @Part system: String?,
         @Parameter(description = "宽高比") @Part aspectRatio: AspectRatio?,
@@ -70,7 +70,7 @@ class GenerativeImageController(
         val result = service.generate(
             buildGenRequest(
                 text,
-                completedFileUpload,
+                images,
                 candidateCount,
                 aspectRatio,
                 system,
@@ -105,6 +105,29 @@ class GenerativeImageController(
 
     @Secured(SecurityRule.IS_ANONYMOUS)
     @Version("v1")
+    @Get("/bytes")
+    @Operation(summary = "预览图片字节", description = "服务端读取并返回图片字节")
+    suspend fun previewBytes(@QueryValue ref: String, request: HttpRequest<*>): HttpResponse<ByteArray> {
+        val ip = addressResolver.resolve(request)
+        val url = service.preview(ref, ip) ?: return HttpResponse.notFound()
+        val bytes = try {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                java.net.URL(url).openStream().use { it.readBytes() }
+            }
+        } catch (e: Exception) {
+            return HttpResponse.serverError()
+        }
+        val contentType = when (ref.substringAfterLast('.', "").lowercase()) {
+            "png" -> MediaType.IMAGE_PNG
+            "jpg", "jpeg" -> MediaType.IMAGE_JPEG
+            "webp" -> MediaType.of("image/webp")
+            else -> MediaType.APPLICATION_OCTET_STREAM
+        }
+        return HttpResponse.ok(bytes).contentType(contentType)
+    }
+
+    @Secured(SecurityRule.IS_ANONYMOUS)
+    @Version("v1")
     @Post("/assess-intent", consumes = [MediaType.TEXT_PLAIN])
     @Operation(summary = "评估生成意图", description = "基于用户文本判断是否为生成/修改图片意图")
     @ApiResponse(
@@ -132,7 +155,7 @@ class GenerativeImageController(
     @Operation(summary = "提交生成任务", description = "提交异步图片生成任务")
     @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
     suspend fun submitGenerateTask(
-        @Parameter(description = "参考图片文件") @Part("image") completedFileUpload: CompletedFileUpload?,
+        @Parameter(description = "参考图片文件") @Part("image") images: List<CompletedFileUpload>?,
         @Parameter(description = "生成文本", required = true) @Part @NotEmpty text: String,
         @Parameter(description = "系统提示") @Part system: String?,
         @Parameter(description = "宽高比") @Part aspectRatio: AspectRatio?,
@@ -150,7 +173,7 @@ class GenerativeImageController(
         service.submitGenerateTask(
             buildGenRequest(
                 text,
-                completedFileUpload,
+                images,
                 candidateCount,
                 aspectRatio,
                 system,
@@ -170,7 +193,7 @@ class GenerativeImageController(
 
     private fun buildGenRequest(
         text: String,
-        completedFileUpload: CompletedFileUpload?,
+        images: List<CompletedFileUpload>?,
         candidateCount: Int?,
         aspectRatio: AspectRatio?,
         system: String?,
@@ -184,7 +207,7 @@ class GenerativeImageController(
         mediaResolution: MediaResolution?,
     ): GenRequest = GenRequest(
         text = text,
-        image = completedFileUpload?.bytes,
+        images = images?.mapNotNull { it.bytes },
         candidateCount = candidateCount ?: 1,
         aspectRatio = aspectRatio ?: AspectRatio.R1_1,
         system = system,

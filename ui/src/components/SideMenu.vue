@@ -1,7 +1,7 @@
 <template>
   <div
       class="hidden sm:flex w-14 border-r border-neutral-200 dark:border-neutral-800 flex-col items-center py-3 gap-4 glass bg-white/40 dark:bg-black/30">
-    <n-tooltip placement="right">
+    <n-tooltip v-if="user.profileReady" placement="right">
       <template #trigger>
         <n-button circle quaternary @click="openProfile">
           <Icon class="text-xl" icon="mdi:account-cog"/>
@@ -9,7 +9,7 @@
       </template>
       用户信息
     </n-tooltip>
-    <n-tooltip placement="right">
+    <n-tooltip v-if="user.profileReady" placement="right">
       <template #trigger>
         <n-button circle quaternary @click="openHistory">
           <Icon class="text-xl" icon="mdi:history"/>
@@ -17,13 +17,31 @@
       </template>
       历史记录
     </n-tooltip>
-    <n-tooltip placement="right">
+    <n-tooltip v-if="user.profileReady" placement="right">
       <template #trigger>
         <n-button circle quaternary @click="showRedeem = true">
           <Icon class="text-xl" icon="mdi:key"/>
         </n-button>
       </template>
       兑换密钥
+    </n-tooltip>
+
+    <n-tooltip v-if="!user.profileReady" placement="right">
+      <template #trigger>
+        <n-button circle quaternary @click="user.requireLogin()">
+          <Icon class="text-xl" icon="mdi:account-arrow-right"/>
+        </n-button>
+      </template>
+      登录
+    </n-tooltip>
+
+    <n-tooltip v-if="user.profileReady" placement="right">
+      <template #trigger>
+        <n-button circle quaternary @click="showLogout = true">
+          <Icon class="text-xl" icon="mdi:logout"/>
+        </n-button>
+      </template>
+      退出登录
     </n-tooltip>
 
     <n-modal v-model:show="showRedeem" :style="{ width: '420px', maxWidth: '92vw' }" preset="card" title="兑换积分密钥">
@@ -65,51 +83,72 @@
           <div v-else class="flex flex-col gap-3">
             <div v-for="r in viewRecords" :key="r.id"
                  class="rounded border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-black/30 overflow-hidden">
-              <div class="p-3 flex flex-wrap items-center gap-2">
-                <div
-                    class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                  <Icon class="text-[0.9rem]" icon="ph:code"/>
-                  <span class="font-medium">输入</span>
-                  <span class="font-semibold tabular-nums">{{ formatTokens(r.inputTokens) }}</span>
+              <div class="p-3 flex items-center gap-2">
+                <div class="flex-1 flex flex-wrap items-center gap-1.5 text-[10px] sm:text-[11px]">
+                  <div
+                      class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    <Icon class="text-[0.75rem]" icon="ph:code"/>
+                    <span class="font-medium">输入</span>
+                    <span class="font-semibold tabular-nums">{{ formatTokens(r.inputTokens) }}</span>
+                  </div>
+                  <div
+                      class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800">
+                    <Icon class="text-[0.75rem]" icon="ph:sparkle"/>
+                    <span class="font-medium">输出</span>
+                    <span class="font-semibold tabular-nums">{{ formatTokens(r.outputTokens) }}</span>
+                  </div>
+                  <div
+                      class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
+                    <Icon class="text-[0.75rem]" icon="ph:timer"/>
+                    <span class="font-medium">耗时</span>
+                    <span class="font-semibold tabular-nums">{{ formatDuration(r.durationMs) }}</span>
+                  </div>
+                  <div
+                      class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
+                    <Icon class="text-[0.75rem]" icon="ph:image"/>
+                    <span class="font-medium">图片</span>
+                    <span class="font-semibold tabular-nums">{{ r.imageCount }}</span>
+                  </div>
+                  <div class="ml-auto text-[11px] text-neutral-500">{{ formatTime(r.createdAt) }}</div>
                 </div>
-                <div
-                    class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800">
-                  <Icon class="text-[0.9rem]" icon="ph:sparkle"/>
-                  <span class="font-medium">输出</span>
-                  <span class="font-semibold tabular-nums">{{ formatTokens(r.outputTokens) }}</span>
+                <div class="flex items-center gap-2">
+                  <n-button quaternary size="small" @click="toggle(r.id)">
+                    <div class="flex items-center gap-1">
+                      <Icon :icon="expanded.has(r.id) ? 'mdi:chevron-up' : 'mdi:chevron-down'"/>
+                      <span>展开图片</span></div>
+                  </n-button>
+                  <n-button quaternary size="small" @click="removeRecord(r)">
+                    <div class="flex items-center gap-1 text-red-600">
+                      <Icon icon="mdi:delete-outline"/>
+                      <span>删除</span>
+                    </div>
+                  </n-button>
                 </div>
-                <div
-                    class="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
-                  <Icon class="text-[0.9rem]" icon="ph:timer"/>
-                  <span class="font-medium">耗时</span>
-                  <span class="font-semibold tabular-nums">{{ formatDuration(r.durationMs) }}</span>
-                </div>
-                <div
-                    class="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
-                  <Icon class="text-[0.9rem]" icon="ph:image"/>
-                  <span class="font-medium">图片</span>
-                  <span class="font-semibold tabular-nums">{{ r.imageCount }}</span>
-                </div>
-                <div class="ml-auto text-xs text-neutral-500">{{ formatTime(r.createdAt) }}</div>
               </div>
-              <div v-if="r.urls?.length" class="px-3 pb-3">
-                <n-button quaternary size="small" @click="toggle(r.id)">
-                  <div class="flex items-center gap-1">
-                    <Icon :icon="expanded.has(r.id) ? 'mdi:chevron-up' : 'mdi:chevron-down'"/>
-                    <span>展开图片</span></div>
-                </n-button>
-                <div v-if="expanded.has(r.id)" class="mt-2 flex flex-wrap justify-center gap-3">
-                  <div v-for="(img,i) in r.urls" :key="i"
-                       class="rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[260px] md:w-[320px] lg:w-[380px] cursor-zoom-in">
-                    <img :src="img || placeholder(i)" class="w-full h-auto object-contain" @click="openPreview(img)"/>
+              <transition name="expand">
+                <div v-if="expanded.has(r.id) && r.urls?.length" class="px-3 pb-3 overflow-hidden">
+                  <div class="mt-2 flex flex-wrap justify-center gap-2">
+                    <div v-for="(img,i) in r.urls" :key="i"
+                         class="rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[200px] md:w-[280px] lg:w-[360px] cursor-zoom-in">
+                      <img :src="img || placeholder(i)" class="w-full h-auto object-contain" @click="openPreview(img)"/>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </transition>
             </div>
           </div>
         </n-spin>
       </div>
       <ImagePreviewer v-model:modelValue="previewShow" :src="previewSrc"/>
+    </n-modal>
+    <n-modal v-model:show="showLogout" :style="{ width: '420px', maxWidth: '92vw' }" preset="card" title="退出登录">
+      <div class="space-y-3">
+        <div>确定要退出登录吗？</div>
+        <div class="flex gap-2 justify-end">
+          <n-button @click="showLogout=false">取消</n-button>
+          <n-button type="error" @click="doLogout">确认退出</n-button>
+        </div>
+      </div>
     </n-modal>
   </div>
 </template>
@@ -120,7 +159,7 @@ import {Icon} from '@iconify/vue'
 import {useUserStore} from '@/stores/user'
 import {NButton, NInput, NModal, NSpin, NTooltip, useMessage} from 'naive-ui'
 import {redeemPoints} from '@/api'
-import {listHistory} from '@/utils/indexedDb'
+import {deleteHistory, listHistory} from '@/utils/indexedDb'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 
 const user = useUserStore()
@@ -132,6 +171,7 @@ function openProfile() {
 
 const showRedeem = ref(false)
 const redeemKey = ref('')
+const showLogout = ref(false)
 
 
 function redeem() {
@@ -228,6 +268,32 @@ function openPreview(src: string) {
   previewShow.value = true
 }
 
+function doLogout() {
+  try {
+    user.logout()
+    message.success('已退出登录')
+  } finally {
+    showLogout.value = false
+  }
+}
+
+async function removeRecord(r: any) {
+  try {
+    if (r?.urls) {
+      for (const u of r.urls) {
+        if (u && typeof u === 'string' && u.startsWith('blob:')) URL.revokeObjectURL(u)
+      }
+    }
+    await deleteHistory(r.id)
+    records.value = records.value.filter((it) => it.id !== r.id)
+    viewRecords.value = viewRecords.value.filter((it) => it.id !== r.id)
+    expanded.value.delete(r.id)
+    message.success('已删除该条记录')
+  } catch {
+    message.error('删除失败')
+  }
+}
+
 function formatTime(ts: number) {
   const d = new Date(ts)
   const y = d.getFullYear()
@@ -277,4 +343,23 @@ function placeholder(index: number) {
 }
 </script>
 
-<style scoped></style>
+<style scoped>
+.expand-enter-active,
+.expand-leave-active {
+  transition: max-height .2s ease, opacity .2s ease, transform .2s ease;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.expand-enter-to,
+.expand-leave-from {
+  max-height: 1000px;
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>

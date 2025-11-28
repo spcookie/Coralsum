@@ -8,12 +8,14 @@
     <div class="flex items-center gap-2 sm:gap-3 flex-wrap text-sm">
       <div class="hidden sm:flex items-center gap-2">
         <Icon class="text-lg" icon="mdi:account"/>
-        <span>{{ displayName }}</span>
-        <n-tooltip placement="bottom" trigger="hover">
+        <span class="font-bold text-neutral-700 dark:text-neutral-200">{{ displayName }}</span>
+        <n-tooltip v-if="user.profileReady" placement="bottom" trigger="hover">
           <template #trigger>
             <div class="flex items-center gap-1">
               <Icon class="text-yellow-500 text-base" icon="material-symbols:bolt-rounded"/>
-              <span>{{ user.points }}</span>
+              <span class="inline-block underline underline-offset-2 decoration-[1px] decoration-dashed">
+                <n-number-animation :active="true" :duration="800" :from="prevPoints" :precision="0" :to="user.points"/>
+              </span>
             </div>
           </template>
           <div class="text-xs text-white space-y-1">
@@ -21,16 +23,23 @@
             <div>永久积分：{{ user.permanentPoints }}</div>
           </div>
         </n-tooltip>
-        <n-tag :color="tierTagStyle" class="inline-flex items-center justify-center leading-none" size="small">
+        <n-tag v-if="user.profileReady" :color="tierTagStyle"
+               class="inline-flex items-center justify-center leading-none" size="small">
           {{ user.tier }}
         </n-tag>
       </div>
       <div class="flex items-center gap-2">
-        <n-button circle class="sm:hidden" quaternary size="small" @click="user.requireProfile()">
+        <n-button v-if="user.profileReady" circle class="sm:hidden" quaternary size="small"
+                  @click="user.requireProfile()">
           <Icon icon="mdi:account-cog"/>
         </n-button>
-        <n-button circle class="sm:hidden" quaternary size="small" @click="showRedeemMobile = true">
+        <n-button v-if="user.profileReady" circle class="sm:hidden" quaternary size="small"
+                  @click="showRedeemMobile = true">
           <Icon icon="mdi:key"/>
+        </n-button>
+        <n-button v-if="!user.profileReady" circle class="sm:hidden" quaternary size="small"
+                  @click="user.requireLogin()">
+          <Icon icon="mdi:account-arrow-right"/>
         </n-button>
         <n-switch :value="settings.darkMode" @update:value="onToggleDark">
           <template #checked>
@@ -48,12 +57,15 @@
       class="sm:hidden w-full px-3 py-2 flex items-center justify-between glass bg-white/60 dark:bg-black/30 border-b border-neutral-200 dark:border-neutral-800">
     <div class="flex items-center gap-2 min-w-0">
       <Icon class="text-base" icon="mdi:account"/>
-      <span class="truncate max-w-[40vw]">{{ displayName }}</span>
-      <div class="flex items-center gap-1">
+      <span class="truncate max-w-[40vw] font-bold text-neutral-700 dark:text-neutral-200">{{ displayName }}</span>
+      <div v-if="user.profileReady" class="flex items-center gap-1">
         <Icon class="text-yellow-500" icon="material-symbols:bolt-rounded"/>
-        <span>{{ user.points }}</span>
+        <span class="inline-block underline underline-offset-2 decoration-[1px] decoration-dashed">
+          <n-number-animation :active="true" :duration="800" :from="prevPoints" :precision="0" :to="user.points"/>
+        </span>
       </div>
-      <n-tag :color="tierTagStyle" class="inline-flex items-center justify-center leading-none" size="small">
+      <n-tag v-if="user.profileReady" :color="tierTagStyle" class="inline-flex items-center justify-center leading-none"
+             size="small">
         {{ user.tier }}
       </n-tag>
     </div>
@@ -113,7 +125,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, onMounted, reactive, ref} from 'vue'
+import {computed, onMounted, reactive, ref, watch} from 'vue'
 import {useRouter} from 'vue-router'
 import {Icon} from '@iconify/vue'
 import {useSettingsStore} from '@/stores/settings'
@@ -127,6 +139,7 @@ import {
   NFormItem,
   NInput,
   NModal,
+  NNumberAnimation,
   NSwitch,
   NTag,
   NTooltip,
@@ -185,6 +198,7 @@ const tierTagStyle = computed(() => {
       : {color: 'rgba(139,92,246,0.10)', textColor: '#8b5cf6', borderColor: '#a78bfa'}
 })
 const showRedeemMobile = ref(false)
+const prevPoints = ref(0)
 // 绑定相关已移除
 const nameMobile = ref(user.name)
 const oldPwd = ref('')
@@ -336,11 +350,17 @@ function redeemMobile() {
 
 onMounted(async () => {
   user.init()
+  prevPoints.value = 0
   try {
     const profile = await getProfile()
     user.setProfile({...profile, token: user.token})
   } catch {
     if (!user.profileReady) user.requireLogin()
+  }
+})
+watch(() => user.points, (nv, ov) => {
+  if (typeof ov === 'number') {
+    prevPoints.value = ov
   }
 })
 </script>

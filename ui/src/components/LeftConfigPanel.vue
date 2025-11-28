@@ -32,27 +32,37 @@
             </n-tooltip>
           </div>
         </template>
-        <n-upload :default-file-list="uploadList" :disabled="generating" multiple @change="onUploadChange">
+        <n-upload
+            :default-file-list="uploadList"
+            :disabled="generating"
+            :on-before-upload="beforeUpload"
+            accept="image/png,image/jpeg"
+            multiple
+            @change="onUploadChange">
           <n-upload-dragger @paste.prevent="handlePaste">
             <div
                 class="flex flex-col items-center justify-center py-10 border border-dashed rounded-xl border-neutral-300 dark:border-neutral-700 text-neutral-500 bg-neutral-50/60 dark:bg-neutral-900/30">
               <Icon class="text-2xl" icon="mdi:cloud-upload"/>
-              <div>拖拽、点击选择或粘贴图片</div>
+              <div class="text-[13px] sm:text-sm">拖拽、点击选择或粘贴图片</div>
+              <div class="text-[11px] sm:text-xs mt-1 text-neutral-500 dark:text-neutral-400">仅支持 PNG/JPG 格式</div>
             </div>
           </n-upload-dragger>
         </n-upload>
-        <div v-if="uploadList.length > 0" class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
-          <n-image-group>
-            <n-image
-                v-for="(it,i) in uploadList"
-                :key="i"
-                :class="selectedIndex===i ? 'ring-2 ring-emerald-500 rounded' : ''"
-                :img-props="{ class: 'rounded bg-neutral-100 dark:bg-neutral-800' }"
+        <div v-if="uploadList.length > 0" class="mt-3 columns-2 md:columns-3 gap-2">
+          <div
+              v-for="(it,i) in uploadList"
+              :key="i"
+              class="mb-2 break-inside-avoid rounded bg-neutral-100 dark:bg-neutral-800 relative overflow-hidden">
+            <img
                 :src="it.url"
-                class="w-full"
-                @click="selectedIndex=i"
+                class="w-full h-auto object-contain rounded cursor-pointer relative z-0"
+                @click="onThumbClick(it.url, i)"
             />
-          </n-image-group>
+            <div class="absolute top-0 right-0 w-10 h-10 pointer-events-none z-10">
+              <div class="badge-fan"></div>
+              <div class="badge-num">{{ i + 1 }}</div>
+            </div>
+          </div>
         </div>
       </n-collapse-item>
       <n-collapse-item name="sys">
@@ -311,6 +321,7 @@
     </n-collapse>
     <n-modal v-model:show="confirmReset" content="是否重置所有配置？" negative-text="取消" positive-text="确认"
              preset="dialog" title="确认重置" @positive-click="doReset"/>
+    <ImagePreviewer v-model:modelValue="previewShow" :src="previewSrc"/>
   </div>
 </template>
 
@@ -319,14 +330,13 @@ import {computed, ref} from 'vue'
 import {Icon} from '@iconify/vue'
 import {useSettingsStore} from '@/stores/settings'
 import {useUserStore} from '@/stores/user'
+import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {
   darkTheme,
   NButton,
   NCollapse,
   NCollapseItem,
   NConfigProvider,
-  NImage,
-  NImageGroup,
   NInput,
   NModal,
   NRadioButton,
@@ -354,15 +364,22 @@ const files = ref<File[]>([])
 const uploadList = ref<any[]>([])
 const confirmReset = ref(false)
 const selectedIndex = ref<number | null>(null)
+const previewShow = ref(false)
+const previewSrc = ref('')
+const allowedTypes = new Set(['image/png', 'image/jpeg'])
 
 function onUploadChange(list: any) {
   if (generating.value) return
   const fl = list?.fileList ?? []
+  const filtered: any[] = []
   for (const it of fl) {
     if (!it.url && it.file) it.url = URL.createObjectURL(it.file)
+    const t = it?.file?.type || it?.type
+    if (allowedTypes.has(t)) filtered.push(it)
   }
-  uploadList.value = fl
-  files.value = fl.map((f: any) => f.file).filter(Boolean)
+  if (filtered.length < fl.length) message.error('仅支持 PNG/JPG 格式')
+  uploadList.value = filtered
+  files.value = filtered.map((f: any) => f.file).filter(Boolean)
 }
 
 function onReset() {
@@ -372,6 +389,11 @@ function onReset() {
 function onGenerate() {
   if (promptEmpty.value) {
     message.error('请填写提示词')
+    return
+  }
+  if (!user.profileReady) {
+    message.error('请先登录')
+    user.requireLogin()
     return
   }
   const pts = Number(user.points || 0)
@@ -390,6 +412,8 @@ function doReset() {
   uploadList.value = []
   files.value = []
   selectedIndex.value = null
+  previewShow.value = false
+  previewSrc.value = ''
 }
 
 function handlePaste(e: ClipboardEvent) {
@@ -400,7 +424,7 @@ function handlePaste(e: ClipboardEvent) {
     const item = items[i]
     if (item.kind === 'file') {
       const file = item.getAsFile()
-      if (file) pastedFiles.push(file)
+      if (file && allowedTypes.has(file.type)) pastedFiles.push(file)
     }
   }
   if (pastedFiles.length) {
@@ -408,7 +432,23 @@ function handlePaste(e: ClipboardEvent) {
       uploadList.value.push({name: file.name, status: 'finished', url: URL.createObjectURL(file)})
       files.value.push(file)
     }
+  } else {
+    message.error('仅支持 PNG/JPG 格式')
   }
+}
+
+function onThumbClick(url: string, i: number) {
+  selectedIndex.value = i
+  previewSrc.value = url
+  previewShow.value = true
+}
+
+function beforeUpload(data: any) {
+  const f = data?.file?.file || data?.file
+  const t = f?.type
+  const ok = allowedTypes.has(t)
+  if (!ok) message.error('仅支持 PNG/JPG 格式')
+  return ok
 }
 
 const sliderThemeOverrides = computed(() => ({
@@ -494,4 +534,32 @@ const sliderThemeOverrides = computed(() => ({
 }
 
 /* removed class-based slider overrides to avoid conflicting colors */
+
+.badge-fan {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #18a058;
+  -webkit-mask-image: conic-gradient(at 100% 0, rgba(255, 255, 255, 1) 0deg 90deg, rgba(255, 255, 255, 0) 90deg 360deg);
+  mask-image: conic-gradient(at 100% 0, rgba(255, 255, 255, 1) 0deg 90deg, rgba(255, 255, 255, 0) 90deg 360deg)
+}
+
+:deep(.dark) .badge-fan {
+  background-color: #2a947d
+}
+
+.badge-num {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4)
+}
+
+:deep(.dark) .badge-num {
+  color: #ffffff
+}
 </style>

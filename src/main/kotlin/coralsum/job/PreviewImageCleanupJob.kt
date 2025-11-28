@@ -1,6 +1,7 @@
 package coralsum.job
 
 import coralsum.repository.GenerateImageReqRecordRepository
+import coralsum.repository.GenerateImageReqRefRepository
 import coralsum.toolkit.logger
 import io.micronaut.objectstorage.aws.AwsS3Operations
 import jakarta.inject.Singleton
@@ -13,6 +14,7 @@ import java.time.LocalDateTime
 class PreviewImageCleanupJob(
     private val store: AwsS3Operations,
     private val generateImageReqRecordRepository: GenerateImageReqRecordRepository,
+    private val generateImageReqRefRepository: GenerateImageReqRefRepository,
 ) {
 
     private val log = logger<PreviewImageCleanupJob>()
@@ -23,17 +25,15 @@ class PreviewImageCleanupJob(
         val cutoff = LocalDateTime.now().minusMinutes(30)
         val expired = runBlocking { generateImageReqRecordRepository.findExpiredBefore(cutoff) }
         expired.forEach { record ->
-            val ref = record.imageRef
-            if (ref != null) {
+            val refs = runBlocking { generateImageReqRefRepository.findAllByRecordId(record.id!!) }
+            refs.forEach { r ->
                 try {
-                    store.delete(ref)
+                    store.delete(r.imageRef)
                 } catch (e: Exception) {
                     log.warn("预览图片删除失败: {}", e.message, e)
-                } finally {
-                    record.imageRef = null
-                    runBlocking { generateImageReqRecordRepository.update(record) }
                 }
             }
+            runBlocking { generateImageReqRefRepository.deleteAllByRecordId(record.id!!) }
         }
     }
 

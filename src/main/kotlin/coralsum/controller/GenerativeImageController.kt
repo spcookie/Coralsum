@@ -6,6 +6,8 @@ import coralsum.common.response.GenResultResponse
 import coralsum.common.response.GenTaskResultResponse
 import coralsum.common.response.IntentAssessmentResponse
 import coralsum.convert.GenerativeConvert
+import coralsum.repository.OpenUserRepository
+import coralsum.repository.OutletUserRepository
 import coralsum.service.GenRequest
 import coralsum.service.impl.GenerativeImageImpl
 import io.micronaut.core.version.annotation.Version
@@ -44,6 +46,8 @@ class GenerativeImageController(
     val service: GenerativeImageImpl,
     val convert: GenerativeConvert,
     val addressResolver: HttpClientAddressResolver,
+    val openUserRepository: OpenUserRepository,
+    val outletUserRepository: OutletUserRepository,
 ) {
     private val log = LoggerFactory.getLogger(GenerativeImageController::class.java)
 
@@ -121,30 +125,27 @@ class GenerativeImageController(
     @Secured(SecurityRule.IS_AUTHENTICATED)
     @Version("v1")
     @Get("/link")
-    @Produces(MediaType.TEXT_HTML)
-    @Operation(summary = "图片预览页面", description = "根据引用标识返回图片HTML页面")
+    @Operation(summary = "获取分享直链", description = "返回带签名的预览直链，指向 /share 接口")
     suspend fun link(
         @QueryValue ref: String,
-        request: HttpRequest<*>,
-    ): HttpResponse<ModelAndView<Map<String, Any>>> {
-        val page =
-            service.linkPage(ref) ?: return HttpResponse.notFound<ModelAndView<Map<String, Any>>>()
-        val mv = ModelAndView(
-            "image-link",
-            mapOf<String, Any>("src" to page.src, "time" to page.time, "user" to page.user)
-        )
-        return HttpResponse.ok(mv)
+        @QueryValue("darkMode") darkMode: Boolean?,
+    ): HttpResponse<String> {
+        val page = service.linkPage(ref) ?: return HttpResponse.notFound()
+        val url = if (darkMode == true) page.src + "&darkMode=true" else page.src
+        return HttpResponse.ok(url)
     }
 
-    @Secured(SecurityRule.IS_AUTHENTICATED)
+    @Secured(SecurityRule.IS_ANONYMOUS)
     @Version("v1")
-    @Get("/bytes")
-    @Operation(summary = "预览图片字节", description = "服务端读取并返回图片字节")
-    suspend fun previewBytes(
+    @Get("/share")
+    @Produces(MediaType.TEXT_HTML)
+    @Operation(summary = "预览图片页面", description = "读取图片字节并在页面中以Base64内嵌展示")
+    suspend fun share(
         @QueryValue ref: String,
-        @QueryValue("pt") token: String?,
+        @QueryValue("pt") token: String,
+        @QueryValue("darkMode") darkMode: Boolean?,
         request: HttpRequest<*>,
-    ): HttpResponse<ByteArray> {
+    ): HttpResponse<ModelAndView<Map<String, Any>>> {
         val ip = addressResolver.resolve(request)
         val url = service.preview(ref, ip, token) ?: return HttpResponse.notFound()
         val bytes = try {
@@ -154,16 +155,40 @@ class GenerativeImageController(
         } catch (_: Exception) {
             return HttpResponse.serverError()
         }
-        val contentType = when (ref.substringAfterLast('.', "").lowercase()) {
-            "png" -> MediaType.IMAGE_PNG
-            "jpg", "jpeg" -> MediaType.IMAGE_JPEG
-            "webp" -> MediaType.of("image/webp")
-            else -> MediaType.APPLICATION_OCTET_STREAM
+        val mime = when (ref.substringAfterLast('.', "").lowercase()) {
+            "png" -> "image/png"
+            "jpg", "jpeg" -> "image/jpeg"
+            "webp" -> "image/webp"
+            else -> "application/octet-stream"
         }
-        return HttpResponse.ok(bytes).contentType(contentType)
+        val base64 = java.util.Base64.getEncoder().encodeToString(bytes)
+        val dataUrl = "data:${mime};base64,${base64}"
+        val parts = token.split(":")
+        val uid = parts.getOrNull(0) ?: ""
+        val exp = parts.getOrNull(1)?.toLongOrNull()
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val time = exp?.let {
+            java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
+                .format(formatter)
+        } ?: ""
+        val user = if (uid.isNotBlank()) {
+            val openUser = openUserRepository.findByUid(uid)
+            if (openUser != null) {
+                val outletWeb = outletUserRepository.findByOpenUserIdAndUserSource(
+                    openUser.id!!,
+                    coralsum.common.enums.UserSource.WEB
+                )
+                outletWeb?.nickName ?: ""
+            } else ""
+        } else ""
+        val mv = ModelAndView(
+            "image-link",
+            mapOf<String, Any>("src" to dataUrl, "time" to time, "user" to user, "dark" to (darkMode == true))
+        )
+        return HttpResponse.ok(mv)
     }
 
-    @Secured(SecurityRule.IS_ANONYMOUS)
+    @Secured(SecurityRule.IS_AUTHENTICATED)
     @Version("v1")
     @Post("/assess-intent", consumes = [MediaType.TEXT_PLAIN])
     @Operation(summary = "评估生成意图", description = "基于用户文本判断是否为生成/修改图片意图")

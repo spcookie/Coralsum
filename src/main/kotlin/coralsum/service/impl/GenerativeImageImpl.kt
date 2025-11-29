@@ -438,7 +438,7 @@ class GenerativeImageImpl(
         if (record.userCode != uid) return null
         val exp = System.currentTimeMillis() + previewConfig.ttlSeconds * 1000
         val token = sign(ref, uid, exp)
-        val src = "/api/generative-image?ref=" + ref + "&pt=" + "$uid:$exp:$token"
+        val src = "/api/generative-image/share?ref=" + ref + "&pt=" + "$uid:$exp:$token"
         val time = record.createTime?.let {
             java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(it)
         } ?: ""

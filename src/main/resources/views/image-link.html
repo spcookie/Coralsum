@@ -5,38 +5,90 @@
     <meta content="width=device-width, initial-scale=1" name="viewport"/>
     <title>图片预览</title>
     <style>
+        :root {
+            --bg-light: #f7f7f9;
+            --bg-dark: #0b1020;
+            --text-light: #111827;
+            --text-dark: #e5e7eb;
+            --panel-bg-light: rgba(255, 255, 255, 0.8);
+            --panel-bg-dark: rgba(0, 0, 0, 0.35);
+        }
         html, body {
             height: 100%;
             margin: 0;
         }
 
+        body.light {
+            background: var(--bg-light);
+            color: var(--text-light);
+        }
+
+        body.dark {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
         .container {
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            background: #0b1020;
+            padding: 16px;
         }
-
         .wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             max-width: 92vw;
-            max-height: 92vh;
+            max-height: 88vh;
+            gap: 12px;
         }
 
-        img {
+        .image-stage {
+            display: grid;
+            place-items: center;
             width: 100%;
+            height: 100%;
+        }
+        img {
+            max-width: 92vw;
+            max-height: 85vh;
+            width: auto;
             height: auto;
             object-fit: contain;
             border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        .info {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 13px;
+            padding: 8px 12px;
+            border-radius: 9999px;
+            backdrop-filter: saturate(1.2) blur(4px);
+        }
+
+        body.light .info {
+            background: var(--panel-bg-light);
+            color: var(--text-light);
+        }
+
+        body.dark .info {
+            background: var(--panel-bg-dark);
+            color: var(--text-dark);
         }
     </style>
 </head>
-<body>
+<body th:class="${dark} ? 'dark' : 'light'">
 <div class="container">
     <div class="wrap">
-        <img alt="image" th:src="${src}"/>
-        <div style="margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 12px; color: #e5e7eb; font-size: 13px;">
+        <div class="image-stage">
+            <img alt="image" th:src="${src}"/>
+        </div>
+        <div class="info">
             <span th:text="${time}"></span>
             <span>•</span>
             <span th:text="${user}"></span>

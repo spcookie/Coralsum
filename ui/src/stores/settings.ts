@@ -17,7 +17,8 @@ export const useSettingsStore = defineStore('settings', {
         outputFormat: 'PNG' as OutputFormat,
         imageSize: '1K' as ImageSize,
         mediaResolution: 'auto' as MediaResolution,
-        darkMode: false
+        darkMode: false,
+        advancedExpanded: false
     }),
     actions: {
         toggleDark() {

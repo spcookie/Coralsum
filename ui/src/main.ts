@@ -24,7 +24,7 @@ if (import.meta.env.DEV) {
 try {
     const raw = localStorage.getItem('pinia_settings')
     if (raw) {
-        const saved = JSON.parse(raw)
+        const saved = JSON.parse(raw || '{}')
         const dark = !!saved?.darkMode
         document.documentElement.classList.toggle('dark', dark)
     }

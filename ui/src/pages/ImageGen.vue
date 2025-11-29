@@ -3,7 +3,7 @@
     <LeftConfigPanel :generating="btnLoading" @generate="doGenerate"/>
     <div class="relative z-0 isolate flex-1 flex flex-col md:h-full glass bg-white/40 dark:bg-black/30">
       <div class="flex-1 overflow-y-auto">
-        <RightResultPanel :loading="loading" :result="result"/>
+        <RightResultPanel :loading="loading" :result="result" @save-history="onSaveHistory"/>
       </div>
       <div class="shrink-0 py-2 md:pb-0 pb-[env(safe-area-inset-bottom)]">
         <div class="flex flex-col items-center justify-center text-sm text-neutral-600 dark:text-neutral-300">
@@ -33,7 +33,7 @@ import {onMounted, onUnmounted, ref, watch} from 'vue'
 import LeftConfigPanel from '@/components/LeftConfigPanel.vue'
 import RightResultPanel from '@/components/RightResultPanel.vue'
 import {useSettingsStore} from '@/stores/settings'
-import {assessIntent, generate, getGenerateTaskResult, getImageBytes, refreshUserInfoByEmail} from '@/api'
+import {assessIntent, generate, getGenerateTaskResult, refreshUserInfoByEmail} from '@/api'
 import {useUserStore} from '@/stores/user'
 import {useMessage} from 'naive-ui'
 import {addHistoryFromResult} from '@/utils/indexedDb'
@@ -253,27 +253,7 @@ async function doGenerate(payload: { prompt: string; systemPrompt?: string; file
       const u = await refreshUserInfoByEmail()
       user.setProfile({...u, token: user.token})
     }
-    if (result.value) {
-      try {
-        const dataUrls = await buildDataUrls(currentBlobUrls.value)
-        await addHistoryFromResult(user.email || '', {
-          prompt: payload.prompt,
-          systemPrompt: payload.systemPrompt,
-          config: {
-            candidateRadio: settings.candidateRadio,
-            aspectRatio: settings.aspectRatio,
-            topP: settings.topP,
-            temperature: settings.temperature,
-            resolution: settings.resolution,
-            outputFormat: settings.outputFormat,
-            imageSize: settings.imageSize,
-            mediaResolution: settings.mediaResolution
-          },
-          result: {...result.value, images: dataUrls}
-        })
-      } catch {
-      }
-    }
+
   } catch (e: any) {
     const msg = e?.message || '服务异常'
     // 模拟状态码处理
@@ -347,27 +327,7 @@ async function pollTaskResultLoop() {
           user.setProfile({...u, token: user.token})
         } catch {
         }
-        if (result.value) {
-          try {
-            const dataUrls = await buildDataUrls(currentBlobUrls.value)
-            await addHistoryFromResult(user.email || '', {
-              prompt: '',
-              systemPrompt: undefined,
-              config: {
-                candidateRadio: settings.candidateRadio,
-                aspectRatio: settings.aspectRatio,
-                topP: settings.topP,
-                temperature: settings.temperature,
-                resolution: settings.resolution,
-                outputFormat: settings.outputFormat,
-                imageSize: settings.imageSize,
-                mediaResolution: settings.mediaResolution
-              },
-              result: {...result.value, images: dataUrls}
-            })
-          } catch {
-          }
-        }
+
         return
       }
       if (res.status === 'FAILED' || res.status === 'FAIL') {
@@ -397,6 +357,26 @@ async function pollTaskResultLoop() {
 onMounted(() => {
   syncGenerateStatus()
 })
+
+function onSaveHistory(dataUrls: string[]) {
+  if (!result.value) return
+  const cfg = {
+    candidateRadio: settings.candidateRadio,
+    aspectRatio: settings.aspectRatio,
+    topP: settings.topP,
+    temperature: settings.temperature,
+    resolution: settings.resolution,
+    outputFormat: settings.outputFormat,
+    imageSize: settings.imageSize,
+    mediaResolution: settings.mediaResolution
+  }
+  addHistoryFromResult(user.email || '', {
+    prompt: '',
+    systemPrompt: undefined,
+    config: cfg,
+    result: {...result.value, images: dataUrls}
+  })
+}
 
 onUnmounted(() => {
   revokeCurrentBlobUrls()

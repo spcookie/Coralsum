@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
           name="viewport"/>
-    <title>Coralsum AI 生图</title>
+    <title>Coralsum 生图</title>
     <link href="/favicon.svg?v=3" rel="icon" sizes="any" type="image/svg+xml"/>
     <meta content="#ffffff" media="(prefers-color-scheme: light)" name="theme-color"/>
     <meta content="#0b0b0b" media="(prefers-color-scheme: dark)" name="theme-color"/>
@@ -13,15 +13,26 @@
             try {
                 var html = document.documentElement
                 var raw = localStorage.getItem('pinia_settings')
+                var saved = null
                 if (raw) {
-                    var saved = JSON.parse(raw || '{}')
-                    if (saved && typeof saved.darkMode !== 'undefined') {
-                        html.classList.toggle('dark', !!saved.darkMode)
-                        return
+                    try {
+                        saved = JSON.parse(raw || '{}')
+                    } catch {
                     }
                 }
-                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    html.classList.add('dark')
+                var hasSavedDark = saved && typeof saved.darkMode !== 'undefined'
+                if (hasSavedDark) {
+                    var darkSaved = !!saved.darkMode
+                    html.classList.toggle('dark', darkSaved)
+                } else {
+                    var isDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+                    html.classList.toggle('dark', isDark)
+                    var seed = saved && typeof saved === 'object' ? saved : {}
+                    seed.darkMode = isDark
+                    try {
+                        localStorage.setItem('pinia_settings', JSON.stringify(seed))
+                    } catch {
+                    }
                 }
             } catch {
             }
@@ -77,67 +88,149 @@
         color: var(--pl-text)
     }
 
-    .loader {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px
-    }
-
-    .loader .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: var(--pl-dot1);
-        opacity: 0.85;
-        animation: pulse 1.2s ease-in-out infinite
-    }
-
-    .loader .dot:nth-child(2) {
-        background: var(--pl-dot2);
-        animation-delay: 0.15s
-    }
-
-    .loader .dot:nth-child(3) {
-        background: var(--pl-dot3);
-        animation-delay: 0.30s
-    }
-
-    @keyframes pulse {
-        0%, 100% {
-            transform: scale(0.75);
-            opacity: 0.6
-        }
-        50% {
-            transform: scale(1);
-            opacity: 1
-        }
-    }
-
     .brand {
-        font: 500 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        position: relative;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        font-weight: 600;
+        font-size: clamp(28px, 9vw, 84px);
         letter-spacing: 0.02em;
-        color: var(--pl-text)
+        color: var(--pl-text);
+    }
+
+    .brand::after {
+        content: attr(data-text);
+        position: absolute;
+        inset: 0;
+        color: var(--pl-base);
+        filter: blur(3px);
+        opacity: .55;
+        pointer-events: none;
+        -webkit-mask-image: linear-gradient(135deg, transparent 0 42%, #000 46% 54%, transparent 58% 100%);
+        -webkit-mask-size: 170% 170%;
+        -webkit-mask-repeat: no-repeat;
+        -webkit-mask-position: var(--mask-pos, 0% 50%);
+        transition: -webkit-mask-position var(--mask-dur, 1200ms) ease-in-out;
+    }
+
+    @supports not (-webkit-mask-image: linear-gradient(white, black)) {
+        .brand::after {
+            display: none;
+        }
+    }
+
+    .brand .letter {
+        display: inline-block;
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    .brand .letter:nth-child(3n+1) {
+        color: var(--pl-dot1);
+    }
+
+    .brand .letter:nth-child(3n+2) {
+        color: var(--pl-dot2);
+    }
+
+    .brand .letter:nth-child(3n+3) {
+        color: var(--pl-dot3);
+    }
+
+    @keyframes letter-in {
+        0% {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes letter-out {
+        0% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(-6px);
+        }
     }
 </style>
 <div id="preload-overlay" class="preload-overlay">
-    <div class="loader">
-        <div class="dot"></div>
-        <div class="dot"></div>
-        <div class="dot"></div>
-    </div>
-    <div class="brand">Coralsum AI 生图</div>
+    <div class="brand" data-text="Coralsum">Coralsum</div>
+
 </div>
+<script>
+    (function () {
+        var overlay = document.getElementById('preload-overlay')
+        var brand = overlay && overlay.querySelector('.brand[data-text]')
+        if (!brand) return
+        var text = brand.getAttribute('data-text') || brand.textContent || ''
+        brand.textContent = ''
+        var letters = []
+        for (var i = 0; i < text.length; i++) {
+            var s = document.createElement('span')
+            s.className = 'letter'
+            s.textContent = text[i]
+            brand.appendChild(s)
+            letters.push(s)
+        }
+
+        var step = 90, inDur = 360, outDur = 320, hold = 650, gap = 900, sweepDur = 1200
+        var forward = true
+
+        function runCycle() {
+            if (!overlay || overlay.style.display === 'none') return
+            // reset letters
+            for (var i = 0; i < letters.length; i++) {
+                var el = letters[i]
+                el.style.animation = 'none'
+                el.style.opacity = '0'
+                el.style.transform = 'translateY(8px)'
+                // force reflow to restart
+                void el.offsetWidth
+            }
+            // sweep start/end
+            brand.style.setProperty('--mask-dur', sweepDur + 'ms')
+            brand.style.setProperty('--mask-pos', (forward ? '0% 50%' : '100% 50%'))
+            // next frame move to other side
+            requestAnimationFrame(function () {
+                brand.style.setProperty('--mask-pos', (forward ? '100% 50%' : '0% 50%'))
+            })
+
+            var len = letters.length
+            var inTotal = inDur + step * (len - 1)
+            var outBase = inTotal + hold
+            // appear from one side
+            for (var i = 0; i < len; i++) {
+                var idx = forward ? i : (len - 1 - i)
+                var el = letters[idx]
+                el.style.animation = 'letter-in ' + inDur + 'ms ease-out ' + (i * step) + 'ms forwards, '
+                    + 'letter-out ' + outDur + 'ms ease-in ' + (outBase + (forward ? (len - 1 - i) : i) * step) + 'ms forwards'
+            }
+
+            // schedule next cycle reverse with gap
+            var cycleTotal = outBase + outDur + step * (len - 1) + gap
+            setTimeout(function () {
+                forward = !forward;
+                runCycle()
+            }, cycleTotal)
+        }
+
+        runCycle()
+    })()
+</script>
 <script type="module">
     const html = document.documentElement
     html.classList.add('preload-block')
     try {
         const raw = localStorage.getItem('pinia_settings')
         if (raw) {
-            const saved = JSON.parse(raw)
+            const saved = JSON.parse(raw || '{}')
             const dark = !!saved?.darkMode
             html.classList.toggle('dark', dark)
-        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            html.classList.add('dark')
         }
     } catch {
     }

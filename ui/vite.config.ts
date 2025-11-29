@@ -6,13 +6,13 @@ export default defineConfig({
     server: {
         port: 5173,
         host: true,
-        
+        allowedHosts: ['localhost', 'coralsum.spcookie.top'],
         proxy: {
             '/api': {
                 target: 'http://localhost:8080',
                 changeOrigin: true,
                 headers: {
-                    Origin: 'http://localhost:5173'
+                    Origin: 'http://localhost:8080'
                 }
             }
         }

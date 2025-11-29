@@ -15,6 +15,7 @@ export const useUserStore = defineStore('user', {
         uid: '',
         permissions: [] as string[],
         name: '',
+        nickTag: 0 as number | null,
         points: 0,
         permanentPoints: 0,
         subscribePoints: 0,
@@ -43,6 +44,7 @@ export const useUserStore = defineStore('user', {
             permissions?: string[];
             email: string;
             name: string;
+            nickTag?: number | null;
             points?: number;
             permanentPoints?: number;
             subscribePoints?: number;
@@ -53,6 +55,7 @@ export const useUserStore = defineStore('user', {
             if (Array.isArray(payload.permissions)) this.permissions = payload.permissions
             this.email = payload.email
             this.name = payload.name
+            if (typeof payload.nickTag === 'number' || payload.nickTag === null) this.nickTag = payload.nickTag ?? null
             if (typeof payload.points === 'number') this.points = payload.points
             this.permanentPoints = payload.permanentPoints ?? this.permanentPoints
             this.subscribePoints = payload.subscribePoints ?? this.subscribePoints

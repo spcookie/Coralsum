@@ -10,6 +10,7 @@ data class ProfileResponse(
     @Schema(description = "用户UID") val uid: String,
     @Schema(description = "权限列表") val permissions: List<String>,
     @Schema(description = "昵称") val nickName: String,
+    @Schema(description = "昵称编号") val nickTag: Int? = null,
     @Schema(description = "来源标识码") val sourceCode: String,
     @Schema(description = "永久积分") val permanentPoints: Int,
     @Schema(description = "订阅积分") val subscribePoints: Int,

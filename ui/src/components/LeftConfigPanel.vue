@@ -133,7 +133,7 @@
         </n-radio-group>
       </div>
     </div>
-    <n-collapse :default-expanded-names="[]">
+    <n-collapse :expanded-names="advancedExpandedNames" @update:expanded-names="onAdvancedExpandChange">
       <n-collapse-item name="advanced">
         <template #header>
           <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
@@ -629,6 +629,12 @@ const sliderThemeOverrides = computed(() => ({
     dotColor: settings.darkMode ? '#2a947d' : '#36ad6a'
   }
 }))
+
+const advancedExpandedNames = computed(() => (settings.advancedExpanded ? ['advanced'] : []))
+
+function onAdvancedExpandChange(names: Array<string | number>) {
+  settings.advancedExpanded = Array.isArray(names) && names.includes('advanced')
+}
 
 </script>
 

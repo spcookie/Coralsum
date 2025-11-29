@@ -44,6 +44,7 @@ export async function getProfile() {
         uid: data.uid,
         permissions: Array.isArray(data.permissions) ? data.permissions : [],
         name: data.nick_name,
+        nickTag: typeof data.nick_tag === 'number' ? data.nick_tag : null,
         email: data.source_code,
         tier: data.tier,
         permanentPoints: Number(data.permanent_points || 0),
@@ -63,6 +64,7 @@ export async function updateProfileName(name: string) {
         uid: data.uid,
         permissions: Array.isArray(data.permissions) ? data.permissions : [],
         name: data.nick_name,
+        nickTag: typeof data.nick_tag === 'number' ? data.nick_tag : null,
         email: data.source_code,
         tier: data.tier,
         permanentPoints: Number(data.permanent_points || 0),
@@ -146,6 +148,8 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
 
 export async function assessIntent(text: string): Promise<{ generateIntent: boolean; guideMessage: string }> {
     const headers: any = {'X-API-Version': 'v1', 'Content-Type': 'text/plain'}
+    const user = useUserStore()
+    if (user?.token) headers.Authorization = `Bearer ${user.token}`
     const {data} = await http.post('/generative-image/assess-intent', text, {headers})
     return {
         generateIntent: data.generate_intent,
@@ -169,9 +173,15 @@ export async function getPreviewBytes(ref: string, pt?: string): Promise<Blob> {
     return data as Blob
 }
 
-export async function getImageShareLink(ref: string): Promise<string> {
+export async function getImageShareLink(ref: string, darkMode?: boolean): Promise<string> {
     const headers: any = {'X-API-Version': 'v1'}
+    try {
+        const user = useUserStore()
+        if (user?.token) headers.Authorization = `Bearer ${user.token}`
+    } catch {
+    }
     const params: any = {ref}
+    if (typeof darkMode === 'boolean') params.darkMode = darkMode
     const {data} = await http.get('/generative-image/link', {params, headers})
     if (data && typeof data === 'object') {
         const url = (data as any).url ?? (data as any).link ?? ''

@@ -1,7 +1,8 @@
 const DB_NAME = 'coralsum-history'
-const DB_VERSION = 3
+const DB_VERSION = 4
 const STORE_NAME = 'history'
 const IMG_STORE_NAME = 'images'
+const PREVIEW_STORE_NAME = 'preview_cache'
 
 export type HistoryRecord = {
     id: string
@@ -46,6 +47,10 @@ function openDb(): Promise<IDBDatabase> {
             }
             if (!db.objectStoreNames.contains(IMG_STORE_NAME)) {
                 db.createObjectStore(IMG_STORE_NAME, {keyPath: 'id'})
+            }
+            if (!db.objectStoreNames.contains(PREVIEW_STORE_NAME)) {
+                const store = db.createObjectStore(PREVIEW_STORE_NAME, {keyPath: 'key'})
+                store.createIndex('createdAt', 'createdAt', {unique: false})
             }
         }
         req.onsuccess = () => resolve(req.result)
@@ -236,6 +241,111 @@ export async function deleteHistory(id: string): Promise<void> {
     try {
         store.delete(id)
     } catch {
+    }
+    await new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+        tx.onabort = () => reject(tx.error)
+    })
+    db.close()
+}
+
+function normalizeKey(src: string): string {
+    try {
+        const u = new URL(src, window.location.origin)
+        const ref = u.searchParams.get('ref')
+        const pt = u.searchParams.get('pt')
+        if (ref) return `ref:${ref}${pt ? `|pt:${pt}` : ''}`
+        return u.toString()
+    } catch {
+        const idxQ = src.indexOf('ref=')
+        const idxPt = src.indexOf('&pt=')
+        const ref = idxQ >= 0 ? decodeURIComponent(src.slice(idxQ + 4)) : ''
+        const pt = idxPt >= 0 ? decodeURIComponent(src.slice(idxPt + 4)) : ''
+        if (ref) return `ref:${ref}${pt ? `|pt:${pt}` : ''}`
+        return src
+    }
+}
+
+function splitDataUrl(u: string): { type: string; base64: string } | null {
+    if (typeof u !== 'string' || !u.startsWith('data:')) return null
+    const comma = u.indexOf(',')
+    if (comma < 0) return null
+    const header = u.slice(0, comma)
+    const data = u.slice(comma + 1)
+    const type = header.match(/data:(.*);base64/)?.[1] || 'application/octet-stream'
+    return {type, base64: data}
+}
+
+export async function savePreview(src: string, dataUrl: string): Promise<void> {
+    const parts = splitDataUrl(dataUrl)
+    if (!parts) return
+    const key = normalizeKey(src)
+    const db = await openDb()
+    const tx = db.transaction([PREVIEW_STORE_NAME], 'readwrite')
+    const store = tx.objectStore(PREVIEW_STORE_NAME)
+    const size = Math.floor((parts.base64.length * 3) / 4)
+    store.put({key, base64: parts.base64, type: parts.type, size, createdAt: Date.now()})
+    await new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+        tx.onabort = () => reject(tx.error)
+    })
+    db.close()
+}
+
+export async function getPreview(src: string): Promise<string | null> {
+    const key = normalizeKey(src)
+    const db = await openDb()
+    const tx = db.transaction([PREVIEW_STORE_NAME], 'readonly')
+    const store = tx.objectStore(PREVIEW_STORE_NAME)
+    let rec: any = null
+    try {
+        rec = await wrapRequest<any>(store.get(key))
+    } catch {
+    }
+    db.close()
+    if (rec && rec.base64 && rec.type) return `data:${rec.type};base64,${rec.base64}`
+    return null
+}
+
+export async function deletePreview(src: string): Promise<void> {
+    const key = normalizeKey(src)
+    const db = await openDb()
+    const tx = db.transaction([PREVIEW_STORE_NAME], 'readwrite')
+    const store = tx.objectStore(PREVIEW_STORE_NAME)
+    try {
+        store.delete(key)
+    } catch {
+    }
+    await new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+        tx.onabort = () => reject(tx.error)
+    })
+    db.close()
+}
+
+export async function evictPreview(maxEntries: number): Promise<void> {
+    if (!Number.isFinite(maxEntries) || maxEntries <= 0) return
+    const db = await openDb()
+    const tx = db.transaction([PREVIEW_STORE_NAME], 'readwrite')
+    const store = tx.objectStore(PREVIEW_STORE_NAME)
+    let all: any[] = []
+    try {
+        all = await wrapRequest<any[]>(store.getAll())
+    } catch {
+        all = []
+    }
+    if (Array.isArray(all) && all.length > maxEntries) {
+        all.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+        const toDelete = all.slice(0, all.length - maxEntries)
+        for (const r of toDelete) {
+            try {
+                store.delete(r.key)
+            } catch {
+            }
+        }
     }
     await new Promise<void>((resolve, reject) => {
         tx.oncomplete = () => resolve()

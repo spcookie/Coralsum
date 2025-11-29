@@ -25,16 +25,13 @@ class WebUserServiceImpl(
         val openUser = openUserRepository.findByUid(uid) ?: return null
         val outletWeb = outletUserRepository.findByOpenUserIdAndUserSource(openUser.id!!, UserSource.WEB)
         val userPoints = userPointsRepository.findByOpenUserId(openUser.id)
-        val finalNick = if (outletWeb?.nickName.isNullOrBlank()) {
-            ""
-        } else {
-            val tag = outletWeb.nickTag
-            if (tag == null) outletWeb.nickName else outletWeb.nickName + "#" + String.format("%04d", tag)
-        }
+        val finalNickBase = outletWeb?.nickName ?: ""
+        val finalNickTag = outletWeb?.nickTag
         return ProfileResponse(
             uid = openUser.uid ?: "",
             permissions = openUser.assignRoleList() ?: emptyList(),
-            nickName = finalNick,
+            nickName = finalNickBase,
+            nickTag = finalNickTag,
             sourceCode = outletWeb?.sourceCode ?: "",
             permanentPoints = ((userPoints?.permanentPoints ?: BigDecimal.ZERO).setScale(
                 2,

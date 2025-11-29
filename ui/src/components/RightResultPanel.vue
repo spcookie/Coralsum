@@ -29,44 +29,58 @@
       <Icon class="text-[0.85rem]" icon="ph:warning"/>
       <span>图片预览链接有效时间为 30 分钟，且仅有 5 次有效预览次数，请注意保存图片！</span>
     </div>
-    <div v-if="loading" class="flex flex-wrap justify-center gap-3">
+    <div class="relative">
+      <div v-if="images.length > 0" class="flex flex-wrap justify-center gap-3">
+        <div v-for="(img, i) in images" :key="i"
+             class="group rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px] relative">
+          <div v-if="!loadedSet.has(i)" :style="skeletonAspectStyle" class="w-full">
+            <div
+                class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
+          </div>
+          <img
+              :ref="el => setImgRef(el, i)"
+              :class="loadedSet.has(i) ? 'opacity-100' : 'opacity-0'"
+              :src="img"
+              class="w-full h-auto object-contain cursor-zoom-in transition-opacity duration-200"
+              crossorigin="anonymous"
+              @click="openPreview(img)"
+              @error="onImgError($event, i)"
+              @load="onImgLoad(i)"
+          />
+          <div
+              class="absolute inset-x-0 bottom-0 opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto">
+            <div class="h-12 bg-gradient-to-t from-black/65 to-transparent flex items-center justify-center">
+              <n-tooltip placement="top" trigger="hover">
+                <template #trigger>
+                  <n-button class="control-btn" size="small" strong @click.stop="onShare(i)">
+                    <Icon class="text-[1rem]" icon="ph:share"/>
+                  </n-button>
+                </template>
+                复制分享链接
+              </n-tooltip>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <div v-if="loading && images.length > 0" class="absolute inset-0 z-10 pointer-events-none">
+        <div class="flex flex-wrap justify-center gap-3">
+          <div v-for="i in settings.candidateRadio" :key="i"
+               class="rounded overflow-hidden bg-neutral-100/80 dark:bg-neutral-800/80 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px]">
+            <div :style="skeletonAspectStyle" class="w-full">
+              <div
+                  class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-if="loading && images.length === 0" class="flex flex-wrap justify-center gap-3">
       <div v-for="i in settings.candidateRadio" :key="i"
            class="rounded overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px]">
         <div :style="skeletonAspectStyle" class="w-full">
           <div
               class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
-        </div>
-      </div>
-    </div>
-    <div v-if="!loading && images.length > 0" class="flex flex-wrap justify-center gap-3">
-      <div v-for="(img, i) in images" :key="i"
-           class="group rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px] relative">
-        <div v-if="!loadedSet.has(i)" :style="skeletonAspectStyle" class="w-full">
-          <div
-              class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
-        </div>
-        <img
-            :class="loadedSet.has(i) ? 'opacity-100' : 'opacity-0'"
-            :src="img"
-            crossorigin="anonymous"
-            class="w-full h-auto object-contain cursor-zoom-in transition-opacity duration-200"
-            @click="openPreview(img)"
-            @error="onImgError($event, i)"
-            @load="onImgLoad(i)"
-        />
-        <div
-            class="absolute inset-x-0 bottom-0 opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto">
-          <div class="h-12 bg-gradient-to-t from-black/65 to-transparent flex items-center justify-center">
-            <n-tooltip placement="top" trigger="hover">
-              <template #trigger>
-                <n-button class="control-btn" size="small" strong @click.stop="onShare(i)">
-                  <Icon class="text-[1rem]" icon="ph:share"/>
-                </n-button>
-              </template>
-              复制分享链接
-            </n-tooltip>
-          </div>
-
         </div>
       </div>
     </div>
@@ -86,7 +100,9 @@ import {Icon} from '@iconify/vue'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {NButton, NTooltip, useMessage} from 'naive-ui'
 import {getImageShareLink} from '@/api'
+
 import {useSettingsStore} from '@/stores/settings'
+import {savePreview} from '@/utils/indexedDb'
 
 export interface Result {
   inputTokens: number
@@ -108,6 +124,8 @@ const images = computed(() => {
 })
 
 const loadedSet = ref<Set<number>>(new Set())
+const imgRefs = ref<HTMLImageElement[]>([])
+const emit = defineEmits<{ (e: 'save-history', dataUrls: string[]): void }>()
 const allImagesLoaded = computed(() => !props.loading && images.value.length > 0 && loadedSet.value.size >= images.value.length)
 
 function placeholderImage(index: number) {
@@ -178,6 +196,27 @@ function onImgError(e: Event, i: number) {
 
 function onImgLoad(i: number) {
   loadedSet.value.add(i)
+  const img = imgRefs.value[i]
+  if (!img) return
+  try {
+    const canvas = document.createElement('canvas')
+    const w = img.naturalWidth || img.width
+    const h = img.naturalHeight || img.height
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(img, 0, 0)
+    const dataUrl = canvas.toDataURL('image/png')
+    if (dataUrl && dataUrl.startsWith('data:')) {
+      savePreview(img.src, dataUrl)
+    }
+  } catch {
+  }
+}
+
+function setImgRef(el: HTMLImageElement | null, i: number) {
+  if (el) imgRefs.value[i] = el
 }
 
 async function onShare(i: number) {
@@ -186,6 +225,7 @@ async function onShare(i: number) {
     message?.error('无可分享链接', {placement: 'top'})
     return
   }
+  const prefer = props.result?.linkImages?.[i]
   const refParam = (() => {
     try {
       const url = new URL(raw, window.location.origin)
@@ -200,12 +240,10 @@ async function onShare(i: number) {
       return noQuery.split('/').pop() || ''
     }
   })()
-  if (!refParam) {
-    message?.error('无法解析分享引用', {placement: 'top'})
-    return
-  }
   try {
-    const link = await getImageShareLink(refParam)
+    if (!refParam) throw new Error('无法解析分享引用')
+    const dark = document.documentElement.classList.contains('dark')
+    const link = await getImageShareLink(refParam, dark)
     const abs = (() => {
       try {
         return new URL(link, window.location.origin).toString()
@@ -214,16 +252,53 @@ async function onShare(i: number) {
       }
     })()
     if (!abs) throw new Error('空链接')
-    await navigator.clipboard.writeText(abs)
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(abs)
+    } else {
+      const ta = document.createElement('textarea')
+      ta.value = abs
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
     message?.success('分享链接已复制，可直接发送', {placement: 'top'})
   } catch (e: any) {
-    const msg = e?.message || '复制失败，请手动复制链接'
-    message?.error(msg, {placement: 'top'})
+    const fallback = (() => {
+      try {
+        return new URL(raw, window.location.origin).toString()
+      } catch {
+        return raw
+      }
+    })()
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(fallback)
+      } else {
+        const ta = document.createElement('textarea')
+        ta.value = fallback
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.focus()
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      }
+      message?.success('已复制原始链接', {placement: 'top'})
+    } catch (err: any) {
+      const msg = err?.message || e?.message || '复制失败，请手动复制链接'
+      message?.error(msg, {placement: 'top'})
+    }
   }
 }
 
 watch(images, () => {
   loadedSet.value = new Set()
+  imgRefs.value = []
 })
 
 const showOverlay = computed(() => {
@@ -311,6 +386,30 @@ const skeletonAspectStyle = computed(() => {
   }
   const [rw, rh] = map[ar] ?? map['1:1']
   return {aspectRatio: `${rw} / ${rh}`}
+})
+
+watch(allImagesLoaded, async (v) => {
+  if (!v) return
+  const out: string[] = []
+  for (let i = 0; i < imgRefs.value.length; i++) {
+    const img = imgRefs.value[i]
+    if (!img) continue
+    try {
+      const canvas = document.createElement('canvas')
+      const w = img.naturalWidth || img.width
+      const h = img.naturalHeight || img.height
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) continue
+      ctx.drawImage(img, 0, 0)
+      const dataUrl = canvas.toDataURL('image/png')
+      out.push(dataUrl)
+    } catch {
+      out.push('')
+    }
+  }
+  if (out.length > 0) emit('save-history', out)
 })
 
 </script>

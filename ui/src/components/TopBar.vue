@@ -3,7 +3,7 @@
       class="h-14 border-b border-transparent px-3 sm:px-4 flex items-center justify-between glass bg-white/40 dark:bg-black/30">
     <div class="font-medium text-neutral-700 dark:text-neutral-200 flex items-center gap-2">
       <Icon class="text-xl" icon="solar:stars-bold-duotone"/>
-      <span>Coralsum AI 生图</span>
+      <span>Coralsum 生图</span>
     </div>
     <div class="flex items-center gap-2 sm:gap-3 flex-wrap text-sm">
       <div class="hidden sm:flex items-center gap-2">
@@ -317,10 +317,11 @@ const rules: FormRules = {
 const loginValid = computed(() => emailRegex.test(loginForm.email.trim()) && pwdRegex.test(loginForm.password.trim()))
 const displayName = computed(() => user.name || user.email || '未登录')
 const nameParts = computed(() => {
-  const n = String(displayName.value || '')
-  const i = n.indexOf('#')
-  if (i > 0) return {base: n.slice(0, i), tag: n.slice(i + 1)}
-  return {base: n, tag: ''}
+  const base = String(displayName.value || '')
+  const tag = user.profileReady && typeof user.nickTag === 'number'
+      ? String(user.nickTag).padStart(4, '0')
+      : ''
+  return {base, tag}
 })
 const tierTagStyle = computed(() => {
   const dark = settings.darkMode

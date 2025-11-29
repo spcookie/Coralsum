@@ -29,9 +29,10 @@
       >
         <img
             ref="imgRef"
-            :src="src"
+            :src="realSrc"
             :style="imgStyle"
             class="absolute top-1/2 left-1/2 will-change-transform"
+            crossorigin="anonymous"
             draggable="false"
             @load="onImgLoad"
         />
@@ -92,6 +93,7 @@
 import {computed, onMounted, ref, watch} from 'vue'
 import {Icon} from '@iconify/vue'
 import {NButton, NModal, NSpin, useMessage} from 'naive-ui'
+import {getPreview, savePreview} from '@/utils/indexedDb'
 
 const props = defineProps<{ modelValue: boolean; src: string }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
@@ -100,6 +102,7 @@ const message = useMessage()
 const canvasRef = ref<HTMLElement | null>(null)
 const imgRef = ref<HTMLImageElement | null>(null)
 const imgLoading = ref(true)
+const realSrc = ref<string>(props.src)
 const scale = ref(1)
 const tx = ref(0)
 const ty = ref(0)
@@ -201,37 +204,73 @@ function fitToContainer() {
 }
 
 function onImgLoad() {
-  fitToContainer()
   imgLoading.value = false
+  try {
+    if (!realSrc.value.startsWith('data:')) {
+      const img = imgRef.value
+      if (!img || !img.complete || img.naturalWidth === 0 || img.naturalHeight === 0) return
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      ctx.drawImage(img, 0, 0)
+      const dataUrl = canvas.toDataURL('image/png')
+      if (dataUrl && dataUrl.startsWith('data:')) {
+        savePreview(props.src, dataUrl)
+      }
+    }
+  } catch {
+  }
 }
 
-async function fetchBlob(url: string) {
-  if (url.startsWith('data:')) {
-    const parts = url.split(',')
-    const mime = parts[0].match(/data:(.*);base64/)?.[1] || 'image/png'
-    const bstr = atob(parts[1])
-    const n = bstr.length
-    const u8 = new Uint8Array(n)
-    for (let i = 0; i < n; i++) u8[i] = bstr.charCodeAt(i)
-    return new Blob([u8], {type: mime})
+async function dataUrlToBlob(url: string) {
+  const parts = url.split(',')
+  const mime = parts[0].match(/data:(.*);base64/)?.[1] || 'image/png'
+  const bstr = atob(parts[1])
+  const n = bstr.length
+  const u8 = new Uint8Array(n)
+  for (let i = 0; i < n; i++) u8[i] = bstr.charCodeAt(i)
+  return new Blob([u8], {type: mime})
+}
+
+async function canvasToBlob(): Promise<Blob | null> {
+  const img = imgRef.value
+  if (!img || !img.complete || img.naturalWidth === 0 || img.naturalHeight === 0) return null
+  const canvas = document.createElement('canvas')
+  canvas.width = img.naturalWidth
+  canvas.height = img.naturalHeight
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  try {
+    ctx.drawImage(img, 0, 0)
+  } catch {
+    return null
   }
-  const res = await fetch(url)
-  const blob = await res.blob()
-  return blob
+  return await new Promise(resolve => {
+    try {
+      canvas.toBlob(b => resolve(b), 'image/png')
+    } catch {
+      resolve(null)
+    }
+  })
 }
 
 async function copyImage() {
   try {
-    const blob = await fetchBlob(props.src)
-    // @ts-ignore
-    if (navigator.clipboard && 'write' in navigator.clipboard && window.ClipboardItem) {
-      // @ts-ignore
-      await navigator.clipboard.write([new ClipboardItem({[blob.type]: blob})])
-      message?.success('已复制到剪贴板')
-      return
+    let blob: Blob | null = null
+    if (props.src.startsWith('data:')) {
+      blob = await dataUrlToBlob(props.src)
+    } else {
+      blob = await canvasToBlob()
     }
-    await navigator.clipboard.writeText(props.src)
-    message?.success('已复制图片链接')
+    if (blob && navigator.clipboard && 'write' in navigator.clipboard && (window as any).ClipboardItem) {
+      await (navigator.clipboard as any).write([new (window as any).ClipboardItem({[blob.type]: blob})])
+      message?.success('已复制到剪贴板')
+    } else {
+      await navigator.clipboard.writeText(props.src)
+      message?.success('已复制图片链接')
+    }
   } catch (e) {
     message?.error('复制失败')
   }
@@ -239,16 +278,29 @@ async function copyImage() {
 
 async function downloadImage() {
   try {
-    const blob = await fetchBlob(props.src)
-    const url = URL.createObjectURL(blob)
+    let blob: Blob | null = null
+    if (props.src.startsWith('data:')) {
+      blob = await dataUrlToBlob(props.src)
+    } else {
+      blob = await canvasToBlob()
+    }
     const a = document.createElement('a')
     const nameFromUrl = props.src.split('?')[0].split('/').pop() || 'image'
-    a.href = url
-    a.download = nameFromUrl
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
+    if (blob) {
+      const url = URL.createObjectURL(blob)
+      a.href = url
+      a.download = nameFromUrl
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } else {
+      a.href = props.src
+      a.download = nameFromUrl
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    }
   } catch (e) {
     message?.error('下载失败')
   }
@@ -258,18 +310,33 @@ watch(() => props.modelValue, v => {
   if (v) {
     imgLoading.value = true
     reset();
-    fitToContainer()
+    resolveSrc()
   }
 })
 watch(() => props.src, () => {
   imgLoading.value = true
+  realSrc.value = props.src
+  resolveSrc()
 })
 onMounted(() => {
   if (props.modelValue) {
     reset();
-    fitToContainer()
+    resolveSrc()
   }
 })
+
+async function resolveSrc() {
+  try {
+    const cached = await getPreview(props.src)
+    if (cached) {
+      realSrc.value = cached
+    } else {
+      realSrc.value = props.src
+    }
+  } catch {
+    realSrc.value = props.src
+  }
+}
 </script>
 
 <style scoped>

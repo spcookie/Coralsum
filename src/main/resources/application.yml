@@ -85,7 +85,7 @@ micronaut:
       - pattern: /dashboard
         access:
           - isAnonymous()
-      - pattern: /css/**
+      - pattern: /assets/**
         access:
           - isAnonymous()
       - pattern: /index.html

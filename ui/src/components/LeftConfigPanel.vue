@@ -1,6 +1,6 @@
 <template>
   <div
-      class="w-full md:w-[420px] md:h-full h-auto overflow-y-auto p-4 md:p-5 md:border-r border-b md:border-b-0 border-neutral-200 dark:border-neutral-800 space-y-5 glass bg-white/40 dark:bg-black/30">
+      class="relative z-20 w-full md:w-[420px] md:flex-shrink-0 md:h-[calc(100vh-56px)] h-auto md:overflow-y-auto p-4 md:p-5 md:border-r border-b md:border-b-0 border-neutral-200 dark:border-neutral-800 space-y-5 glass bg-white/40 dark:bg-black/30">
     <div class="space-y-2">
       <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1 justify-between">
         <div class="flex items-center gap-1">
@@ -106,9 +106,10 @@
           <span>重置</span>
         </div>
       </n-button>
-      <n-button :disabled="generating || promptEmpty" class="w-full justify-center" type="primary" @click="onGenerate">
+      <n-button :disabled="generating || promptEmpty" :loading="generating" class="w-full justify-center" type="primary"
+                @click="onGenerate">
         <div class="flex items-center gap-2">
-          <Icon :class="generating ? 'animate-spin' : ''" :icon="generating ? 'mdi:loading' : 'ph:sparkle'"/>
+          <Icon v-if="!generating" icon="ph:sparkle"/>
           <span>生成</span>
         </div>
       </n-button>
@@ -335,7 +336,8 @@
     </n-collapse>
     <n-modal v-model:show="confirmReset" content="是否重置所有配置？" negative-text="取消" positive-text="确认"
              preset="dialog" title="确认重置" @positive-click="doReset"/>
-    <n-modal v-model:show="promptGuideShow" :style="{ width: 'min(920px, 86vw)', margin: '20px' }" class="rounded-xl"
+    <n-modal v-model:show="promptGuideShow" :style="{ width: 'min(920px, 86vw)', margin: '20px auto' }"
+             class="rounded-xl"
              preset="card" title="提示指南与最佳实践">
       <div class="max-h-[70vh] overflow-y-auto text-[13px] space-y-4">
         <div class="text-lg font-semibold">用于生成图片的提示</div>
@@ -515,6 +517,10 @@ function onReset() {
 }
 
 function onGenerate() {
+  const now = Date.now()
+  if (generating.value) return
+  if (now - lastClickAt.value < 400) return
+  lastClickAt.value = now
   if (promptEmpty.value) {
     message.error('请填写提示词')
     return
@@ -531,6 +537,8 @@ function onGenerate() {
   }
   emit('generate', {prompt: prompt.value, systemPrompt: systemPrompt.value, files: files.value})
 }
+
+const lastClickAt = ref(0)
 
 function doReset() {
   settings.reset()

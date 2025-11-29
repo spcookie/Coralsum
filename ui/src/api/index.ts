@@ -130,7 +130,8 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
                 inputTokens: result.input_tokens ?? result.inputTokens,
                 outputTokens: result.output_tokens ?? result.outputTokens,
                 images: result.images || [],
-                text: result.text
+                text: result.text,
+                linkImages: result.link_images ?? result.linkImages ?? []
             }
         }
         if (status === 'FAILED') {
@@ -150,6 +151,38 @@ export async function assessIntent(text: string): Promise<{ generateIntent: bool
         generateIntent: data.generate_intent,
         guideMessage: data.guide_message
     }
+}
+
+export async function getImageBytes(ref: string, pt?: string): Promise<Blob> {
+    const headers: any = {'X-API-Version': 'v1'}
+    const params: any = {ref}
+    if (pt) params.pt = pt
+    const {data} = await http.get('/generative-image/bytes', {params, headers, responseType: 'blob'})
+    return data as Blob
+}
+
+export async function getPreviewBytes(ref: string, pt?: string): Promise<Blob> {
+    const headers: any = {'X-API-Version': 'v1'}
+    const params: any = {ref}
+    if (pt) params.pt = pt
+    const {data} = await http.get('/generative-image', {params, headers, responseType: 'blob'})
+    return data as Blob
+}
+
+export async function getImageShareLink(ref: string): Promise<string> {
+    const headers: any = {'X-API-Version': 'v1'}
+    const params: any = {ref}
+    const {data} = await http.get('/generative-image/link', {params, headers})
+    if (data && typeof data === 'object') {
+        const url = (data as any).url ?? (data as any).link ?? ''
+        return String(url || '')
+    }
+    return String(data || '')
+}
+
+export async function getExternalBlob(url: string): Promise<Blob> {
+    const {data} = await http.get(url, {responseType: 'blob'})
+    return data as Blob
 }
 
 export async function register(email: string, password: string, code: string) {
@@ -230,7 +263,8 @@ export async function getGenerateTaskResult(): Promise<{
                 inputTokens: r.input_tokens ?? r.inputTokens,
                 outputTokens: r.output_tokens ?? r.outputTokens,
                 images: r.images || [],
-                text: r.text
+                text: r.text,
+                linkImages: r.link_images ?? r.linkImages ?? []
             }
             : undefined
     }

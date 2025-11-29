@@ -19,6 +19,8 @@ data class RetrievalImageReqRecord(
 
     val ip: String? = null,
 
+    val isTokenVisit: Boolean = false,
+
     @field:DateCreated
     val createTime: LocalDateTime? = null,
 

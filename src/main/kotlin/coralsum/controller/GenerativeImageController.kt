@@ -19,6 +19,7 @@ import io.micronaut.http.server.util.HttpClientAddressResolver
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import io.micronaut.validation.Validated
+import io.micronaut.views.ModelAndView
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -27,11 +28,14 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.NotEmpty
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.coroutines.withContext
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import java.net.URI
+import java.net.URL
 
 @Validated
 @Controller("/api/generative-image")
@@ -122,10 +126,10 @@ class GenerativeImageController(
     suspend fun link(
         @QueryValue ref: String,
         request: HttpRequest<*>,
-    ): HttpResponse<io.micronaut.views.ModelAndView<Map<String, Any>>> {
+    ): HttpResponse<ModelAndView<Map<String, Any>>> {
         val page =
-            service.linkPage(ref) ?: return HttpResponse.notFound<io.micronaut.views.ModelAndView<Map<String, Any>>>()
-        val mv = io.micronaut.views.ModelAndView(
+            service.linkPage(ref) ?: return HttpResponse.notFound<ModelAndView<Map<String, Any>>>()
+        val mv = ModelAndView(
             "image-link",
             mapOf<String, Any>("src" to page.src, "time" to page.time, "user" to page.user)
         )
@@ -144,10 +148,10 @@ class GenerativeImageController(
         val ip = addressResolver.resolve(request)
         val url = service.preview(ref, ip, token) ?: return HttpResponse.notFound()
         val bytes = try {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                java.net.URL(url).openStream().use { it.readBytes() }
+            withContext(Dispatchers.IO) {
+                URL(url).openStream().use { it.readBytes() }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return HttpResponse.serverError()
         }
         val contentType = when (ref.substringAfterLast('.', "").lowercase()) {

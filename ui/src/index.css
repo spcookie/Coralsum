@@ -108,3 +108,21 @@ html {
     background-color: rgba(59, 130, 246, 0.85) !important;
     border-color: rgba(0, 0, 0, 0.40);
 }
+
+@media (max-width: 480px) {
+    input, textarea, select {
+        font-size: 16px;
+    }
+
+    .n-input__input-el,
+    .n-input__textarea-el,
+    .n-base-selection-input__content,
+    .n-input-number .n-input__input-el {
+        font-size: 16px !important;
+    }
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}

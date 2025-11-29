@@ -99,10 +99,18 @@ class NanoBanana(private val apiKey: String) : Closeable {
                     buildList {
                         add(Part.builder().text(text).build())
                         images?.forEach { img ->
+                            val type = FileTypeUtil.getType(img.inputStream())
+                            val mimeType = when (type) {
+                                "png" -> "image/png"
+
+                                "jpg", "jpeg" -> "image/jpeg"
+
+                                else -> throw IllegalArgumentException("Unsupported image type: $type")
+                            }
                             add(
                                 Part.builder().inlineData(
                                     Blob.builder().data(img)
-                                        .mimeType("image/" + FileTypeUtil.getType(img.inputStream())).build()
+                                        .mimeType(mimeType).build()
                                 ).build()
                             )
                         }

@@ -12,4 +12,6 @@ interface RetrievalImageReqRecordRepository : CoroutineCrudRepository<RetrievalI
     suspend fun findByIp(ip: String): List<RetrievalImageReqRecord>
 
     suspend fun countByImageRef(imageRef: String): Long
+
+    suspend fun countByImageRefAndIsTokenVisit(imageRef: String, isTokenVisit: Boolean): Long
 }

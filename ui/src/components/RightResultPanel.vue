@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-1 p-4 space-y-4">
+  <div class="p-4 space-y-4">
     <div v-if="!showOverlay" class="flex flex-wrap items-center gap-1 sm:gap-1.5 text-[10px] sm:text-[11px]">
       <div
           class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
@@ -40,16 +40,7 @@
     </div>
     <div v-if="!loading && images.length > 0" class="flex flex-wrap justify-center gap-3">
       <div v-for="(img, i) in images" :key="i"
-           class="rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px] relative">
-        <div
-            :style="document.documentElement.classList.contains('dark')
-              ? 'background-color: rgba(59,130,246,0.85); color: #fff; border: 1px solid rgba(0,0,0,0.40)'
-              : 'background-color: rgba(37,99,235,0.90); color: #fff; border: 1px solid rgba(255,255,255,0.70)'
-            "
-            class="img-badge"
-        >
-          {{ i + 1 }}
-        </div>
+           class="group rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px] relative">
         <div v-if="!loadedSet.has(i)" :style="skeletonAspectStyle" class="w-full">
           <div
               class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
@@ -57,23 +48,25 @@
         <img
             :class="loadedSet.has(i) ? 'opacity-100' : 'opacity-0'"
             :src="img"
+            crossorigin="anonymous"
             class="w-full h-auto object-contain cursor-zoom-in transition-opacity duration-200"
             @click="openPreview(img)"
             @error="onImgError($event, i)"
             @load="onImgLoad(i)"
         />
-        <div class="absolute inset-x-0 bottom-0">
+        <div
+            class="absolute inset-x-0 bottom-0 opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto">
           <div class="h-12 bg-gradient-to-t from-black/65 to-transparent flex items-center justify-center">
-            <button
-                class="px-3 py-1.5 rounded-full bg-white/90 dark:bg-white/80 text-neutral-800 shadow-sm border border-white/60 hover:bg-white"
-                title="复制分享链接" @click.stop="onShare(i)">
-              <Icon class="text-[1rem]" icon="ph:share"/>
-            </button>
+            <n-tooltip placement="top" trigger="hover">
+              <template #trigger>
+                <n-button class="control-btn" size="small" strong @click.stop="onShare(i)">
+                  <Icon class="text-[1rem]" icon="ph:share"/>
+                </n-button>
+              </template>
+              复制分享链接
+            </n-tooltip>
           </div>
-          <div v-if="shareIndex === i"
-               class="absolute left-1/2 -translate-x-1/2 -translate-y-2 bottom-12 px-3 py-1.5 rounded bg-neutral-800 text-white text-xs shadow">
-            {{ shareTip }}
-          </div>
+
         </div>
       </div>
     </div>
@@ -91,6 +84,8 @@
 import {computed, onUnmounted, ref, watch} from 'vue'
 import {Icon} from '@iconify/vue'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
+import {NButton, NTooltip, useMessage} from 'naive-ui'
+import {getImageShareLink} from '@/api'
 import {useSettingsStore} from '@/stores/settings'
 
 export interface Result {
@@ -168,8 +163,7 @@ function themedPlaceholderImage(index: number) {
 
 const previewShow = ref(false)
 const previewSrc = ref('')
-const shareIndex = ref<number | null>(null)
-const shareTip = ref('')
+const message = useMessage()
 
 function openPreview(src: string) {
   previewSrc.value = src;
@@ -187,18 +181,45 @@ function onImgLoad(i: number) {
 }
 
 async function onShare(i: number) {
-  const link = props.result?.linkImages?.[i] ?? images.value[i]
-  if (!link) return
-  try {
-    await navigator.clipboard.writeText(link)
-    shareTip.value = '分享链接已复制，可直接发送'
-  } catch {
-    shareTip.value = '复制失败，请手动复制链接'
+  const raw = props.result?.linkImages?.[i] || props.result?.images?.[i]
+  if (!raw) {
+    message?.error('无可分享链接', {placement: 'top'})
+    return
   }
-  shareIndex.value = i
-  setTimeout(() => {
-    if (shareIndex.value === i) shareIndex.value = null
-  }, 1600)
+  const refParam = (() => {
+    try {
+      const url = new URL(raw, window.location.origin)
+      const q = url.searchParams.get('ref')
+      if (q) return q
+      const path = url.pathname.split('/').pop() || ''
+      return path
+    } catch {
+      const idxQ = raw.indexOf('ref=')
+      if (idxQ >= 0) return decodeURIComponent(raw.slice(idxQ + 4))
+      const noQuery = raw.split('?')[0]
+      return noQuery.split('/').pop() || ''
+    }
+  })()
+  if (!refParam) {
+    message?.error('无法解析分享引用', {placement: 'top'})
+    return
+  }
+  try {
+    const link = await getImageShareLink(refParam)
+    const abs = (() => {
+      try {
+        return new URL(link, window.location.origin).toString()
+      } catch {
+        return link
+      }
+    })()
+    if (!abs) throw new Error('空链接')
+    await navigator.clipboard.writeText(abs)
+    message?.success('分享链接已复制，可直接发送', {placement: 'top'})
+  } catch (e: any) {
+    const msg = e?.message || '复制失败，请手动复制链接'
+    message?.error(msg, {placement: 'top'})
+  }
 }
 
 watch(images, () => {
@@ -337,3 +358,73 @@ const skeletonAspectStyle = computed(() => {
   }
 }
 </style>
+.img-badge {
+position: absolute;
+top: 8px;
+left: 8px;
+width: 24px;
+height: 24px;
+border-radius: 9999px;
+display: grid;
+place-items: center;
+font-size: 12px;
+}
+
+:deep(.control-btn.n-button) {
+background-color: rgba(128, 128, 128, 0.3) !important;
+color: #fff !important;
+border: none !important;
+box-shadow: none !important;
+}
+
+:deep(.control-btn.n-button:hover) {
+background-color: rgba(128, 128, 128, 0.4) !important;
+}
+
+:deep(.control-btn.n-button .n-button__content) {
+color: #fff !important;
+}
+
+:deep(.control-btn.n-button .n-button__border) {
+display: none !important;
+}
+
+.share-tip {
+min-width: 220px;
+max-width: 80%;
+}
+
+:deep(.n-tooltip .n-tooltip__content) {
+background-color: rgba(0, 0, 0, 0.9) !important;
+color: #fff !important;
+}
+.img-badge {
+position: absolute;
+top: 8px;
+left: 8px;
+width: 24px;
+height: 24px;
+border-radius: 9999px;
+display: grid;
+place-items: center;
+font-size: 12px;
+}
+
+:deep(.control-btn.n-button) {
+background-color: rgba(128, 128, 128, 0.3) !important;
+color: #fff !important;
+border: none !important;
+box-shadow: none !important;
+}
+
+:deep(.control-btn.n-button:hover) {
+background-color: rgba(128, 128, 128, 0.4) !important;
+}
+
+:deep(.control-btn.n-button .n-button__content) {
+color: #fff !important;
+}
+
+:deep(.control-btn.n-button .n-button__border) {
+display: none !important;
+}

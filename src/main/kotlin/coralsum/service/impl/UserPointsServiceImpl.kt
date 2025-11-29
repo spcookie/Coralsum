@@ -33,7 +33,7 @@ class UserPointsServiceImpl(
         private val COEFFICIENT = 2.toBigDecimal()
     }
 
-    @Transactional
+    @Transactional(rollbackFor = [Exception::class])
     override suspend fun getOrCreateByOpenUserId(openUserId: Long): UserPoints {
         val existed = userPointsRepository.findByOpenUserId(openUserId)
         if (existed != null) return existed

@@ -28,8 +28,8 @@ class WebUserServiceImpl(
         val finalNick = if (outletWeb?.nickName.isNullOrBlank()) {
             ""
         } else {
-            val tag = outletWeb?.nickTag
-            if (tag == null) outletWeb!!.nickName!! else outletWeb!!.nickName!! + "#" + String.format("%04d", tag)
+            val tag = outletWeb.nickTag
+            if (tag == null) outletWeb.nickName else outletWeb.nickName + "#" + String.format("%04d", tag)
         }
         return ProfileResponse(
             uid = openUser.uid ?: "",
@@ -48,7 +48,7 @@ class WebUserServiceImpl(
         )
     }
 
-    @Transactional
+    @Transactional(rollbackFor = [Exception::class])
     override suspend fun updateNickName(uid: String, nickName: String): Boolean {
         val openUser = openUserRepository.findByUid(uid) ?: return false
         val outletWeb =
@@ -98,12 +98,12 @@ class WebUserServiceImpl(
         suspend fun getOrCreateBitmap(base: String): NickNameBitmap {
             val existing = nickNameBitmapRepository.findByBaseNameAndUserSource(base, UserSource.WEB)
             if (existing != null) return existing
-            try {
-                return nickNameBitmapRepository.save(
+            return try {
+                nickNameBitmapRepository.save(
                     NickNameBitmap(userSource = UserSource.WEB, baseName = base, bitmap = zeroBitmap())
                 )
             } catch (_: Exception) {
-                return nickNameBitmapRepository.findByBaseNameAndUserSource(base, UserSource.WEB)!!
+                nickNameBitmapRepository.findByBaseNameAndUserSource(base, UserSource.WEB)!!
             }
         }
 
@@ -156,7 +156,7 @@ class WebUserServiceImpl(
             }
         }
         if (allocated == null) return false
-        if (!oldBase.isBlank() && oldTag != null && oldBase != sanitized) {
+        if (!oldBase.isBlank() && oldTag != null) {
             val bmp = getOrCreateBitmap(oldBase)
             var ok = false
             var tries = 0

@@ -414,17 +414,18 @@ class GenerativeImageImpl(
 
     override suspend fun preview(ref: String, ip: String, token: String?): String? {
         val tokenUid = verifyToken(ref, token)
-        val uid = if (securityService.authentication.isPresent) securityService.authentication.get().name else null
-        val countImageRefBy = retrievalImageReqRecordRepository.countByImageRef(ref)
-        if (countImageRefBy > MAX_PRE_COUNT) return null
+        val isTokenVisit = tokenUid != null
+        val limit = if (isTokenVisit) 10 else 3
+        val count = retrievalImageReqRecordRepository.countByImageRefAndIsTokenVisit(ref, isTokenVisit)
+        if (count >= limit) return null
         val imageRef = generateImageReqRefRepository.findByImageRef(ref) ?: return null
         val record = generateImageReqRecordRepository.findById(imageRef.recordId) ?: return null
-        if (tokenUid == null) {
-            if (uid == null || record.userCode != uid) return null
-        } else {
+        if (isTokenVisit) {
             if (record.userCode != tokenUid) return null
         }
-        retrievalImageReqRecordRepository.save(RetrievalImageReqRecord(imageRef = ref, ip = ip))
+        retrievalImageReqRecordRepository.save(
+            RetrievalImageReqRecord(imageRef = ref, ip = ip, isTokenVisit = isTokenVisit)
+        )
         val presignRequest = PresignRequest.builder(ref, PresignRequest.Operation.DOWNLOAD).build()
         val response = store.presign(presignRequest)
         return response.url.toString()

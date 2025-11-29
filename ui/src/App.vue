@@ -2,9 +2,9 @@
   <n-config-provider :date-locale="dateZhCN" :locale="zhCN" :theme="theme">
     <n-message-provider>
       <n-dialog-provider>
-        <div v-if="!isStandalone" class="h-screen overflow-hidden flex tech-bg">
+        <div v-if="!isStandalone" class="md:h-screen md:overflow-hidden flex tech-bg">
           <SideMenu/>
-          <div class="flex-1 flex flex-col overflow-hidden">
+          <div class="flex-1 flex flex-col md:overflow-hidden">
             <TopBar/>
             <router-view/>
           </div>
@@ -28,7 +28,7 @@ import {useSettingsStore} from '@/stores/settings'
 const settings = useSettingsStore()
 const theme = computed(() => (settings.darkMode ? darkTheme : null))
 const route = useRoute()
-const isStandalone = computed(() => route.name === 'register')
+const isStandalone = computed(() => route.name === 'register' || route.name === 'forgot')
 </script>
 
 <style>

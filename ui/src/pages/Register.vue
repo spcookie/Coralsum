@@ -7,10 +7,22 @@
             <n-input v-model:value="form.email" placeholder="邮箱"/>
           </n-form-item>
           <n-form-item path="password">
-            <n-input v-model:value="form.password" maxlength="16" placeholder="密码" type="password"/>
+            <n-input v-model:value="form.password" :type="regPwdVisible ? 'text' : 'password'" maxlength="16"
+                     placeholder="密码">
+              <template #suffix>
+                <Icon :icon="regPwdVisible ? 'mdi:eye-off-outline' : 'mdi:eye-outline'"
+                      class="cursor-pointer text-neutral-400" @click="regPwdVisible = !regPwdVisible"/>
+              </template>
+            </n-input>
           </n-form-item>
           <n-form-item path="confirm">
-            <n-input v-model:value="form.confirm" maxlength="16" placeholder="确认密码" type="password"/>
+            <n-input v-model:value="form.confirm" :type="regConfirmVisible ? 'text' : 'password'" maxlength="16"
+                     placeholder="确认密码">
+              <template #suffix>
+                <Icon :icon="regConfirmVisible ? 'mdi:eye-off-outline' : 'mdi:eye-outline'"
+                      class="cursor-pointer text-neutral-400" @click="regConfirmVisible = !regConfirmVisible"/>
+              </template>
+            </n-input>
           </n-form-item>
           <div class="flex items-center gap-2">
             <n-form-item class="flex-1" path="code">
@@ -20,7 +32,7 @@
           </div>
           <div class="flex gap-2 justify-end">
             <n-button @click="goLogin">已有账号？去登录</n-button>
-            <n-button :disabled="!valid" type="primary" @click="doRegister">注册</n-button>
+            <n-button :disabled="!valid" :loading="registerLoading" type="primary" @click="doRegister">注册</n-button>
           </div>
         </div>
       </n-form>
@@ -29,11 +41,12 @@
 </template>
 
 <script lang="ts" setup>
-import {ref, reactive, computed} from 'vue'
+import {computed, reactive, ref} from 'vue'
 import {useRouter} from 'vue-router'
-import {NCard, NForm, NFormItem, NInput, NButton, useMessage} from 'naive-ui'
-import type {FormRules, FormInst} from 'naive-ui'
-import {sendEmailCode, register} from '@/api'
+import type {FormInst, FormRules} from 'naive-ui'
+import {NButton, NCard, NForm, NFormItem, NInput, useMessage} from 'naive-ui'
+import {Icon} from '@iconify/vue'
+import {register, sendEmailCode} from '@/api'
 import {useUserStore} from '@/stores/user'
 
 const router = useRouter()
@@ -41,6 +54,9 @@ const message = useMessage()
 const user = useUserStore()
 const formRef = ref<FormInst | null>(null)
 const form = reactive({email: '', password: '', confirm: '', code: ''})
+const regPwdVisible = ref(false)
+const regConfirmVisible = ref(false)
+const registerLoading = ref(false)
 const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
 const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/
 const codeRegex = /^\d{4,6}$/
@@ -79,16 +95,20 @@ async function sendCode() {
 
 async function doRegister() {
   try {
+    if (registerLoading.value) return
     if (!valid.value) {
       message.error('请检查输入项');
       return
     }
+    registerLoading.value = true
     await register(form.email.trim(), form.password.trim(), form.code.trim())
     message.success('注册成功，请登录')
     user.requireLogin()
     router.push('/')
   } catch (e: any) {
     message.error(e?.message || '注册失败')
+  } finally {
+    registerLoading.value = false
   }
 }
 

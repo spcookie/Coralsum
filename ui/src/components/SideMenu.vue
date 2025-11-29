@@ -53,7 +53,8 @@
       退出登录
     </n-tooltip>
 
-    <n-modal v-model:show="showRedeem" :style="{ width: '420px', maxWidth: '92vw' }" preset="card" title="兑换积分密钥">
+    <n-modal v-model:show="showRedeem" :style="{ width: '420px', maxWidth: '92vw', margin: '0 auto' }" preset="card"
+             title="兑换积分密钥">
       <div class="space-y-3">
         <n-input v-model:value="redeemKey" placeholder="输入密钥"/>
         <div class="flex gap-2 justify-end">
@@ -62,7 +63,7 @@
         </div>
       </div>
     </n-modal>
-    <n-modal v-model:show="showHistory" :style="{ width: 'min(96vw, 980px)' }" preset="card">
+    <n-modal v-model:show="showHistory" :style="{ width: 'min(96vw, 980px)', margin: '0 auto' }" preset="card">
       <template #header>
         <div class="flex items-center gap-2">
           <span>历史记录</span>
@@ -126,12 +127,18 @@
                       <Icon :icon="expanded.has(r.id) ? 'mdi:chevron-up' : 'mdi:chevron-down'"/>
                       <span>展开图片</span></div>
                   </n-button>
-                  <n-button quaternary size="small" @click="removeRecord(r)">
-                    <div class="flex items-center gap-1 text-red-600">
-                      <Icon icon="mdi:delete-outline"/>
-                      <span>删除</span>
-                    </div>
-                  </n-button>
+                  <n-popconfirm :show-icon="false" negative-text="取消" positive-text="删除"
+                                @positive-click="removeRecord(r)">
+                    <template #trigger>
+                      <n-button quaternary size="small">
+                        <div class="flex items-center gap-1 text-red-600">
+                          <Icon icon="mdi:delete-outline"/>
+                          <span>删除</span>
+                        </div>
+                      </n-button>
+                    </template>
+                    确认删除该条历史记录？
+                  </n-popconfirm>
                 </div>
               </div>
               <transition name="expand">
@@ -150,7 +157,8 @@
       </div>
       <ImagePreviewer v-model:modelValue="previewShow" :src="previewSrc"/>
     </n-modal>
-    <n-modal v-model:show="showLogout" :style="{ width: '420px', maxWidth: '92vw' }" preset="card" title="退出登录">
+    <n-modal v-model:show="showLogout" :style="{ width: '420px', maxWidth: '92vw', margin: '0 auto' }" preset="card"
+             title="退出登录">
       <div class="space-y-3">
         <div>确定要退出登录吗？</div>
         <div class="flex gap-2 justify-end">
@@ -166,7 +174,7 @@
 import {computed, ref, watch} from 'vue'
 import {Icon} from '@iconify/vue'
 import {useUserStore} from '@/stores/user'
-import {NButton, NInput, NModal, NSpin, NTooltip, useMessage} from 'naive-ui'
+import {NButton, NInput, NModal, NPopconfirm, NSpin, NTooltip, useMessage} from 'naive-ui'
 import {redeemPoints} from '@/api'
 import {deleteHistory, listHistory} from '@/utils/indexedDb'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'

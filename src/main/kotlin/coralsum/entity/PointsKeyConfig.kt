@@ -6,6 +6,7 @@ import io.micronaut.data.model.naming.NamingStrategies
 import io.micronaut.security.annotation.CreatedBy
 import io.micronaut.security.annotation.UpdatedBy
 import io.micronaut.serde.annotation.Serdeable
+import jakarta.validation.constraints.Size
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
@@ -18,6 +19,7 @@ data class PointsKeyConfig(
     val id: Long? = null,
 
     @field:MappedProperty("NAME")
+    @field:Size(max = 20)
     val name: String,
 
     @field:TypeDef(type = DataType.BIGDECIMAL)
@@ -35,9 +37,6 @@ data class PointsKeyConfig(
     val periodUnit: String? = null,
     @field:MappedProperty("PERIOD_COUNT")
     val periodCount: Int = 0,
-
-    @field:MappedProperty("VALID_TO")
-    val validTo: LocalDateTime? = null,
 
     @field:MappedProperty("DISABLED")
     val disabled: Boolean = false,

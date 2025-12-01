@@ -90,7 +90,7 @@
         </div>
       </div>
     </transition>
-    <div v-else-if="showOverlay"
+    <div v-if="showOverlay"
          class="flex items-center justify-center min-h-[50vh] sm:min-h-[56vh] lg:min-h-[60vh] p-6 text-center">
       <div class="typewriter">
         <span v-for="(c,i) in visibleChars" :key="i" class="fade-char tw-text">{{ c }}</span>

@@ -451,7 +451,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, ref} from 'vue'
+import {computed, ref, watch} from 'vue'
 import {Icon} from '@iconify/vue'
 import {useSettingsStore} from '@/stores/settings'
 import {useUserStore} from '@/stores/user'
@@ -562,6 +562,10 @@ async function loadPricing() {
   } catch {}
 }
 loadPricing()
+
+watch(() => user.profileReady, (ready) => {
+  if (ready) loadPricing()
+})
 
 const estimatedPoints = computed(() => {
   const p = pricing.value

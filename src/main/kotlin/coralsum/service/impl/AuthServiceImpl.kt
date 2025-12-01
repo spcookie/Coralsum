@@ -11,8 +11,8 @@ import coralsum.repository.OutletUserRepository
 import coralsum.service.IAuthService
 import coralsum.service.IEmailService
 import jakarta.inject.Singleton
+import java.security.SecureRandom
 import java.time.LocalDateTime
-import kotlin.random.Random
 
 @Singleton
 class AuthServiceImpl(
@@ -21,8 +21,11 @@ class AuthServiceImpl(
     private val openUserRepository: OpenUserRepository,
     private val outletUserRepository: OutletUserRepository,
 ) : IAuthService {
+    companion object {
+        private val secureRandom: SecureRandom = SecureRandom()
+    }
     override suspend fun sendEmailCode(email: String, purpose: String): Boolean {
-        val code = (100000 + Random.nextInt(900000)).toString()
+        val code = "%06d".format(secureRandom.nextInt(1_000_000))
         val rec = EmailVerificationCode(
             email = email,
             code = code,

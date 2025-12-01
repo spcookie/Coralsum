@@ -1,39 +1,39 @@
 <template>
   <div class="flex-1 overflow-y-auto p-4 space-y-4">
-    <n-card title="生成密钥配置">
-      <n-form :model="form" :rules="rules" ref="formRef">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <n-form-item label="配置名称">
-            <n-input v-model:value="form.name" placeholder="如：新春活动礼包"/>
-          </n-form-item>
-          <div class="col-span-1 md:col-span-2 flex items-start gap-3">
-            <n-form-item class="flex-1" label="永久积分">
-              <n-input-number v-model:value="form.permanentPoints" :precision="2" min="0"/>
+    <n-collapse :default-expanded-names="[]">
+      <n-collapse-item name="cfg">
+        <template #header>
+          <div class="text-[16px] leading-6 font-medium">生成密钥配置</div>
+        </template>
+        <n-form ref="formRef" :model="form" :rules="rules" require-mark-placement="right" show-require-mark>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <n-form-item label="配置名称" path="name">
+              <n-input v-model:value="form.name" maxlength="20" placeholder="如：新春活动礼包" show-count/>
             </n-form-item>
-            <n-form-item class="flex-1" label="订阅积分">
-              <n-input-number v-model:value="form.subscribePoints" :precision="2" min="0"/>
+            <div class="col-span-1 md:col-span-2 flex items-start gap-3">
+              <n-form-item class="flex-1" label="永久积分" path="permanentPoints">
+                <n-input-number v-model:value="form.permanentPoints" :precision="2" min="0"/>
+              </n-form-item>
+              <n-form-item class="flex-1" label="订阅积分" path="subscribePoints">
+                <n-input-number v-model:value="form.subscribePoints" :precision="2" min="0"/>
+              </n-form-item>
+            </div>
+            <n-form-item class="max-w-[220px]" label="订阅类型">
+              <n-select v-model:value="form.subscribeType" :options="subscribeOptions" class="w-[200px]"/>
+            </n-form-item>
+            <n-form-item class="max-w-[220px]" label="周期单位">
+              <n-select v-model:value="form.periodUnit" :options="periodUnitOptions" class="w-[200px]"/>
+            </n-form-item>
+            <n-form-item label="周期数量" path="periodCount">
+              <n-input-number v-model:value="form.periodCount" :precision="0" min="0"/>
             </n-form-item>
           </div>
-          <n-form-item class="max-w-[220px]" label="订阅类型">
-            <n-select v-model:value="form.subscribeType" :options="subscribeOptions" class="w-[200px]"/>
-          </n-form-item>
-          <n-form-item class="max-w-[220px]" label="周期单位">
-            <n-select v-model:value="form.periodUnit" :options="periodUnitOptions" class="w-[200px]"/>
-          </n-form-item>
-          <n-form-item label="周期数量">
-            <n-input-number v-model:value="form.periodCount" :precision="0" min="0"/>
-          </n-form-item>
-          <n-form-item label="结束时间">
-            <n-date-picker v-model:value="form.validTo" placeholder="选择结束时间" type="datetime"/>
-          </n-form-item>
-        </div>
-        <div class="flex gap-2 justify-end mt-2">
-          <n-button @click="saveConfig">保存配置</n-button>
-          <n-button :disabled="!canGenerate" type="primary" @click="generateKeys">生成密钥</n-button>
-          <n-input-number v-model:value="genCount" :precision="0" max="200" min="1"/>
-      </div>
-      </n-form>
-    </n-card>
+          <div class="flex gap-2 justify-end mt-2">
+            <n-button @click="saveConfig">保存配置</n-button>
+          </div>
+        </n-form>
+      </n-collapse-item>
+    </n-collapse>
 
     <n-card title="配置列表">
       <div class="flex items-center justify-between mb-2">
@@ -45,6 +45,8 @@
           <n-button @click="queryConfigs">查询</n-button>
         </div>
         <div class="flex items-center gap-2">
+          <n-input-number v-model:value="genCount" :precision="0" max="200" min="1" style="width: 120px"/>
+          <n-button :disabled="!selectedConfigId" type="primary" @click="generateKeys">生成密钥</n-button>
           <n-button @click="resetConfigs">重置</n-button>
           <n-button @click="loadConfigs">刷新配置</n-button>
         </div>
@@ -63,6 +65,7 @@
     <n-card title="密钥列表">
       <div class="flex gap-2 mb-2 items-center">
         <n-input v-model:value="keyQuery" placeholder="按Key查询" style="width: 200px"/>
+        <n-select v-model:value="keySortBy" :options="keySortOptions" style="width: 140px"/>
         <n-select v-model:value="keyOrder" :options="orderOptions" style="width: 120px"/>
         <n-button @click="queryKeys">查询</n-button>
         <n-button :disabled="selectedIds.length===0" @click="batchToggle(true)">批量启用</n-button>
@@ -85,20 +88,32 @@
 
 <script lang="ts" setup>
 import {computed, h, onMounted, reactive, ref} from 'vue'
+import type {FormInst, FormRules} from 'naive-ui'
 import {
   NButton,
   NCard,
+  NCollapse,
+  NCollapseItem,
   NDataTable,
-  NDatePicker,
   NForm,
   NFormItem,
   NInput,
   NInputNumber,
+  NPagination,
+  NPopconfirm,
+  NPopover,
   NSelect,
+  NTag,
   useMessage
 } from 'naive-ui'
-import {createPointsKeyConfig, generatePointsKeys, listPointsKeyConfigs, listPointsKeys, togglePointsKeys} from '@/api'
-import type { FormRules, FormInst } from 'naive-ui'
+import {
+  createPointsKeyConfig,
+  generatePointsKeys,
+  listPointsKeyConfigs,
+  listPointsKeys,
+  togglePointsKeyConfig,
+  togglePointsKeys
+} from '@/api'
 
 const message = useMessage()
 
@@ -109,17 +124,21 @@ const form = reactive({
   subscribeType: 'MONTHLY',
   periodUnit: 'MONTH',
   periodCount: 0,
-  validTo: null as any,
+
 })
-const genCount = ref(10)
+const genCount = ref(1)
 const canGenerate = computed(() => (form.name || '').trim().length > 0)
 
 const formRef = ref<FormInst | null>(null)
 const rules: FormRules = {
   name: [
-    { required: true, message: '请填写配置名称', trigger: ['input', 'blur'] },
     {
-      validator: (_r, v: any) => typeof v === 'string' && v.trim().length > 0 || new Error('配置名称不能为空'),
+      validator: (_r, v: any) => {
+        const s = String(v ?? '').trim()
+        if (s.length === 0) return new Error('配置名称不能为空')
+        if (s.length > 20) return new Error('配置名称长度不可超过20')
+        return true
+      },
       trigger: ['input', 'blur']
     }
   ],
@@ -164,14 +183,13 @@ const periodUnitOptions = [
 
 async function saveConfig() {
   try {
-    await formRef.value?.validate()
-    const payload: any = {...form}
-    if (payload.validTo) {
-      const d = new Date(payload.validTo)
-      // 发送为 LocalDateTime 格式：yyyy-MM-dd'T'HH:mm:ss（不带时区）
-      const iso = d.toISOString().slice(0, 19)
-      payload.validTo = iso
+    const ok = await formRef.value?.validate().then(() => true).catch(() => false)
+    if (!ok) {
+      message.warning('请修正表单错误');
+      return
     }
+    const payload: any = {...form}
+    payload.name = String(payload.name ?? '').trim()
     const saved = await createPointsKeyConfig(payload)
     selectedConfigId.value = saved.id
     await loadConfigs()
@@ -222,18 +240,160 @@ function parseProblemMessage(err: any): string | null {
   }
 }
 
+function formatDateTime(input: any): string {
+  try {
+    if (!input) return '--'
+    const d = typeof input === 'string' ? new Date(input) : input
+    if (!d || Number.isNaN(d.getTime())) return String(input)
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  } catch {
+    return String(input ?? '--')
+  }
+}
+
+function copyText(text: string) {
+  try {
+    navigator?.clipboard?.writeText(text)
+    message.success('已复制')
+  } catch {
+    message.warning('复制失败')
+  }
+}
+
+function parseMaybeJson(raw: any): any {
+  let cur = raw
+  for (let i = 0; i < 3; i++) {
+    if (typeof cur === 'string') {
+      const t = cur.trim()
+      try {
+        cur = JSON.parse(t)
+      } catch {
+        break
+      }
+    } else {
+      break
+    }
+  }
+  return cur
+}
+
+function isDateArray(val: any): boolean {
+  if (!Array.isArray(val)) return false
+  if (val.length < 3) return false
+  return val.every((n) => typeof n === 'number' && Number.isFinite(n))
+}
+
+function toDateFromArray(arr: number[]): Date {
+  const [y, m, d, hh = 0, mm = 0, ss = 0] = arr
+  return new Date(y, (m || 1) - 1, d || 1, hh, mm, ss)
+}
+
+function normalizeDates(input: any): any {
+  if (input == null) return input
+  if (isDateArray(input)) {
+    const dt = toDateFromArray(input as number[])
+    return formatDateTime(dt)
+  }
+  if (Array.isArray(input)) return input.map((v) => normalizeDates(v))
+  if (typeof input === 'object') {
+    const out: any = Array.isArray(input) ? [] : {}
+    for (const k of Object.keys(input)) {
+      const v = (input as any)[k]
+      out[k] = normalizeDates(v)
+    }
+    return out
+  }
+  return input
+}
+
+function safeNormalizeAndStringify(raw: any): string {
+  try {
+    const normalized = normalizeDates(raw)
+    return JSON.stringify(normalized, null, 2)
+  } catch {
+    try {
+      return JSON.stringify(raw, null, 2)
+    } catch {
+      return String(raw ?? '')
+    }
+  }
+}
+
+function renderConfigTip(row: any) {
+  const raw = row.configJson
+  const obj = parseMaybeJson(raw)
+  const pretty = safeNormalizeAndStringify(obj ?? raw)
+  const name = obj?.name ?? '--'
+  const perm = obj?.permanent_points ?? obj?.permanentPoints ?? '--'
+  const subs = obj?.subscribe_points ?? obj?.subscribePoints ?? '--'
+  const st = obj?.subscribe_type ?? obj?.subscribeType ?? '--'
+  const pu = obj?.period_unit ?? obj?.periodUnit ?? '--'
+  const pc = obj?.period_count ?? obj?.periodCount ?? '--'
+  const disabled = obj?.disabled ?? '--'
+  const copyBtn = h(NButton, {size: 'tiny', onClick: () => copyText(pretty)}, {default: () => '复制JSON'})
+  return h('div', {class: 'space-y-2 w-[460px] max-w-[70vw]'}, [
+    h('div', {class: 'text-xs text-neutral-400'}, '配置摘要'),
+    h('div', {class: 'grid grid-cols-2 gap-x-3 gap-y-1 text-sm'}, [
+      h('div', {}, `名称：${name}`),
+      h('div', {}, `永久积分：${perm}`),
+      h('div', {}, `订阅积分：${subs}`),
+      h('div', {}, `订阅类型：${st}`),
+      h('div', {}, `周期单位：${pu}`),
+      h('div', {}, `周期数量：${pc}`),
+      h('div', {}, `禁用：${String(!!disabled)}`),
+    ]),
+    h('div', {class: 'flex items-center justify-between'}, [
+      h('div', {class: 'text-xs text-neutral-400'}, '原始JSON'), copyBtn
+    ]),
+    h('pre', {class: 'text-xs bg-neutral-800 text-neutral-100 p-2 rounded overflow-auto max-h-[240px]'}, pretty),
+  ])
+}
+
 const rows = ref<any[]>([])
 const selectedIds = ref<number[]>([])
 const columns = [
   {type: 'selection'},
   {title: 'ID', key: 'id', width: 80},
   {title: 'Key', key: 'keyCode'},
-  {title: '配置快照', key: 'configJson'},
-  {title: '可用', key: 'enabled'},
-  {title: '已使用', key: 'used'},
-  {title: '使用时间', key: 'usedTime'},
+  {
+    title: '状态',
+    key: 'status',
+    render(row: any) {
+      const used = !!row.used
+      const enabled = !!row.enabled
+      const type = used ? 'error' : (enabled ? 'success' : 'warning')
+      const label = used ? '已使用' : (enabled ? '启用' : '禁用')
+      return h(NTag, {type, size: 'small'}, {default: () => label})
+    }
+  },
+  {
+    title: '创建时间', key: 'createTime', render(row: any) {
+      return formatDateTime(row.createTime)
+    }
+  },
+  {
+    title: '使用时间', key: 'usedTime', render(row: any) {
+      return formatDateTime(row.usedTime)
+    }
+  },
   {title: '使用IP', key: 'usedIp'},
   {title: '使用UID', key: 'usedUid'},
+  {
+    title: '操作',
+    key: 'action',
+    render(row: any) {
+      const viewBtn = h(
+          NPopover,
+          {trigger: 'click'},
+          {
+            default: () => renderConfigTip(row),
+            trigger: () => h(NButton, {size: 'small', tertiary: true}, {default: () => '查看配置'})
+          }
+      )
+      return h('div', {class: 'flex items-center gap-2'}, [viewBtn])
+    }
+  }
 ]
 
 const keyPage = ref(1)
@@ -241,6 +401,11 @@ const keySize = ref(10)
 const keyTotal = ref(0)
 const keyQuery = ref('')
 const keyOrder = ref<'asc' | 'desc'>('desc')
+const keySortBy = ref<'status' | 'used'>('used')
+const keySortOptions = [
+  {label: '按状态', value: 'status'},
+  {label: '按使用时间', value: 'used'},
+]
 
 function onCheck(keys: any[]) {
   selectedIds.value = (keys || []).map((k: any) => Number(k))
@@ -263,6 +428,7 @@ async function loadKeys() {
       page: keyPage.value,
       size: keySize.value,
       key: keyQuery.value.trim() || undefined,
+      sortBy: keySortBy.value,
       order: keyOrder.value
     })
     rows.value = (res.items || []).map(mapKeyRow)
@@ -295,11 +461,11 @@ const cfgPage = ref(1)
 const cfgSize = ref(10)
 const cfgTotal = ref(0)
 const cfgName = ref('')
-const cfgSortBy = ref<'id' | 'end'>('id')
+const cfgSortBy = ref<'id' | 'status'>('id')
 const cfgOrder = ref<'asc' | 'desc'>('desc')
 const cfgSortOptions = [
   {label: '按ID', value: 'id'},
-  {label: '按结束时间', value: 'end'},
+  {label: '按状态', value: 'status'},
 ]
 const orderOptions = [
   {label: '升序', value: 'asc'},
@@ -313,23 +479,50 @@ const cfgColumns = [
   {title: '订阅类型', key: 'subscribeType'},
   {title: '周期单位', key: 'periodUnit'},
   {title: '周期数量', key: 'periodCount'},
-  {title: '结束时间', key: 'validTo'},
-  {title: '禁用', key: 'disabled'},
+  {
+    title: '状态',
+    key: 'status',
+    render(row: any) {
+      const disabled = !!row.disabled
+      const type = disabled ? 'error' : 'success'
+      const label = disabled ? '禁用' : '启用'
+      return h(NTag, {type, size: 'small'}, {default: () => label})
+    }
+  },
   {
     title: '操作',
     key: 'action',
     render(row: any) {
-      return h(
-          NButton,
-          {size: 'small', onClick: () => selectConfig(row)},
-          {default: () => '选择'}
+      const chooseBtn = h(NButton, {size: 'small', onClick: () => selectConfig(row)}, {default: () => '选择'})
+      const disabled = !!row.disabled
+      const toggleText = disabled ? '启用' : '禁用'
+      const confirmText = disabled ? '确认启用该配置？' : '确认禁用该配置？'
+      const toggleBtn = h(
+          NPopconfirm,
+          {onPositiveClick: () => toggleConfigStatus(row, !disabled)},
+          {
+            default: () => confirmText,
+            trigger: () => h(NButton, {size: 'small', tertiary: true}, {default: () => toggleText})
+          }
       )
+      return h('div', {class: 'flex items-center gap-2'}, [chooseBtn, toggleBtn])
     }
   }
 ]
 
 function selectConfig(row: any) {
   selectedConfigId.value = Number(row.id)
+}
+
+async function toggleConfigStatus(row: any, toDisabled: boolean) {
+  try {
+    await togglePointsKeyConfig(Number(row.id), toDisabled)
+    message.success(toDisabled ? '配置已禁用' : '配置已启用')
+    await loadConfigs()
+  } catch (e: any) {
+    const msg = parseProblemMessage(e) || e?.message || '操作失败'
+    message.error(msg)
+  }
 }
 
 const selectedConfigInfo = computed(() => {
@@ -395,6 +588,7 @@ function mapKeyRow(r: any) {
     enabled: !!(r.enabled ?? r.enabled),
     used: !!(r.used ?? r.used),
     usedTime: r.used_time ?? r.usedTime,
+    createTime: r.create_time ?? r.createTime,
     usedIp: r.used_ip ?? r.usedIp,
     usedUid: r.used_uid ?? r.usedUid,
   }
@@ -409,10 +603,14 @@ function mapCfgRow(r: any) {
     subscribeType: r.subscribe_type ?? r.subscribeType,
     periodUnit: r.period_unit ?? r.periodUnit,
     periodCount: r.period_count ?? r.periodCount,
-    validTo: r.valid_to ?? r.validTo,
     disabled: !!(r.disabled ?? r.disabled),
   }
 }
 </script>
 
-<style scoped></style>
+<style scoped>
+:deep(.n-form-item-label__asterisk),
+:deep(.n-form-item-asterisk) {
+  color: #16a34a;
+}
+</style>

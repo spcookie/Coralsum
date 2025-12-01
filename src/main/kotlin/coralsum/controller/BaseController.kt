@@ -14,8 +14,7 @@ class BaseController {
 
     @Error(BusinessException::class, global = true)
     fun globalError(e: BusinessException): HttpResponse<Res<Any>> {
-        logger.error(e.message, e)
-        return HttpResponse.serverError<Res<Any>>()
-            .body(Res.fail(e.message))
+        logger.error(e.message)
+        return HttpResponse.ok(Res.fail(e.message))
     }
 }

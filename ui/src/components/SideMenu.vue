@@ -59,7 +59,9 @@
         <n-input v-model:value="redeemKey" placeholder="输入密钥"/>
         <div class="flex gap-2 justify-end">
           <n-button @click="showRedeem=false">取消</n-button>
-          <n-button type="primary" @click="redeem">兑换</n-button>
+          <n-button :disabled="redeeming || !redeemKey.trim()" type="primary" @click="redeem">
+            {{ redeeming ? '兑换中...' : '兑换' }}
+          </n-button>
         </div>
       </div>
     </n-modal>
@@ -178,8 +180,8 @@
 import {computed, ref, watch} from 'vue'
 import {Icon} from '@iconify/vue'
 import {useUserStore} from '@/stores/user'
-import {NButton, NInput, NModal, NPopconfirm, NSpin, NTooltip, useMessage} from 'naive-ui'
-import {redeemPoints} from '@/api'
+import {NButton, NInput, NModal, NPagination, NPopconfirm, NSpin, NTooltip, useMessage} from 'naive-ui'
+import {getProfile, redeemPoints} from '@/api'
 import {countHistory, deleteHistory, listHistory} from '@/utils/indexedDb'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {useRoute, useRouter} from 'vue-router'
@@ -204,6 +206,7 @@ function goHome() {
 
 const showRedeem = ref(false)
 const redeemKey = ref('')
+const redeeming = ref(false)
 const showLogout = ref(false)
 
 
@@ -214,9 +217,17 @@ function redeem() {
     return
   }
   if (redeemKey.value.trim()) {
+    redeeming.value = true
     redeemPoints(user.email, redeemKey.value.trim())
-        .then(res => {
-          user.addPoints(res.pointsAdded)
+        .then(async (res) => {
+          const addedRaw = Number((res as any)?.pointsAdded ?? (res as any)?.points_added ?? 0)
+          const addedView = Number.isFinite(addedRaw) ? addedRaw : 0
+          try {
+            const profile = await getProfile()
+            user.setProfile({...profile})
+          } catch {
+          }
+          message.success(`兑换成功，积分+${addedView.toFixed(0)}`)
           redeemKey.value = ''
           showRedeem.value = false
         })
@@ -230,6 +241,9 @@ function redeem() {
           } else {
             message.error(e?.message || '兑换失败')
           }
+        })
+        .finally(() => {
+          redeeming.value = false
         })
   }
 }

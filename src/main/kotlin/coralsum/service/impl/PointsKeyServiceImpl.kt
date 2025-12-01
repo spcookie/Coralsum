@@ -5,12 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import coralsum.common.dto.PageResp
 import coralsum.common.enums.MembershipTier
 import coralsum.common.enums.SubscribeType
-import coralsum.common.request.CreatePointsKeyConfigReq
-import coralsum.common.request.GeneratePointsKeysReq
-import coralsum.common.request.RedeemPointsResp
-import coralsum.common.request.ToggleKeysReq
+import coralsum.common.request.*
 import coralsum.entity.PointsKey
 import coralsum.entity.PointsKeyConfig
+import coralsum.excption.BusinessException
 import coralsum.repository.OpenUserRepository
 import coralsum.repository.PointsKeyConfigRepository
 import coralsum.repository.PointsKeyRepository
@@ -18,6 +16,7 @@ import coralsum.service.IPointsKeyService
 import coralsum.service.IUserPointsService
 import io.micronaut.data.model.Pageable
 import io.micronaut.data.model.Sort
+import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import kotlinx.coroutines.flow.toList
 import java.math.BigDecimal
@@ -41,7 +40,6 @@ class PointsKeyServiceImpl(
             subscribeType = req.subscribeType,
             periodUnit = req.periodUnit,
             periodCount = req.periodCount,
-            validTo = req.validTo,
             disabled = false,
         )
         return pointsKeyConfigRepository.save(config)
@@ -53,13 +51,11 @@ class PointsKeyServiceImpl(
 
     override suspend fun generateKeys(req: GeneratePointsKeysReq, operator: String?): List<PointsKey> {
         val cfg = pointsKeyConfigRepository.findById(req.configId)
-            ?: throw IllegalArgumentException("配置不存在")
+            ?: throw BusinessException("配置不存在")
         if (cfg.disabled) {
-            throw IllegalStateException("配置已禁用，无法生成密钥")
+            throw BusinessException("配置已禁用，无法生成密钥")
         }
-        val now = LocalDateTime.now()
         val cfgJson = objectMapper.writeValueAsString(cfg)
-        val expire = cfg.validTo
         val result = mutableListOf<PointsKey>()
         val count = req.count.coerceAtMost(1000)
         repeat(count) {
@@ -69,7 +65,6 @@ class PointsKeyServiceImpl(
                 configId = cfg.id!!,
                 configJson = cfgJson,
                 enabled = true,
-                expireTime = expire,
             )
             result += pointsKeyRepository.save(entity)
         }
@@ -90,7 +85,7 @@ class PointsKeyServiceImpl(
         val p = if (page > 0) page else 1
         val s = if (size > 0) size else 10
         val sortProp = when (sortBy?.lowercase()) {
-            "end", "validto" -> "validTo"
+            "status", "disabled" -> "disabled"
             else -> "id"
         }
         val dir = if ((order ?: "desc").equals("asc", true)) Sort.Order.Direction.ASC else Sort.Order.Direction.DESC
@@ -103,11 +98,32 @@ class PointsKeyServiceImpl(
         return PageResp(items = pageData.content, page = p, size = s, total = pageData.totalSize)
     }
 
-    override suspend fun listKeysPaged(page: Int, size: Int, key: String?, order: String?): PageResp<PointsKey> {
+    override suspend fun listKeysPaged(
+        page: Int,
+        size: Int,
+        key: String?,
+        sortBy: String?,
+        order: String?,
+    ): PageResp<PointsKey> {
         val p = if (page > 0) page else 1
         val s = if (size > 0) size else 10
         val dir = if ((order ?: "desc").equals("asc", true)) Sort.Order.Direction.ASC else Sort.Order.Direction.DESC
-        val pageable = Pageable.from(p - 1, s, Sort.of(Sort.Order("usedTime", dir, false)))
+        val sp = when (sortBy?.lowercase()) {
+            "status" -> null
+            "used", "usedtime" -> "usedTime"
+            "enabled" -> "enabled"
+            else -> "usedTime"
+        }
+        val pageable = if (sp == null) {
+            Pageable.from(
+                p - 1, s, Sort.of(
+                    Sort.Order("used", dir, false),
+                    Sort.Order("enabled", dir, false)
+                )
+            )
+        } else {
+            Pageable.from(p - 1, s, Sort.of(Sort.Order(sp, dir, false)))
+        }
         val pageData = if (!key.isNullOrBlank()) {
             pointsKeyRepository.findByKeyCodeContains(key.trim(), pageable)
         } else {
@@ -121,18 +137,29 @@ class PointsKeyServiceImpl(
         pointsKeyRepository.batchToggleEnabled(req.ids, req.enabled)
     }
 
+    override suspend fun toggleConfig(req: ToggleConfigReq): PointsKeyConfig {
+        val cur = pointsKeyConfigRepository.findById(req.id)
+            ?: throw BusinessException("配置不存在")
+        pointsKeyConfigRepository.updateDisabled(req.id, req.disabled)
+        return pointsKeyConfigRepository.findById(req.id) ?: cur.copy(disabled = req.disabled)
+    }
+
+    @Transactional(rollbackFor = [Exception::class])
     override suspend fun redeem(uid: String, ip: String?, keyCode: String): RedeemPointsResp {
         val pk = pointsKeyRepository.findByKeyCode(keyCode) ?: throw IllegalArgumentException("密钥不存在")
-        if (!pk.enabled) throw IllegalStateException("密钥已被禁用")
-        if (pk.used) throw IllegalStateException("密钥已被使用")
+        if (!pk.enabled) throw BusinessException("密钥已被禁用")
+        if (pk.used) throw BusinessException("密钥已被使用")
         val now = LocalDateTime.now()
-        if (pk.expireTime != null && now.isAfter(pk.expireTime)) throw IllegalStateException("密钥已过期")
 
         val cfg = pointsKeyConfigRepository.findById(pk.configId)
-            ?: throw IllegalStateException("密钥配置不存在")
+            ?: throw BusinessException("密钥不存在")
+
+        if (cfg.disabled) {
+            throw BusinessException("密钥已禁用")
+        }
 
         val openUser = openUserRepository.findByUid(uid) ?: throw IllegalStateException("用户不存在")
-        val openUserId = openUser.id ?: throw IllegalStateException("用户ID无效")
+        val openUserId = openUser.id ?: throw BusinessException("用户ID无效")
 
         val permAdd = cfg.permanentPoints
         val subsAdd = cfg.subscribePoints
@@ -140,13 +167,13 @@ class PointsKeyServiceImpl(
         if (permAdd > BigDecimal.ZERO) {
             userPointsService.addPermanentPoints(
                 openUserId,
-                permAdd.setScale(2, RoundingMode.HALF_UP).multiply(BigDecimal(100)).toInt()
+                permAdd.setScale(2, RoundingMode.HALF_UP).toInt()
             )
         }
         if (subsAdd > BigDecimal.ZERO) {
             userPointsService.addSubscribePoints(
                 openUserId,
-                subsAdd.setScale(2, RoundingMode.HALF_UP).multiply(BigDecimal(100)).toInt()
+                subsAdd.setScale(2, RoundingMode.HALF_UP).toInt()
             )
         }
 
@@ -170,7 +197,7 @@ class PointsKeyServiceImpl(
             // 订阅过期时间与时长累加
             if (cfg.periodCount > 0 && !cfg.periodUnit.isNullOrBlank()) {
                 val base = up.subscribeExpireTime?.let { if (it.isAfter(now)) it else now } ?: now
-                up.subscribeExpireTime = when (cfg.periodUnit!!.uppercase()) {
+                up.subscribeExpireTime = when (cfg.periodUnit.uppercase()) {
                     "DAY" -> base.plusDays(cfg.periodCount.toLong())
                     "MONTH" -> base.plusMonths(cfg.periodCount.toLong())
                     "YEAR" -> base.plusYears(cfg.periodCount.toLong())
@@ -186,7 +213,6 @@ class PointsKeyServiceImpl(
             usedTime = now,
             usedIp = ip,
             usedUid = uid,
-            enabled = false,
         )
         pointsKeyRepository.update(usedEntity)
 

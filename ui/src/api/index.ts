@@ -225,7 +225,6 @@ export async function createPointsKeyConfig(payload: {
     subscribeType?: string
     periodUnit?: string
     periodCount?: number
-    validTo?: string
 }) {
     const body: any = {
         name: payload.name,
@@ -233,8 +232,7 @@ export async function createPointsKeyConfig(payload: {
         subscribe_points: payload.subscribePoints,
         subscribe_type: payload.subscribeType,
         period_unit: payload.periodUnit,
-        period_count: payload.periodCount,
-        valid_to: payload.validTo
+        period_count: payload.periodCount
     }
     const {data} = await http.post('/ctl/points-keys/config', body)
     return data
@@ -244,7 +242,7 @@ export async function listPointsKeyConfigs(params?: {
     page?: number
     size?: number
     name?: string
-    sortBy?: 'id' | 'end'
+    sortBy?: 'id' | 'status'
     order?: 'asc' | 'desc'
 }) {
     const {data} = await http.get('/ctl/points-keys/configs', {params})
@@ -260,6 +258,7 @@ export async function listPointsKeys(params?: {
     page?: number
     size?: number
     key?: string
+    sortBy?: 'status' | 'used'
     order?: 'asc' | 'desc'
 }) {
     const {data} = await http.get('/ctl/points-keys/keys', {params})
@@ -268,6 +267,11 @@ export async function listPointsKeys(params?: {
 
 export async function togglePointsKeys(ids: number[], enabled: boolean) {
     const {data} = await http.post('/ctl/points-keys/toggle', {ids, enabled})
+    return data
+}
+
+export async function togglePointsKeyConfig(id: number, disabled: boolean) {
+    const {data} = await http.post('/ctl/points-keys/config/toggle', {id, disabled})
     return data
 }
 

@@ -90,17 +90,17 @@ Mock.mock(/\/api\/auth\/register$/, 'post', (opts) => {
 //   return { code: 'SUCCESS', message: '', data: info }
 // })
 
-Mock.mock(/\/api\/user\/update-name$/, 'post', (opts) => {
-    const {email, name} = JSON.parse(opts.body || '{}')
-    let info = mem.usersByEmail.get(email)
-    if (!info) {
-        info = {email, name, points: genPoints(), tier: genTier(), token: genToken()}
-        mem.usersByEmail.set(email, info)
-    } else {
-        info.name = name
-    }
-    return {code: 'SUCCESS', message: '', data: info}
-})
+// Mock.mock(/\/api\/user\/update-name$/, 'post', (opts) => {
+//     const {email, name} = JSON.parse(opts.body || '{}')
+//     let info = mem.usersByEmail.get(email)
+//     if (!info) {
+//         info = {email, name, points: genPoints(), tier: genTier(), token: genToken()}
+//         mem.usersByEmail.set(email, info)
+//     } else {
+//         info.name = name
+//     }
+//     return {code: 'SUCCESS', message: '', data: info}
+// })
 
 Mock.mock(/\/api\/user\/change-password$/, 'post', (opts) => {
     const {email, oldPassword, newPassword, code} = JSON.parse(opts.body || '{}')
@@ -127,38 +127,38 @@ Mock.mock(/\/api\/user\/change-password$/, 'post', (opts) => {
 //   return { code: 'SUCCESS', message: '', data: { inputTokens, outputTokens, durationMs, images, text } }
 // })
 
-Mock.mock(/\/api\/history\/list$/, 'get', () => {
-    const now = Date.now()
-    const list = Array.from({length: 5}, (_, i) => ({
-        id: String(now - i * 60000),
-        createdAt: now - i * 60000,
-        inputTokens: 64 + i * 10,
-        outputTokens: 256 + i * 64,
-        durationMs: 800 + i * 120,
-        images: [],
-        text: `历史记录 #${i + 1}`
-    }))
-    return {code: 'SUCCESS', message: '', data: list}
-})
+// Mock.mock(/\/api\/history\/list$/, 'get', () => {
+//     const now = Date.now()
+//     const list = Array.from({length: 5}, (_, i) => ({
+//         id: String(now - i * 60000),
+//         createdAt: now - i * 60000,
+//         inputTokens: 64 + i * 10,
+//         outputTokens: 256 + i * 64,
+//         durationMs: 800 + i * 120,
+//         images: [],
+//         text: `历史记录 #${i + 1}`
+//     }))
+//     return {code: 'SUCCESS', message: '', data: list}
+// })
 
-Mock.mock(/\/api\/history\/images$/, 'get', (opts) => {
-    return {
-        code: 'SUCCESS',
-        message: '',
-        data: [placeholderImage(0), placeholderImage(1), placeholderImage(2), placeholderImage(3)]
-    }
-})
-
-Mock.mock(/\/api\/points\/redeem$/, 'post', (opts) => {
-    const {email, key} = JSON.parse(opts.body || '{}')
-    if (!email || !key) {
-        return {status: 400, message: '信息不完整'}
-    }
-    let info = mem.usersByEmail.get(email)
-    if (!info) {
-        return {status: 401, message: '未登录'}
-    }
-    const add = 100
-    info.points += add
-    return {code: 'SUCCESS', message: '', data: {pointsAdded: add, points: info.points}}
-})
+// Mock.mock(/\/api\/history\/images$/, 'get', (opts) => {
+//     return {
+//         code: 'SUCCESS',
+//         message: '',
+//         data: [placeholderImage(0), placeholderImage(1), placeholderImage(2), placeholderImage(3)]
+//     }
+// })
+//
+// Mock.mock(/\/api\/points\/redeem$/, 'post', (opts) => {
+//     const {email, key} = JSON.parse(opts.body || '{}')
+//     if (!email || !key) {
+//         return {status: 400, message: '信息不完整'}
+//     }
+//     let info = mem.usersByEmail.get(email)
+//     if (!info) {
+//         return {status: 401, message: '未登录'}
+//     }
+//     const add = 100
+//     info.points += add
+//     return {code: 'SUCCESS', message: '', data: {pointsAdded: add, points: info.points}}
+// })

@@ -48,6 +48,7 @@ micronaut-cache-caffeine = { module = "io.micronaut.cache:micronaut-cache-caffei
 micronaut-data-r2dbc = { module = "io.micronaut.data:micronaut-data-r2dbc" }
 micronaut-kotlin-ext-fns = { module = "io.micronaut.kotlin:micronaut-kotlin-extension-functions" }
 micronaut-kotlin-runtime = { module = "io.micronaut.kotlin:micronaut-kotlin-runtime" }
+micronaut-views-thymeleaf = { module = "io.micronaut.views:micronaut-views-thymeleaf" }
 resilience4j-consumer = { module = "io.github.resilience4j:resilience4j-consumer", version.ref = "resilience4j" }
 resilience4j-kotlin = { module = "io.github.resilience4j:resilience4j-kotlin", version.ref = "resilience4j" }
 resilience4j-ratelimiter = { module = "io.github.resilience4j:resilience4j-ratelimiter", version.ref = "resilience4j" }

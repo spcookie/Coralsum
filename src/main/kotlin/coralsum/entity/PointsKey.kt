@@ -37,8 +37,6 @@ data class PointsKey(
 
     @field:MappedProperty("ENABLED")
     val enabled: Boolean = true,
-    @field:MappedProperty("EXPIRE_TIME")
-    val expireTime: LocalDateTime? = null,
 
     @field:DateCreated
     @field:MappedProperty("CREATE_TIME")

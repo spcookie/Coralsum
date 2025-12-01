@@ -3,6 +3,7 @@ package coralsum.controller
 import coralsum.common.dto.Res
 import coralsum.common.request.CreatePointsKeyConfigReq
 import coralsum.common.request.GeneratePointsKeysReq
+import coralsum.common.request.ToggleConfigReq
 import coralsum.common.request.ToggleKeysReq
 import coralsum.service.IPointsKeyService
 import io.micronaut.http.annotation.*
@@ -50,9 +51,10 @@ class PointsKeyAdminController(
         @QueryValue(defaultValue = "1") page: Int,
         @QueryValue(defaultValue = "10") size: Int,
         @QueryValue(defaultValue = "") key: String?,
+        @QueryValue(defaultValue = "used") sortBy: String?,
         @QueryValue(defaultValue = "desc") order: String?,
     ): Res<Any> {
-        val res = pointsKeyService.listKeysPaged(page, size, key, order)
+        val res = pointsKeyService.listKeysPaged(page, size, key, sortBy, order)
         return Res.success(res)
     }
 
@@ -60,5 +62,11 @@ class PointsKeyAdminController(
     suspend fun toggle(@Body @Valid req: ToggleKeysReq): Res<Any> {
         pointsKeyService.toggleKeys(req)
         return Res.success(message = "操作成功")
+    }
+
+    @Post("/config/toggle")
+    suspend fun toggleConfig(@Body @Valid req: ToggleConfigReq): Res<Any> {
+        val updated = pointsKeyService.toggleConfig(req)
+        return Res.success(updated)
     }
 }

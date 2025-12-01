@@ -1,6 +1,7 @@
 package coralsum.repository
 
 import coralsum.entity.PointsKeyConfig
+import io.micronaut.data.annotation.Query
 import io.micronaut.data.annotation.Repository
 import io.micronaut.data.model.Page
 import io.micronaut.data.model.Pageable
@@ -15,4 +16,7 @@ interface PointsKeyConfigRepository : CoroutineCrudRepository<PointsKeyConfig, L
 
     suspend fun findAll(pageable: Pageable): Page<PointsKeyConfig>
     suspend fun findByNameContains(name: String, pageable: Pageable): Page<PointsKeyConfig>
+
+    @Query("UPDATE POINTS_KEY_CONFIG SET DISABLED = :disabled WHERE ID = :id")
+    suspend fun updateDisabled(id: Long, disabled: Boolean)
 }

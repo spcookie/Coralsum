@@ -1,10 +1,7 @@
 package coralsum.service
 
 import coralsum.common.dto.PageResp
-import coralsum.common.request.CreatePointsKeyConfigReq
-import coralsum.common.request.GeneratePointsKeysReq
-import coralsum.common.request.RedeemPointsResp
-import coralsum.common.request.ToggleKeysReq
+import coralsum.common.request.*
 import coralsum.entity.PointsKey
 import coralsum.entity.PointsKeyConfig
 
@@ -20,7 +17,8 @@ interface IPointsKeyService {
     ): PageResp<PointsKeyConfig>
     suspend fun generateKeys(req: GeneratePointsKeysReq, operator: String?): List<PointsKey>
     suspend fun listKeys(): List<PointsKey>
-    suspend fun listKeysPaged(page: Int, size: Int, key: String?, order: String?): PageResp<PointsKey>
+    suspend fun listKeysPaged(page: Int, size: Int, key: String?, sortBy: String?, order: String?): PageResp<PointsKey>
     suspend fun toggleKeys(req: ToggleKeysReq)
     suspend fun redeem(uid: String, ip: String?, keyCode: String): RedeemPointsResp
+    suspend fun toggleConfig(req: ToggleConfigReq): PointsKeyConfig
 }

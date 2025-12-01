@@ -8,7 +8,6 @@ import coralsum.config.PricingConfig
 import coralsum.entity.OpenUser
 import coralsum.entity.UserPoints
 import coralsum.entity.UserPointsDeduction
-import coralsum.repository.GenerateImageReqRecordRepository
 import coralsum.repository.GenerateImageReqRefRepository
 import coralsum.repository.OpenUserRepository
 import coralsum.repository.UserPointsDeductionRepository
@@ -49,19 +48,19 @@ class UserPointsServiceImpl(
     override suspend fun addPermanentPoints(openUserId: Long, delta: Int): UserPoints {
         val points = getOrCreateByOpenUserId(openUserId)
         points.permanentPoints = points.permanentPoints.add(delta.toBigDecimal()).max(BigDecimal.ZERO)
-        return userPointsRepository.save(points)
+        return userPointsRepository.update(points)
     }
 
     override suspend fun addSubscribePoints(openUserId: Long, delta: Int): UserPoints {
         val points = getOrCreateByOpenUserId(openUserId)
         points.subscribePoints = points.subscribePoints.add(delta.toBigDecimal()).max(BigDecimal.ZERO)
-        return userPointsRepository.save(points)
+        return userPointsRepository.update(points)
     }
 
     override suspend fun updateSubscribeType(openUserId: Long, type: SubscribeType?): UserPoints {
         val points = getOrCreateByOpenUserId(openUserId)
         points.subscribeType = type
-        return userPointsRepository.save(points)
+        return userPointsRepository.update(points)
     }
 
     override suspend fun hasEnoughPoints(openUserId: Long): Boolean {
@@ -80,7 +79,7 @@ class UserPointsServiceImpl(
         }
         if (newTier != points.tier) {
             points.tier = newTier
-            return userPointsRepository.save(points)
+            return userPointsRepository.update(points)
         }
         return points
     }

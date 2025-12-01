@@ -117,7 +117,9 @@
       <n-input v-model:value="redeemKeyMobile" placeholder="输入密钥"/>
       <div class="flex gap-2 justify-end">
         <n-button @click="showRedeemMobile=false">取消</n-button>
-        <n-button type="primary" @click="redeemMobile">兑换</n-button>
+        <n-button :disabled="redeemingMobile || !redeemKeyMobile.trim()" type="primary" @click="redeemMobile">
+          {{ redeemingMobile ? '兑换中...' : '兑换' }}
+        </n-button>
       </div>
     </div>
   </n-modal>
@@ -276,6 +278,7 @@ import {
   NInput,
   NModal,
   NNumberAnimation,
+  NPagination,
   NPopconfirm,
   NSpin,
   NSwitch,
@@ -285,6 +288,7 @@ import {
 } from 'naive-ui'
 import {
   changePassword,
+  getEstimateParams,
   getProfile,
   login as apiLogin,
   redeemPoints,
@@ -292,7 +296,6 @@ import {
   sendEmailCode,
   updateProfileName
 } from '@/api'
-import {getEstimateParams} from '@/api'
 import {countHistory, deleteHistory, listHistory} from '@/utils/indexedDb'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 
@@ -356,6 +359,7 @@ const newPwd = ref('')
 const confirmPwd = ref('')
 const emailCode = ref('')
 const redeemKeyMobile = ref('')
+const redeemingMobile = ref(false)
 const showHistory = ref(false)
 const loadingHistory = ref(false)
 const records = ref<any[]>([])
@@ -500,9 +504,17 @@ function redeemMobile() {
     return
   }
   if (redeemKeyMobile.value.trim()) {
+    redeemingMobile.value = true
     redeemPoints(user.email, redeemKeyMobile.value.trim())
-        .then(res => {
-          user.addPoints(res.pointsAdded)
+        .then(async (res) => {
+          const addedRaw = Number((res as any)?.pointsAdded ?? (res as any)?.points_added ?? 0)
+          const addedView = Number.isFinite(addedRaw) ? addedRaw : 0
+          try {
+            const profile = await getProfile()
+            user.setProfile({...profile})
+          } catch {
+          }
+          message.success(`兑换成功，积分+${addedView.toFixed(0)}`)
           redeemKeyMobile.value = ''
           showRedeemMobile.value = false
         })
@@ -516,6 +528,9 @@ function redeemMobile() {
           } else {
             message.error(e?.message || '兑换失败')
           }
+        })
+        .finally(() => {
+          redeemingMobile.value = false
         })
   }
 }

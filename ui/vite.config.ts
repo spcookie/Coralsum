@@ -28,10 +28,10 @@ export default defineConfig({
         allowedHosts: ['localhost', 'coralsum.spcookie.top'],
         proxy: {
             '/api': {
-                target: 'http://localhost:8888',
+                target: 'http://localhost:8080',
                 changeOrigin: true,
                 headers: {
-                    Origin: 'http://localhost:8888'
+                    Origin: 'http://localhost:8080'
                 }
             }
         }

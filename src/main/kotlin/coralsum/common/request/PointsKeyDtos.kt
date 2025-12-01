@@ -2,13 +2,12 @@ package coralsum.common.request
 
 import io.micronaut.serde.annotation.Serdeable
 import jakarta.validation.constraints.*
-import com.fasterxml.jackson.annotation.JsonFormat
 import java.math.BigDecimal
-import java.time.LocalDateTime
 
 @Serdeable
 data class CreatePointsKeyConfigReq(
     @field:NotBlank(message = "配置名称不能为空")
+    @field:Size(max = 20, message = "配置名称长度不可超过20")
     val name: String,
 
     @field:DecimalMin(value = "0", inclusive = true, message = "永久积分需≥0")
@@ -23,8 +22,6 @@ data class CreatePointsKeyConfigReq(
     @field:PositiveOrZero(message = "周期数量需≥0")
     val periodCount: Int = 0,
 
-    @field:JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    val validTo: LocalDateTime? = null,
 )
 
 @Serdeable
@@ -55,4 +52,11 @@ data class RedeemPointsReq(
 data class RedeemPointsResp(
     val pointsAdded: Int,
     val points: Int,
+)
+
+@Serdeable
+data class ToggleConfigReq(
+    @field:Positive(message = "配置ID需为正数")
+    val id: Long,
+    val disabled: Boolean,
 )

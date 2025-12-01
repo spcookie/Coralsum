@@ -1,7 +1,6 @@
 package coralsum.entity
 
 import coralsum.common.enums.MembershipTier
-import coralsum.common.enums.SubscribeStatus
 import coralsum.common.enums.SubscribeType
 import io.micronaut.data.annotation.*
 import io.micronaut.data.model.DataType
@@ -28,10 +27,6 @@ data class UserPoints(
     var subscribePoints: BigDecimal = BigDecimal.ZERO,
 
     var subscribeExpireTime: LocalDateTime? = null,
-
-    var subscribeDurationDays: Int = 0,
-
-    var subscribeStatus: SubscribeStatus? = null,
 
     var subscribeType: SubscribeType? = null,
 

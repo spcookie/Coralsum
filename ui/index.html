@@ -180,6 +180,7 @@
 
         var step = 90, inDur = 360, outDur = 320, hold = 650, gap = 900, sweepDur = 1200
         var forward = true
+        var startDelay = 300
 
         function runCycle() {
             if (!overlay || overlay.style.display === 'none') return
@@ -219,7 +220,10 @@
             }, cycleTotal)
         }
 
-        runCycle()
+        setTimeout(function () {
+            if (!overlay || overlay.style.display === 'none') return
+            runCycle()
+        }, startDelay)
     })()
 </script>
 <script type="module">

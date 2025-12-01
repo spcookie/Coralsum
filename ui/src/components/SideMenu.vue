@@ -77,7 +77,7 @@
       </template>
       <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between">
-          <div class="text-xs text-neutral-500">共 {{ records.length }} 条</div>
+          <div class="text-xs text-neutral-500">共 {{ total }} 条</div>
           <div class="flex items-center gap-2">
             <n-button quaternary size="small" @click="loadHistory">
               <div class="flex items-center gap-1">
@@ -155,6 +155,10 @@
           </div>
         </n-spin>
       </div>
+      <div class="mt-2 flex justify-end">
+        <n-pagination :item-count="total" :page="page" :page-size="pageSize" @update:page="onPageChange"
+                      @update:page-size="onPageSizeChange"/>
+      </div>
       <ImagePreviewer v-model:modelValue="previewShow" :src="previewSrc"/>
     </n-modal>
     <n-modal v-model:show="showLogout" :style="{ width: '420px', maxWidth: '92vw', margin: '0 auto' }" preset="card"
@@ -176,7 +180,7 @@ import {Icon} from '@iconify/vue'
 import {useUserStore} from '@/stores/user'
 import {NButton, NInput, NModal, NPopconfirm, NSpin, NTooltip, useMessage} from 'naive-ui'
 import {redeemPoints} from '@/api'
-import {deleteHistory, listHistory} from '@/utils/indexedDb'
+import {countHistory, deleteHistory, listHistory} from '@/utils/indexedDb'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {useRoute, useRouter} from 'vue-router'
 
@@ -237,6 +241,9 @@ const viewRecords = ref<any[]>([])
 const expanded = ref<Set<string>>(new Set())
 const previewShow = ref(false)
 const previewSrc = ref('')
+const page = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
 
 function openHistory() {
   if (!user.profileReady) {
@@ -245,14 +252,19 @@ function openHistory() {
     return
   }
   showHistory.value = true
+  page.value = 1
   loadHistory()
 }
 
 async function loadHistory() {
   try {
     loadingHistory.value = true
-    const list = await listHistory(user.email || '', 100, 0)
+    const [list, cnt] = await Promise.all([
+      listHistory(user.email || '', pageSize.value, (page.value - 1) * pageSize.value),
+      countHistory(user.email || '')
+    ])
     records.value = list
+    total.value = Number(cnt || 0)
     const urlsList: string[][] = list.map(r => (r.images || []).map((img: any) => {
       if (img && typeof img !== 'string') {
         try {
@@ -270,6 +282,17 @@ async function loadHistory() {
   } finally {
     loadingHistory.value = false
   }
+}
+
+function onPageChange(p: number) {
+  page.value = p
+  loadHistory()
+}
+
+function onPageSizeChange(s: number) {
+  pageSize.value = s
+  page.value = 1
+  loadHistory()
 }
 
 function cleanupUrls() {
@@ -319,9 +342,12 @@ async function removeRecord(r: any) {
       }
     }
     await deleteHistory(r.id)
-    records.value = records.value.filter((it) => it.id !== r.id)
-    viewRecords.value = viewRecords.value.filter((it) => it.id !== r.id)
+    const cnt = await countHistory(user.email || '')
+    total.value = Number(cnt || 0)
+    const maxPage = Math.max(1, Math.ceil(total.value / pageSize.value))
+    if (page.value > maxPage) page.value = maxPage
     expanded.value.delete(r.id)
+    await loadHistory()
     message.success('已删除该条记录')
   } catch {
     message.error('删除失败')

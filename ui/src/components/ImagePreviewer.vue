@@ -268,11 +268,39 @@ async function copyImage() {
       await (navigator.clipboard as any).write([new (window as any).ClipboardItem({[blob.type]: blob})])
       message?.success('已复制到剪贴板')
     } else {
-      await navigator.clipboard.writeText(props.src)
+      await copyText(props.src)
       message?.success('已复制图片链接')
     }
   } catch (e) {
     message?.error('复制失败')
+  }
+}
+
+async function copyText(text: string) {
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+      return
+    }
+  } catch {
+    // fall through to execCommand
+  }
+  const ta = document.createElement('textarea')
+  ta.value = text
+  ta.style.position = 'fixed'
+  ta.style.opacity = '0'
+  ta.style.left = '0'
+  ta.style.top = '0'
+  document.body.appendChild(ta)
+  ta.focus()
+  ta.select()
+  try {
+    ta.setSelectionRange(0, ta.value.length)
+  } catch {}
+  try {
+    document.execCommand('copy')
+  } finally {
+    document.body.removeChild(ta)
   }
 }
 

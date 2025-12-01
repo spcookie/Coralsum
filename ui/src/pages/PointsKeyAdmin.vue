@@ -1,7 +1,7 @@
 <template>
   <div class="flex-1 overflow-y-auto p-4 space-y-4">
     <n-card title="生成密钥配置">
-      <n-form :model="form">
+      <n-form :model="form" :rules="rules" ref="formRef">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <n-form-item label="配置名称">
             <n-input v-model:value="form.name" placeholder="如：新春活动礼包"/>
@@ -17,11 +17,11 @@
           <n-form-item class="max-w-[220px]" label="订阅类型">
             <n-select v-model:value="form.subscribeType" :options="subscribeOptions" class="w-[200px]"/>
           </n-form-item>
-          <n-form-item label="订阅时长（天）">
-            <n-input-number v-model:value="form.subscribeDurationDays" :precision="0" min="0"/>
+          <n-form-item class="max-w-[220px]" label="周期单位">
+            <n-select v-model:value="form.periodUnit" :options="periodUnitOptions" class="w-[200px]"/>
           </n-form-item>
-          <n-form-item label="开始时间">
-            <n-date-picker v-model:value="form.validFrom" placeholder="选择开始时间" type="datetime"/>
+          <n-form-item label="周期数量">
+            <n-input-number v-model:value="form.periodCount" :precision="0" min="0"/>
           </n-form-item>
           <n-form-item label="结束时间">
             <n-date-picker v-model:value="form.validTo" placeholder="选择结束时间" type="datetime"/>
@@ -31,7 +31,7 @@
           <n-button @click="saveConfig">保存配置</n-button>
           <n-button :disabled="!canGenerate" type="primary" @click="generateKeys">生成密钥</n-button>
           <n-input-number v-model:value="genCount" :precision="0" max="200" min="1"/>
-        </div>
+      </div>
       </n-form>
     </n-card>
 
@@ -98,6 +98,7 @@ import {
   useMessage
 } from 'naive-ui'
 import {createPointsKeyConfig, generatePointsKeys, listPointsKeyConfigs, listPointsKeys, togglePointsKeys} from '@/api'
+import type { FormRules, FormInst } from 'naive-ui'
 
 const message = useMessage()
 
@@ -106,12 +107,48 @@ const form = reactive({
   permanentPoints: 0,
   subscribePoints: 0,
   subscribeType: 'MONTHLY',
-  subscribeDurationDays: 0,
-  validFrom: null as any,
+  periodUnit: 'MONTH',
+  periodCount: 0,
   validTo: null as any,
 })
 const genCount = ref(10)
 const canGenerate = computed(() => (form.name || '').trim().length > 0)
+
+const formRef = ref<FormInst | null>(null)
+const rules: FormRules = {
+  name: [
+    { required: true, message: '请填写配置名称', trigger: ['input', 'blur'] },
+    {
+      validator: (_r, v: any) => typeof v === 'string' && v.trim().length > 0 || new Error('配置名称不能为空'),
+      trigger: ['input', 'blur']
+    }
+  ],
+  permanentPoints: [
+    {
+      validator: (_r, v: any) => (v ?? 0) >= 0 || new Error('永久积分需≥0'),
+      trigger: ['change', 'blur']
+    }
+  ],
+  subscribePoints: [
+    {
+      validator: (_r, v: any) => {
+        if (!form.subscribeType) return true
+        return (v ?? 0) >= 0 || new Error('订阅积分需≥0')
+      },
+      trigger: ['change', 'blur']
+    }
+  ],
+  periodCount: [
+    {
+      validator: (_r, v: any) => {
+        const val = Number(v ?? 0)
+        if (!form.periodUnit) return true
+        return (Number.isFinite(val) && val > 0) || new Error('设置周期单位时，周期数量需>0')
+      },
+      trigger: ['change', 'blur']
+    }
+  ],
+}
 
 const subscribeOptions = [
   {label: 'MONTHLY', value: 'MONTHLY'},
@@ -119,17 +156,29 @@ const subscribeOptions = [
   {label: 'TRIAL', value: 'TRIAL'},
 ]
 
+const periodUnitOptions = [
+  {label: 'DAY', value: 'DAY'},
+  {label: 'MONTH', value: 'MONTH'},
+  {label: 'YEAR', value: 'YEAR'},
+]
+
 async function saveConfig() {
   try {
+    await formRef.value?.validate()
     const payload: any = {...form}
-    if (payload.validFrom) payload.validFrom = new Date(payload.validFrom).toISOString()
-    if (payload.validTo) payload.validTo = new Date(payload.validTo).toISOString()
+    if (payload.validTo) {
+      const d = new Date(payload.validTo)
+      // 发送为 LocalDateTime 格式：yyyy-MM-dd'T'HH:mm:ss（不带时区）
+      const iso = d.toISOString().slice(0, 19)
+      payload.validTo = iso
+    }
     const saved = await createPointsKeyConfig(payload)
     selectedConfigId.value = saved.id
     await loadConfigs()
     message.success('配置已保存')
   } catch (e: any) {
-    message.error(e?.message || '保存失败')
+    const msg = parseProblemMessage(e) || e?.message || '保存失败'
+    message.error(msg)
   }
 }
 
@@ -140,11 +189,36 @@ async function generateKeys() {
       message.warning('请先选择配置或保存配置')
       return
     }
+    const c = Number(genCount.value)
+    if (!Number.isFinite(c) || c < 1 || c > 200) {
+      message.warning('生成数量需在 1-200 之间')
+      return
+    }
     await generatePointsKeys(id, genCount.value)
     message.success('密钥生成成功')
     await loadKeys()
   } catch (e: any) {
-    message.error(e?.message || '生成失败')
+    const msg = parseProblemMessage(e) || e?.message || '生成失败'
+    message.error(msg)
+  }
+}
+
+function parseProblemMessage(err: any): string | null {
+  try {
+    const data = err?.response?.data
+    if (!data || typeof data !== 'object') return null
+    // Micronaut Problem JSON: violations[] or message/detail/title
+    const violations = (data as any).violations
+    if (Array.isArray(violations) && violations.length > 0) {
+      const first = violations[0]
+      const field = first?.field || first?.path || ''
+      const m = first?.message || ''
+      return String(m || field || '')
+    }
+    const message = (data as any).message || (data as any).detail || (data as any).title
+    return message ? String(message) : null
+  } catch {
+    return null
   }
 }
 
@@ -178,7 +252,8 @@ async function batchToggle(enabled: boolean) {
     message.success(enabled ? '已启用选中密钥' : '已禁用选中密钥')
     await loadKeys()
   } catch (e: any) {
-    message.error(e?.message || '操作失败')
+    const msg = parseProblemMessage(e) || e?.message || '操作失败'
+    message.error(msg)
   }
 }
 
@@ -190,10 +265,11 @@ async function loadKeys() {
       key: keyQuery.value.trim() || undefined,
       order: keyOrder.value
     })
-    rows.value = res.items || []
+    rows.value = (res.items || []).map(mapKeyRow)
     keyTotal.value = Number(res.total || 0)
   } catch (e: any) {
-    message.error(e?.message || '加载失败')
+    const msg = parseProblemMessage(e) || e?.message || '加载失败'
+    message.error(msg)
   }
 }
 
@@ -219,11 +295,10 @@ const cfgPage = ref(1)
 const cfgSize = ref(10)
 const cfgTotal = ref(0)
 const cfgName = ref('')
-const cfgSortBy = ref<'id' | 'start' | 'end'>('id')
+const cfgSortBy = ref<'id' | 'end'>('id')
 const cfgOrder = ref<'asc' | 'desc'>('desc')
 const cfgSortOptions = [
   {label: '按ID', value: 'id'},
-  {label: '按开始时间', value: 'start'},
   {label: '按结束时间', value: 'end'},
 ]
 const orderOptions = [
@@ -236,8 +311,8 @@ const cfgColumns = [
   {title: '永久积分', key: 'permanentPoints'},
   {title: '订阅积分', key: 'subscribePoints'},
   {title: '订阅类型', key: 'subscribeType'},
-  {title: '订阅天数', key: 'subscribeDurationDays'},
-  {title: '开始时间', key: 'validFrom'},
+  {title: '周期单位', key: 'periodUnit'},
+  {title: '周期数量', key: 'periodCount'},
   {title: '结束时间', key: 'validTo'},
   {title: '禁用', key: 'disabled'},
   {
@@ -274,10 +349,11 @@ async function loadConfigs() {
       sortBy: cfgSortBy.value,
       order: cfgOrder.value
     })
-    cfgRows.value = res.items || []
+    cfgRows.value = (res.items || []).map(mapCfgRow)
     cfgTotal.value = Number(res.total || 0)
   } catch (e: any) {
-    message.error(e?.message || '加载配置失败')
+    const msg = parseProblemMessage(e) || e?.message || '加载配置失败'
+    message.error(msg)
   }
 }
 
@@ -310,6 +386,33 @@ onMounted(async () => {
   await loadConfigs()
   await loadKeys()
 })
+
+function mapKeyRow(r: any) {
+  return {
+    id: Number(r.id),
+    keyCode: r.key_code ?? r.keyCode,
+    configJson: r.config_json ?? r.configJson,
+    enabled: !!(r.enabled ?? r.enabled),
+    used: !!(r.used ?? r.used),
+    usedTime: r.used_time ?? r.usedTime,
+    usedIp: r.used_ip ?? r.usedIp,
+    usedUid: r.used_uid ?? r.usedUid,
+  }
+}
+
+function mapCfgRow(r: any) {
+  return {
+    id: Number(r.id),
+    name: r.name,
+    permanentPoints: r.permanent_points ?? r.permanentPoints,
+    subscribePoints: r.subscribe_points ?? r.subscribePoints,
+    subscribeType: r.subscribe_type ?? r.subscribeType,
+    periodUnit: r.period_unit ?? r.periodUnit,
+    periodCount: r.period_count ?? r.periodCount,
+    validTo: r.valid_to ?? r.validTo,
+    disabled: !!(r.disabled ?? r.disabled),
+  }
+}
 </script>
 
 <style scoped></style>

@@ -33,7 +33,7 @@ import {onMounted, onUnmounted, ref, watch} from 'vue'
 import LeftConfigPanel from '@/components/LeftConfigPanel.vue'
 import RightResultPanel from '@/components/RightResultPanel.vue'
 import {useSettingsStore} from '@/stores/settings'
-import {assessIntent, generate, getGenerateTaskResult, refreshUserInfoByEmail} from '@/api'
+import {assessIntent, generate, getEstimateParams, getGenerateTaskResult, refreshUserInfoByEmail} from '@/api'
 import {useUserStore} from '@/stores/user'
 import {useMessage} from 'naive-ui'
 import {addHistoryFromResult} from '@/utils/indexedDb'
@@ -249,6 +249,7 @@ async function doGenerate(payload: { prompt: string; systemPrompt?: string; file
     } catch {
       result.value = r
     }
+    try { await getEstimateParams() } catch {}
     if (user.email) {
       const u = await refreshUserInfoByEmail()
       user.setProfile({...u, token: user.token})
@@ -327,6 +328,7 @@ async function pollTaskResultLoop() {
           user.setProfile({...u, token: user.token})
         } catch {
         }
+        try { await getEstimateParams() } catch {}
 
         return
       }
@@ -356,6 +358,7 @@ async function pollTaskResultLoop() {
 
 onMounted(() => {
   syncGenerateStatus()
+  getEstimateParams().catch(() => {})
 })
 
 function onSaveHistory(dataUrls: string[]) {

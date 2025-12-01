@@ -6,6 +6,7 @@ import coralsum.common.response.GenResultResponse
 import coralsum.common.response.GenTaskResultResponse
 import coralsum.common.response.IntentAssessmentResponse
 import coralsum.convert.GenerativeConvert
+import coralsum.config.PricingConfig
 import coralsum.repository.OpenUserRepository
 import coralsum.repository.OutletUserRepository
 import coralsum.service.GenRequest
@@ -22,6 +23,7 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import io.micronaut.validation.Validated
 import io.micronaut.views.ModelAndView
+import io.micronaut.http.exceptions.HttpStatusException
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -48,6 +50,7 @@ class GenerativeImageController(
     val addressResolver: HttpClientAddressResolver,
     val openUserRepository: OpenUserRepository,
     val outletUserRepository: OutletUserRepository,
+    val pricingConfig: PricingConfig,
 ) {
     private val log = LoggerFactory.getLogger(GenerativeImageController::class.java)
 
@@ -147,7 +150,7 @@ class GenerativeImageController(
         request: HttpRequest<*>,
     ): HttpResponse<ModelAndView<Map<String, Any>>> {
         val ip = addressResolver.resolve(request)
-        val url = service.preview(ref, ip, token) ?: return HttpResponse.notFound()
+        val url = service.preview(ref, ip, token) ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "资源不存在或无权访问")
         val bytes = try {
             withContext(Dispatchers.IO) {
                 URL(url).openStream().use { it.readBytes() }
@@ -176,7 +179,7 @@ class GenerativeImageController(
             if (openUser != null) {
                 val outletWeb = outletUserRepository.findByOpenUserIdAndUserSource(
                     openUser.id!!,
-                    coralsum.common.enums.UserSource.WEB
+                    UserSource.WEB
                 )
                 outletWeb?.nickName ?: ""
             } else ""
@@ -301,4 +304,5 @@ class GenerativeImageController(
         return Res.success(convert.toResponse(generateTaskResult))
     }
 
+    
 }

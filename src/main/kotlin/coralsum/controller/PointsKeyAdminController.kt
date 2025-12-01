@@ -8,16 +8,19 @@ import coralsum.service.IPointsKeyService
 import io.micronaut.http.annotation.*
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.utils.SecurityService
+import io.micronaut.validation.Validated
+import jakarta.validation.Valid
 
 
 @Controller("/api/ctl/points-keys")
 @Secured("CTL")
+@Validated
 class PointsKeyAdminController(
     private val pointsKeyService: IPointsKeyService,
     private val securityService: SecurityService,
 ) {
     @Post("/config")
-    suspend fun createConfig(@Body req: CreatePointsKeyConfigReq): Res<Any> {
+    suspend fun createConfig(@Body @Valid req: CreatePointsKeyConfigReq): Res<Any> {
         val operator = securityService.authentication.get().name
         val saved = pointsKeyService.createConfig(req, operator)
         return Res.success(saved)
@@ -36,7 +39,7 @@ class PointsKeyAdminController(
     }
 
     @Post("/generate")
-    suspend fun generate(@Body req: GeneratePointsKeysReq): Res<Any> {
+    suspend fun generate(@Body @Valid req: GeneratePointsKeysReq): Res<Any> {
         val operator = securityService.authentication.get().name
         val keys = pointsKeyService.generateKeys(req, operator)
         return Res.success(keys)
@@ -54,7 +57,7 @@ class PointsKeyAdminController(
     }
 
     @Post("/toggle")
-    suspend fun toggle(@Body req: ToggleKeysReq): Res<Any> {
+    suspend fun toggle(@Body @Valid req: ToggleKeysReq): Res<Any> {
         pointsKeyService.toggleKeys(req)
         return Res.success(message = "操作成功")
     }

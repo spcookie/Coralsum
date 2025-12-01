@@ -33,26 +33,28 @@
       <div v-if="images.length > 0" class="flex flex-wrap justify-center gap-3">
         <div v-for="(img, i) in images" :key="i"
              class="group rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px] relative">
-          <div v-if="!loadedSet.has(i)" :style="skeletonAspectStyle" class="w-full">
-            <div
-                class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
+          <div :style="skeletonAspectStyle" class="w-full relative">
+            <img
+                :ref="el => setImgRef(el, i)"
+                :class="loadedSet.has(i) ? 'opacity-100' : 'opacity-0'"
+                :src="img"
+                class="absolute inset-0 w-full h-full object-contain cursor-zoom-in transition-opacity duration-200"
+                crossorigin="anonymous"
+                @click="openPreview(img)"
+                @error="onImgError($event, i)"
+                @load="onImgLoad(i)"
+            />
+            <div v-if="!loadedSet.has(i)" class="absolute inset-0 pointer-events-none">
+              <div
+                  class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
+            </div>
           </div>
-          <img
-              :ref="el => setImgRef(el, i)"
-              :class="loadedSet.has(i) ? 'opacity-100' : 'opacity-0'"
-              :src="img"
-              class="w-full h-auto object-contain cursor-zoom-in transition-opacity duration-200"
-              crossorigin="anonymous"
-              @click="openPreview(img)"
-              @error="onImgError($event, i)"
-              @load="onImgLoad(i)"
-          />
           <div
               class="absolute inset-x-0 bottom-0 opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto">
             <div class="h-12 bg-gradient-to-t from-black/65 to-transparent flex items-center justify-center">
               <n-tooltip placement="top" trigger="hover">
                 <template #trigger>
-                  <n-button class="control-btn" size="small" strong @click.stop="onShare(i)">
+                  <n-button class="share-btn" size="small" strong @click.stop="onShare(i)">
                     <Icon class="text-[1rem]" icon="ph:share"/>
                   </n-button>
                 </template>
@@ -63,27 +65,31 @@
           </div>
         </div>
       </div>
-      <div v-if="loading && images.length > 0" class="absolute inset-0 z-10 pointer-events-none">
-        <div class="flex flex-wrap justify-center gap-3">
-          <div v-for="i in settings.candidateRadio" :key="i"
-               class="rounded overflow-hidden bg-neutral-100/80 dark:bg-neutral-800/80 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px]">
-            <div :style="skeletonAspectStyle" class="w-full">
-              <div
-                  class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
+      <transition name="fade">
+        <div v-if="loading && images.length > 0" class="absolute inset-0 z-10 pointer-events-none">
+          <div class="flex flex-wrap justify-center gap-3">
+            <div v-for="i in settings.candidateRadio" :key="i"
+                 class="rounded overflow-hidden bg-neutral-100/80 dark:bg-neutral-800/80 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px]">
+              <div :style="skeletonAspectStyle" class="w-full">
+                <div
+                    class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </transition>
     </div>
-    <div v-if="loading && images.length === 0" class="flex flex-wrap justify-center gap-3">
-      <div v-for="i in settings.candidateRadio" :key="i"
-           class="rounded overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px]">
-        <div :style="skeletonAspectStyle" class="w-full">
-          <div
-              class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
+    <transition name="fade">
+      <div v-if="loading && images.length === 0" class="flex flex-wrap justify-center gap-3">
+        <div v-for="i in settings.candidateRadio" :key="i"
+             class="rounded overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px]">
+          <div :style="skeletonAspectStyle" class="w-full">
+            <div
+                class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
+          </div>
         </div>
       </div>
-    </div>
+    </transition>
     <div v-else-if="showOverlay"
          class="flex items-center justify-center min-h-[50vh] sm:min-h-[56vh] lg:min-h-[60vh] p-6 text-center">
       <div class="typewriter">
@@ -182,6 +188,7 @@ function themedPlaceholderImage(index: number) {
 const previewShow = ref(false)
 const previewSrc = ref('')
 const message = useMessage()
+const shareLinks = ref<Record<number, string>>({})
 
 function openPreview(src: string) {
   previewSrc.value = src;
@@ -225,80 +232,31 @@ async function onShare(i: number) {
     message?.error('无可分享链接', {placement: 'top'})
     return
   }
-  const prefer = props.result?.linkImages?.[i]
-  const refParam = (() => {
+  const cached = shareLinks.value[i]
+  const abs = cached ?? (() => {
     try {
-      const url = new URL(raw, window.location.origin)
-      const q = url.searchParams.get('ref')
-      if (q) return q
-      const path = url.pathname.split('/').pop() || ''
-      return path
+      return new URL(raw, window.location.origin).toString()
     } catch {
-      const idxQ = raw.indexOf('ref=')
-      if (idxQ >= 0) return decodeURIComponent(raw.slice(idxQ + 4))
-      const noQuery = raw.split('?')[0]
-      return noQuery.split('/').pop() || ''
+      return raw
     }
   })()
   try {
-    if (!refParam) throw new Error('无法解析分享引用')
-    const dark = document.documentElement.classList.contains('dark')
-    const link = await getImageShareLink(refParam, dark)
-    const abs = (() => {
-      try {
-        return new URL(link, window.location.origin).toString()
-      } catch {
-        return link
-      }
-    })()
-    if (!abs) throw new Error('空链接')
-    if (navigator?.clipboard?.writeText) {
-      await navigator.clipboard.writeText(abs)
-    } else {
-      const ta = document.createElement('textarea')
-      ta.value = abs
-      ta.style.position = 'fixed'
-      ta.style.opacity = '0'
-      document.body.appendChild(ta)
-      ta.focus()
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
+    if ((navigator as any)?.share && cached) {
+      await (navigator as any).share({url: abs})
+      return
     }
-    message?.success('分享链接已复制，可直接发送', {placement: 'top'})
-  } catch (e: any) {
-    const fallback = (() => {
-      try {
-        return new URL(raw, window.location.origin).toString()
-      } catch {
-        return raw
-      }
-    })()
-    try {
-      if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(fallback)
-      } else {
-        const ta = document.createElement('textarea')
-        ta.value = fallback
-        ta.style.position = 'fixed'
-        ta.style.opacity = '0'
-        document.body.appendChild(ta)
-        ta.focus()
-        ta.select()
-        document.execCommand('copy')
-        document.body.removeChild(ta)
-      }
-      message?.success('已复制原始链接', {placement: 'top'})
-    } catch (err: any) {
-      const msg = err?.message || e?.message || '复制失败，请手动复制链接'
-      message?.error(msg, {placement: 'top'})
-    }
+    await copyText(abs)
+    message?.success(cached ? '分享链接已复制，可直接发送' : '已复制原始链接', {placement: 'top'})
+  } catch (err: any) {
+    const msg = err?.message || '复制失败，请手动复制链接'
+    message?.error(msg, {placement: 'top'})
   }
 }
 
 watch(images, () => {
   loadedSet.value = new Set()
   imgRefs.value = []
+  shareLinks.value = {}
 })
 
 const showOverlay = computed(() => {
@@ -410,7 +368,64 @@ watch(allImagesLoaded, async (v) => {
     }
   }
   if (out.length > 0) emit('save-history', out)
+  try {
+    const dark = document.documentElement.classList.contains('dark')
+    for (let i = 0; i < images.value.length; i++) {
+      const raw = props.result?.linkImages?.[i] || props.result?.images?.[i]
+      if (!raw) continue
+      const refParam = (() => {
+        try {
+          const url = new URL(raw, window.location.origin)
+          const q = url.searchParams.get('ref')
+          if (q) return q
+          const path = url.pathname.split('/').pop() || ''
+          return path
+        } catch {
+          const idxQ = raw.indexOf('ref=')
+          if (idxQ >= 0) return decodeURIComponent(raw.slice(idxQ + 4))
+          const noQuery = raw.split('?')[0]
+          return noQuery.split('/').pop() || ''
+        }
+      })()
+      if (!refParam) continue
+      try {
+        const link = await getImageShareLink(refParam, dark)
+        const abs = (() => {
+          try {
+            return new URL(link, window.location.origin).toString()
+          } catch {
+            return link
+          }
+        })()
+        if (abs) shareLinks.value[i] = abs
+      } catch {}
+    }
+  } catch {}
 })
+
+async function copyText(text: string) {
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+      return
+    }
+  } catch {}
+  const ta = document.createElement('textarea')
+  ta.value = text
+  ta.style.position = 'fixed'
+  ta.style.opacity = '0'
+  ta.style.left = '0'
+  ta.style.top = '0'
+  document.body.appendChild(ta)
+  ta.focus()
+  ta.select()
+  try { ta.setSelectionRange(0, ta.value.length) } catch {}
+  try {
+    document.execCommand('copy')
+  } finally {
+    document.body.removeChild(ta)
+  }
+}
 
 </script>
 
@@ -446,16 +461,18 @@ watch(allImagesLoaded, async (v) => {
   animation: fadeIn 320ms ease-out forwards
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(2px)
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(2px)
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0)
+    }
   }
-  to {
-    opacity: 1;
-    transform: translateY(0)
-  }
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 200ms ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
 .img-badge {
 position: absolute;
@@ -526,4 +543,27 @@ color: #fff !important;
 
 :deep(.control-btn.n-button .n-button__border) {
 display: none !important;
+}
+:deep(.share-btn.n-button) {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  color: #333 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.share-btn.n-button:hover) {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+:deep(.share-btn.n-button .n-button__content) {
+  color: inherit !important;
+}
+
+:deep(.dark) .share-btn.n-button {
+  background-color: rgba(255, 255, 255, 0.18) !important;
+  color: #fff !important;
+}
+
+:deep(.dark) .share-btn.n-button:hover {
+  background-color: rgba(255, 255, 255, 0.24) !important;
 }

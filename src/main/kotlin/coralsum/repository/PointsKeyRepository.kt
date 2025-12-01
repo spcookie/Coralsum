@@ -16,6 +16,6 @@ interface PointsKeyRepository : CoroutineCrudRepository<PointsKey, Long> {
     suspend fun findAll(pageable: Pageable): Page<PointsKey>
     suspend fun findByKeyCodeContains(keyCode: String, pageable: Pageable): Page<PointsKey>
 
-    @Query("UPDATE points_key SET enabled = :enabled WHERE id IN (:ids)")
+    @Query("UPDATE POINTS_KEY SET enabled = :enabled WHERE id IN (:ids)")
     suspend fun batchToggleEnabled(ids: List<Long>, enabled: Boolean)
 }

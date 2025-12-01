@@ -1,6 +1,5 @@
 package coralsum.service
 
-import coralsum.common.enums.SubscribeStatus
 import coralsum.common.enums.SubscribeType
 import coralsum.entity.UserPoints
 
@@ -11,9 +10,9 @@ interface IUserPointsService {
 
     suspend fun addSubscribePoints(openUserId: Long, delta: Int): UserPoints
 
-    suspend fun updateSubscribeStatus(openUserId: Long, status: SubscribeStatus): UserPoints
-
     suspend fun updateSubscribeType(openUserId: Long, type: SubscribeType?): UserPoints
 
     suspend fun hasEnoughPoints(openUserId: Long): Boolean
+
+    suspend fun reconcileTier(openUserId: Long): UserPoints
 }

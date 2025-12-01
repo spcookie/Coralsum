@@ -4,7 +4,6 @@ import cn.hutool.core.util.RandomUtil
 import com.fasterxml.jackson.databind.ObjectMapper
 import coralsum.common.dto.PageResp
 import coralsum.common.enums.MembershipTier
-import coralsum.common.enums.SubscribeStatus
 import coralsum.common.enums.SubscribeType
 import coralsum.common.request.CreatePointsKeyConfigReq
 import coralsum.common.request.GeneratePointsKeysReq
@@ -40,8 +39,8 @@ class PointsKeyServiceImpl(
             permanentPoints = req.permanentPoints,
             subscribePoints = req.subscribePoints,
             subscribeType = req.subscribeType,
-            subscribeDurationDays = req.subscribeDurationDays,
-            validFrom = req.validFrom,
+            periodUnit = req.periodUnit,
+            periodCount = req.periodCount,
             validTo = req.validTo,
             disabled = false,
         )
@@ -59,11 +58,6 @@ class PointsKeyServiceImpl(
             throw IllegalStateException("配置已禁用，无法生成密钥")
         }
         val now = LocalDateTime.now()
-        val activeWindowOk =
-            (cfg.validFrom == null || !now.isBefore(cfg.validFrom)) && (cfg.validTo == null || !now.isAfter(cfg.validTo))
-        if (!activeWindowOk) {
-            // 允许生成，但密钥默认过期时间按配置
-        }
         val cfgJson = objectMapper.writeValueAsString(cfg)
         val expire = cfg.validTo
         val result = mutableListOf<PointsKey>()
@@ -96,7 +90,6 @@ class PointsKeyServiceImpl(
         val p = if (page > 0) page else 1
         val s = if (size > 0) size else 10
         val sortProp = when (sortBy?.lowercase()) {
-            "start", "validfrom" -> "validFrom"
             "end", "validto" -> "validTo"
             else -> "id"
         }
@@ -158,31 +151,33 @@ class PointsKeyServiceImpl(
         }
 
         // 订阅类型与时长处理
-        if (cfg.subscribeDurationDays > 0 || !cfg.subscribeType.isNullOrBlank()) {
+        if (cfg.periodCount > 0 || !cfg.subscribeType.isNullOrBlank()) {
             val type = cfg.subscribeType?.let { SubscribeType.of(it) }
             userPointsService.updateSubscribeType(openUserId, type)
-            userPointsService.updateSubscribeStatus(openUserId, SubscribeStatus.ACTIVE)
         }
 
         // 更新会员等级（FREE → PRO/PLUS）
         run {
             val up = userPointsService.getOrCreateByOpenUserId(openUserId)
             val newTier = when {
-                cfg.subscribeDurationDays > 0 -> MembershipTier.PRO
-                cfg.subscribeDurationDays <= 0 && cfg.permanentPoints > BigDecimal.ZERO -> MembershipTier.PLUS
+                cfg.periodCount > 0 -> MembershipTier.PRO
+                cfg.periodCount <= 0 && cfg.permanentPoints > BigDecimal.ZERO -> MembershipTier.PLUS
                 else -> up.tier
             }
             if (newTier != up.tier) {
                 up.tier = newTier
             }
             // 订阅过期时间与时长累加
-            if (cfg.subscribeDurationDays > 0) {
+            if (cfg.periodCount > 0 && !cfg.periodUnit.isNullOrBlank()) {
                 val base = up.subscribeExpireTime?.let { if (it.isAfter(now)) it else now } ?: now
-                up.subscribeExpireTime = base.plusDays(cfg.subscribeDurationDays.toLong())
-                up.subscribeDurationDays = (up.subscribeDurationDays) + cfg.subscribeDurationDays
+                up.subscribeExpireTime = when (cfg.periodUnit!!.uppercase()) {
+                    "DAY" -> base.plusDays(cfg.periodCount.toLong())
+                    "MONTH" -> base.plusMonths(cfg.periodCount.toLong())
+                    "YEAR" -> base.plusYears(cfg.periodCount.toLong())
+                    else -> base
+                }
             }
-            // 持久化更新
-            userPointsService.getOrCreateByOpenUserId(openUserId) // 确保实体刷写
+            userPointsService.getOrCreateByOpenUserId(openUserId)
         }
 
         // 标记密钥使用

@@ -224,6 +224,22 @@ export async function listHistory(email: string, limit = 50, offset = 0): Promis
     }
 }
 
+export async function countHistory(email: string): Promise<number> {
+    try {
+        const db = await openDb()
+        const tx = db.transaction([STORE_NAME], 'readonly')
+        const store = tx.objectStore(STORE_NAME)
+        const idx = store.index('email')
+        const range = IDBKeyRange.only(email || '')
+        let stored = await wrapRequest<any[]>(idx.getAll(range))
+        if (!Array.isArray(stored)) stored = []
+        db.close()
+        return stored.length
+    } catch {
+        return 0
+    }
+}
+
 export async function deleteHistory(id: string): Promise<void> {
     const db = await openDb()
     const tx = db.transaction([STORE_NAME, IMG_STORE_NAME], 'readwrite')

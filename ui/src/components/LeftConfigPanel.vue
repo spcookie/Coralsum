@@ -106,13 +106,26 @@
           <span>重置</span>
         </div>
       </n-button>
-      <n-button :disabled="generating || promptEmpty" :loading="generating" class="w-full justify-center" type="primary"
-                @click="onGenerate">
-        <div class="flex items-center gap-2">
-          <Icon v-if="!generating" icon="ph:sparkle"/>
-          <span>生成</span>
-        </div>
-      </n-button>
+      <div class="relative w-full">
+        <n-button :disabled="generating || promptEmpty" :loading="generating" class="w-full justify-center" type="primary"
+                  @click="onGenerate">
+          <div class="flex items-center gap-2">
+            <Icon v-if="!generating" icon="ph:sparkle"/>
+            <span>生成</span>
+          </div>
+        </n-button>
+        <n-tooltip class="tooltip-xs" placement="top" trigger="hover" :disabled="badgeHidden">
+          <template #trigger>
+            <transition name="bubble">
+              <div v-if="!badgeHidden" :style="badgeStyle" class="absolute -top-2 -right-2 z-20 text-[11px] px-2 py-0.5 rounded-full shadow-md border pointer-events-auto flex items-center gap-1">
+                -{{ estimatedPoints }}
+                <Icon class="text-[12px] text-amber-500 dark:text-amber-700" icon="material-symbols:bolt-rounded"/>
+              </div>
+            </transition>
+          </template>
+          <div class="text-xs text-white">估算基于当前配置与价格，实际扣减以生成结果为准</div>
+        </n-tooltip>
+      </div>
     </div>
     <div class="space-y-2">
       <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
@@ -442,6 +455,7 @@ import {computed, ref} from 'vue'
 import {Icon} from '@iconify/vue'
 import {useSettingsStore} from '@/stores/settings'
 import {useUserStore} from '@/stores/user'
+import {getEstimateParams} from '@/api'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {
   darkTheme,
@@ -458,7 +472,8 @@ import {
   NUpload,
   NUploadDragger,
   useDialog,
-  useMessage
+  useMessage,
+  useThemeVars
 } from 'naive-ui'
 
 const emit = defineEmits<{
@@ -539,6 +554,72 @@ function onGenerate() {
 }
 
 const lastClickAt = ref(0)
+
+const pricing = ref<any | null>(null)
+async function loadPricing() {
+  try {
+    pricing.value = await getEstimateParams()
+  } catch {}
+}
+loadPricing()
+
+const estimatedPoints = computed(() => {
+  const p = pricing.value
+  if (!p) return null
+  const chars = prompt.value.length
+  const tokensPerChar = Number(p.flashLiteTokensPerChar || 2.5)
+  const inUsdPerM = Number(p.flashLiteInputUsdPerMTokens || 0.1)
+  const outUsdPerM = Number(p.flashLiteOutputUsdPerMTokens || 0.4)
+  const usdToCny = Number(p.usdToCny || 7.01)
+  const coef = Number(p.coefficient || 1.5)
+  // 评估阶段：文本 + 输入图片体积转换为令牌
+  const inputTextTokens = chars * tokensPerChar
+  const totalInputBytes = files.value.reduce((s: number, f: File) => s + (f?.size || 0), 0)
+  const mb = totalInputBytes / (1024 * 1024)
+  const evalInputTokens = inputTextTokens
+  const evalOutputTokens = inputTextTokens * 2
+  const evalUsd = evalInputTokens / 1_000_000 * inUsdPerM + evalOutputTokens / 1_000_000 * outUsdPerM
+  const evalRmb = evalUsd * usdToCny
+
+  // 生成阶段：模型令牌成本（预估与评估一致策略）
+  const prevInUsdPerM = Number(p.imagePreviewInputUsdPerMTokens || 2.0)
+  const tokensPerMb = Number(p.imagePreviewTokensPerMb || 2500)
+  const inputImageTokens = mb * tokensPerMb
+  const previewInputTokens = evalInputTokens + inputImageTokens
+  const previewUsd = previewInputTokens / 1_000_000 * prevInUsdPerM
+  const previewRmbTokens = previewUsd * usdToCny
+
+  // 图片单价（按分辨率）
+  const perImageUsd = Number(p.imagePricePerResolutionUsd?.[settings.imageSize] || 0)
+  const images = Number(settings.candidateRadio || 1)
+  const imageRmb = perImageUsd * usdToCny * images
+
+  // 流量评估：按分辨率与格式估算图片体积，乘访问倍数与候选数量
+  const key = `${settings.outputFormat}:${settings.imageSize}`
+  const bytesPerImage = Number(p.estimatedBytesPerImage?.[key] || 0)
+  const visitMultiplier = Number(p.visitMultiplier || 5)
+  const totalBytes = bytesPerImage * images * visitMultiplier
+  const gb = totalBytes / (1024 * 1024 * 1024)
+  const ossBusy = Number(p.ossBusyRmbPerGb || 0.5)
+  const natRate = Number(p.natRmbPerGb || 1.1)
+  const proxyRate = Number(p.proxyRmbPerGb || 1.6)
+  const ossRmb = gb * ossBusy
+  const natRmb = gb * natRate
+  const proxyRmb = gb * proxyRate
+
+  const total = evalRmb + previewRmbTokens + imageRmb + ossRmb + natRmb + proxyRmb
+  const pts = Math.round(total * 100 * coef)
+  return pts
+})
+
+const badgeHidden = computed(() => estimatedPoints.value === null || promptEmpty.value)
+
+const themeVars = useThemeVars()
+const badgeStyle = computed(() => ({
+  backgroundColor: themeVars.value.primaryColor,
+  color: settings.darkMode ? '#000000' : '#ffffff',
+  borderColor: settings.darkMode ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.4)'
+}))
 
 function doReset() {
   settings.reset()
@@ -730,5 +811,39 @@ function onAdvancedExpandChange(names: Array<string | number>) {
 
 :deep(.dark) .badge-num {
   color: #ffffff
+}
+
+.scale-enter-active,
+.scale-leave-active {
+  transition: transform 200ms ease-out, opacity 200ms ease-out
+}
+
+.scale-enter-from,
+.scale-leave-to {
+  transform: scale(0.6);
+  opacity: 0
+}
+
+.scale-enter-to,
+.scale-leave-from {
+  transform: scale(1);
+  opacity: 1
+}
+
+.bubble-enter-active,
+.bubble-leave-active {
+  transition: transform 160ms cubic-bezier(0.22, 1.0, 0.36, 1.0), opacity 160ms ease-out
+}
+
+.bubble-enter-from,
+.bubble-leave-to {
+  transform: scale(0.7);
+  opacity: 0
+}
+
+.bubble-enter-to,
+.bubble-leave-from {
+  transform: scale(1);
+  opacity: 1
 }
 </style>

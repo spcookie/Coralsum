@@ -1,111 +1,67 @@
-## Micronaut 4.10.1 Documentation
+# 🪸 Coralsum AI 图片生成
 
-- [User Guide](https://docs.micronaut.io/4.10.1/guide/index.html)
-- [API Reference](https://docs.micronaut.io/4.10.1/api/index.html)
-- [Configuration Reference](https://docs.micronaut.io/4.10.1/guide/configurationreference.html)
-- [Micronaut Guides](https://guides.micronaut.io/index.html)
+![Micronaut](https://img.shields.io/badge/Micronaut-4.x-222?logo=micronaut) ![Kotlin](https://img.shields.io/badge/Kotlin-1.9-7F52FF?logo=kotlin) ![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk) ![Vue3](https://img.shields.io/badge/Vue-3-42b883?logo=vue.js) ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite)
+
+> 🚀 Micronaut + Kotlin 后端，Vue 3 + Vite 前端；以 NanoBananaPro（Gemini 3 Pro Image Preview）为引擎，面向文本到图像与图片增强。
+
 ---
 
-- [Shadow Gradle Plugin](https://gradleup.com/shadow/)
-- [Micronaut Gradle Plugin documentation](https://micronaut-projects.github.io/micronaut-gradle-plugin/latest/)
-- [GraalVM Gradle Plugin documentation](https://graalvm.github.io/native-build-tools/latest/gradle-plugin.html)
-## Feature micronaut-aop documentation
+## ✨ 项目简介
+- 轻量前后端一体：后端 Micronaut + Kotlin；前端 Vue 3 + Vite。
+- 模型引擎：NanoBananaPro（Gemini 3 Pro Image Preview）。
+- 支持多候选生成、可选 Upscayl 增强与直链预览。
 
-- [Micronaut Aspect-Oriented Programming (AOP) documentation](https://docs.micronaut.io/latest/guide/index.html#aop)
+## 🛠 技术栈
+- 后端：Micronaut、Kotlin、R2DBC、Flyway、H2、JobRunr、Caffeine
+- 前端：Vue 3、Vite、TypeScript、Pinia、Vue Router、TailwindCSS、Naive UI
 
+## ⚙️ 环境准备
+- JDK 17+
+- Node.js 18+
+- npm 9+
 
-## Feature annotation-api documentation
+## ▶️ 本地启动
+- 后端：
+```bash
+./gradlew run
+```
+- 前端：
+```bash
+cd ui
+npm i
+npm run dev
+```
 
-- [https://jakarta.ee/specifications/annotations/](https://jakarta.ee/specifications/annotations/)
+## 🛡️ 配置说明（.env）
+- 在项目根目录创建 `.env`：
+```bash
+# 模型引擎
+GOOGLE_GEMINI_API_KEY=<your-gemini-key>
 
+# 直链与预览域名（如 https://your.domain.example）
+CLOUDFLARE_HOST=<your-host>
 
-## Feature test-resources documentation
+# S3 兼容端点
+OSS_ENDPOINT=<https://s3.your-endpoint.example>
+```
 
-- [Micronaut Test Resources documentation](https://micronaut-projects.github.io/micronaut-test-resources/latest/guide/)
+环境变量建议：
+```bash
+export oss.endpoint="https://s3.your-endpoint.example"
+```
 
-
-## Feature assertj documentation
-
-- [https://assertj.github.io/doc/](https://assertj.github.io/doc/)
-
-
-## Feature serialization-jackson documentation
-
-- [Micronaut Serialization Jackson Core documentation](https://micronaut-projects.github.io/micronaut-serialization/latest/guide/)
-
-
-## Feature cache-caffeine documentation
-
-- [Micronaut Caffeine Cache documentation](https://micronaut-projects.github.io/micronaut-cache/latest/guide/index.html)
-
-- [https://github.com/ben-manes/caffeine](https://github.com/ben-manes/caffeine)
-
-
-## Feature reactor documentation
-
-- [Micronaut Reactor documentation](https://micronaut-projects.github.io/micronaut-reactor/snapshot/guide/index.html)
-
-
-## Feature r2dbc documentation
-
-- [Micronaut R2DBC documentation](https://micronaut-projects.github.io/micronaut-r2dbc/latest/guide/)
-
-- [https://r2dbc.io](https://r2dbc.io)
-
-
-## Feature netflix-hystrix documentation
-
-- [Micronaut Netflix Hystrix documentation](https://docs.micronaut.io/latest/guide/index.html#netflixHystrix)
-
-
-## Feature management documentation
-
-- [Micronaut Management documentation](https://docs.micronaut.io/latest/guide/index.html#management)
-
-
-## Feature openapi documentation
-
-- [Micronaut OpenAPI Support documentation](https://micronaut-projects.github.io/micronaut-openapi/latest/guide/index.html)
-
-- [https://www.openapis.org](https://www.openapis.org)
-
-
-## Feature micronaut-aot documentation
-
-- [Micronaut AOT documentation](https://micronaut-projects.github.io/micronaut-aot/latest/guide/)
-
-
-## Feature data-r2dbc documentation
-
-- [Micronaut Data R2DBC documentation](https://micronaut-projects.github.io/micronaut-data/latest/guide/#dbc)
-
-- [https://r2dbc.io](https://r2dbc.io)
-
-
-## Feature ksp documentation
-
-- [Micronaut Kotlin Symbol Processing (KSP) documentation](https://docs.micronaut.io/latest/guide/#kotlin)
-
-- [https://kotlinlang.org/docs/ksp-overview.html](https://kotlinlang.org/docs/ksp-overview.html)
-
-
-## Feature validation documentation
-
-- [Micronaut Validation documentation](https://micronaut-projects.github.io/micronaut-validation/latest/guide/)
-
-
-## Feature jobrunr-jobrunr documentation
-
-- [https://www.jobrunr.io/en/documentation/configuration/micronaut/](https://www.jobrunr.io/en/documentation/configuration/micronaut/)
-
-
-## Feature jmx documentation
-
-- [Micronaut JMX endpoints documentation](https://micronaut-projects.github.io/micronaut-jmx/latest/guide/index.html)
-
-
-## Feature retry documentation
-
-- [Micronaut Retry documentation](https://docs.micronaut.io/latest/guide/#retry)
-
-
+## 🗂 目录结构
+```
+Coralsum/
+├─ ui/                      # 前端 (Vue + Vite)
+│  ├─ src/                  # 页面与组件
+│  └─ vite.config.ts        # 开发与构建配置
+├─ src/main/kotlin/         # 后端 Kotlin
+│  └─ coralsum/             # controller / service / repository
+├─ src/main/resources/
+│  ├─ application.yml       # 应用配置
+│  └─ public/               # 前端构建产物托管
+├─ models/                  # 模型
+├─ libs/                    # 本地二进制
+└─ build.gradle.kts         # 构建配置
+```

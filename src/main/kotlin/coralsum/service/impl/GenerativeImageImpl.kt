@@ -193,13 +193,21 @@ class GenerativeImageImpl(
                     val upscaylScale = genRequest.upscaylScale
                     if (upscaylModel != null && upscaylScale != null && upscaylScale.scale > 1) {
                         val upscaledPath = tempDir / "image-upscayl-$index.${genRequest.format.ext}"
-                        targetPath = upscaledPath
-                        upscayl.input(imagePath.toString())
-                            .output(upscaledPath.toString())
-                            .model(upscaylModel.modelName)
-                            .scale(upscaylScale.scale)
-                            .format(genRequest.format.ext)
-                            .run()
+                        try {
+                            upscayl.input(imagePath.toString())
+                                .output(upscaledPath.toString())
+                                .model(upscaylModel.modelName)
+                                .scale(upscaylScale.scale)
+                                .format(genRequest.format.ext)
+                                .run()
+                            targetPath = if (upscaledPath.toFile().exists()) upscaledPath else imagePath
+                            if (targetPath == imagePath) {
+                                log.warn("upscayl failed, fallback to original")
+                            }
+                        } catch (e: Exception) {
+                            log.warn("upscayl failed: ${e.message}")
+                            targetPath = imagePath
+                        }
                     } else {
                         targetPath = imagePath
                     }
@@ -245,10 +253,16 @@ class GenerativeImageImpl(
                 applicationEventPublisher.publishEvent(
                     GenerativeImageCostEvent(
                         uid = imageReqRecord.userCode!!,
+                        recordId = recordId,
                         inputTokens = imageReqRecord.inputTokens,
                         outputTokens = imageReqRecord.outputTokens,
-                        scale = (genRequest.upscaylScale?.scale ?: 1) - 1,
-                        imageSize = sizes.sum()
+                        candidateCount = genRequest.candidateCount,
+                        imageCount = refs.size,
+                        imageSizeCategory = genRequest.imageSize ?: ImageSize.X1,
+                        imageSizeBytes = sizes.sum(),
+                        inputCharCount = imageReqRecord.requestText?.length ?: 0,
+                        timestampMs = System.currentTimeMillis(),
+                        success = refs.isNotEmpty()
                     )
                 )
                 try {

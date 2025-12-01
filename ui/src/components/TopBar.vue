@@ -126,11 +126,11 @@
     <n-form ref="formRef" :model="loginForm" :rules="rules">
       <div class="space-y-3">
         <n-form-item path="email">
-          <n-input v-model:value="loginForm.email" placeholder="邮箱"/>
+          <n-input v-model:value="loginForm.email" placeholder="邮箱" @keydown.enter.prevent="login"/>
         </n-form-item>
         <n-form-item path="password">
           <n-input v-model:value="loginForm.password" :type="loginPwdVisible ? 'text' : 'password'" maxlength="16"
-                   placeholder="密码">
+                   placeholder="密码" @keydown.enter.prevent="login">
             <template #suffix>
               <Icon :icon="loginPwdVisible ? 'mdi:eye-off-outline' : 'mdi:eye-outline'"
                     class="cursor-pointer text-neutral-400" @click="loginPwdVisible = !loginPwdVisible"/>
@@ -163,7 +163,7 @@
     </template>
     <div class="flex flex-col gap-3">
       <div class="flex items-center justify-between">
-        <div class="text-xs text-neutral-500">共 {{ records.length }} 条</div>
+        <div class="text-xs text-neutral-500">共 {{ total }} 条</div>
         <div class="flex items-center gap-2">
           <n-button quaternary size="small" @click="loadHistory">
             <div class="flex items-center gap-1">
@@ -241,6 +241,10 @@
         </div>
       </n-spin>
     </div>
+    <div class="mt-2 flex justify-end">
+      <n-pagination :item-count="total" :page="page" :page-size="pageSize" @update:page="onPageChange"
+                    @update:page-size="onPageSizeChange"/>
+    </div>
     <ImagePreviewer v-model:modelValue="previewShow" :src="previewSrc"/>
   </n-modal>
   <n-modal v-model:show="showLogout" :style="{ width: '420px', maxWidth: '92vw', margin: '0 auto' }" preset="card"
@@ -288,7 +292,8 @@ import {
   sendEmailCode,
   updateProfileName
 } from '@/api'
-import {deleteHistory, listHistory} from '@/utils/indexedDb'
+import {getEstimateParams} from '@/api'
+import {countHistory, deleteHistory, listHistory} from '@/utils/indexedDb'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 
 const settings = useSettingsStore()
@@ -360,6 +365,9 @@ const previewShow = ref(false)
 const previewSrc = ref('')
 const historyCount = ref(0)
 const showLogout = ref(false)
+const page = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
 
 // 绑定相关已移除
 
@@ -395,6 +403,7 @@ async function login() {
       profile = await refreshUserInfoByEmail()
     }
     user.setProfile({...profile, token: tokenRes.access_token})
+    try { await getEstimateParams() } catch {}
     user.showLoginModal = false
     loginForm.email = ''
     loginForm.password = ''
@@ -519,13 +528,14 @@ onMounted(async () => {
   try {
     const profile = await getProfile()
     user.setProfile({...profile, token: user.token})
+    try { await getEstimateParams() } catch {}
   } catch {
     if (!user.profileReady) user.requireLogin()
   }
   if (user.profileReady && user.email) {
     try {
-      const list = await listHistory(user.email || '', 100, 0)
-      historyCount.value = Array.isArray(list) ? list.length : 0
+      const cnt = await countHistory(user.email || '')
+      historyCount.value = Number(cnt || 0)
     } catch {
       historyCount.value = 0
     }
@@ -540,8 +550,8 @@ watch(() => user.points, (nv, ov) => {
 watch(() => user.email, async (nv) => {
   if (user.profileReady && nv) {
     try {
-      const list = await listHistory(user.email || '', 100, 0)
-      historyCount.value = Array.isArray(list) ? list.length : 0
+      const cnt = await countHistory(user.email || '')
+      historyCount.value = Number(cnt || 0)
     } catch {
       historyCount.value = 0
     }
@@ -561,15 +571,20 @@ function openHistory() {
     return
   }
   showHistory.value = true
+  page.value = 1
   loadHistory()
 }
 
 async function loadHistory() {
   try {
     loadingHistory.value = true
-    const list = await listHistory(user.email || '', 100, 0)
+    const [list, cnt] = await Promise.all([
+      listHistory(user.email || '', pageSize.value, (page.value - 1) * pageSize.value),
+      countHistory(user.email || '')
+    ])
     records.value = list
-    historyCount.value = Array.isArray(list) ? list.length : 0
+    total.value = Number(cnt || 0)
+    historyCount.value = total.value
     const urlsList: string[][] = list.map(r => (r.images || []).map((img: any) => {
       if (img && typeof img !== 'string') {
         try {
@@ -588,6 +603,17 @@ async function loadHistory() {
   } finally {
     loadingHistory.value = false
   }
+}
+
+function onPageChange(p: number) {
+  page.value = p
+  loadHistory()
+}
+
+function onPageSizeChange(s: number) {
+  pageSize.value = s
+  page.value = 1
+  loadHistory()
 }
 
 function cleanupUrls() {
@@ -637,10 +663,12 @@ async function removeRecord(r: any) {
       }
     }
     await deleteHistory(r.id)
-    records.value = records.value.filter((it) => it.id !== r.id)
-    viewRecords.value = viewRecords.value.filter((it) => it.id !== r.id)
+    const cnt = await countHistory(user.email || '')
+    total.value = Number(cnt || 0)
+    const maxPage = Math.max(1, Math.ceil(total.value / pageSize.value))
+    if (page.value > maxPage) page.value = maxPage
     expanded.value.delete(r.id)
-    historyCount.value = records.value.length
+    await loadHistory()
     message.success('已删除该条记录')
   } catch {
     message.error('删除失败')

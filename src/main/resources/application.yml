@@ -43,7 +43,8 @@ micronaut:
         paths: classpath:META-INF/swagger
         mapping: /swagger/**
       static:
-        paths: classpath:static
+        enabled: true
+        paths: classpath:public
         mapping: /**
   caches:
     generate-task-result:
@@ -52,7 +53,7 @@ micronaut:
       expire-after-access: 5m
   security:
     authentication: bearer
-    reject-not-found: true
+    reject-not-found: false
     redirect:
       enabled: false
     basic-auth:
@@ -88,7 +89,10 @@ micronaut:
       - pattern: /assets/**
         access:
           - isAnonymous()
-      - pattern: /index.html
+      - pattern: /favicon.svg
+        access:
+          - isAnonymous()
+      - pattern: "/"
         access:
           - isAnonymous()
   serde:
@@ -115,11 +119,13 @@ flyway:
   datasources:
     default:
       enabled: true
-logger:
-  levels:
-    io.micronaut.data.query: DEBUG
-    io.r2dbc.h2: DEBUG
-    org.h2.jdbc: DEBUG
+#logger:
+#  levels:
+#    io.micronaut.data.query: DEBUG
+#    io.r2dbc.h2: DEBUG
+#    org.h2.jdbc: DEBUG
+problem:
+  stack-trace: false
 jobrunr:
   job-scheduler:
     enabled: true
@@ -150,3 +156,32 @@ resilience4j:
         baseConfig: default
 preview:
   ttlSeconds: 1500
+pricing:
+  usd-to-cny: 7.01
+  coefficient: 1
+  flash-lite:
+    tokens-per-char: 2.5
+    input-usd-per-m-tokens: 0.10
+    output-usd-per-m-tokens: 0.40
+  image-preview:
+    input-usd-per-m-tokens: 2.0
+    output-usd-per-m-tokens: 12.0
+    price-per-image1-k2-k-usd: 0.134
+    price-per-image4-k-usd: 0.24
+    tokens-per-mb: 2500
+  oss:
+    idle-rmb-per-gb: 0.25
+    busy-rmb-per-gb: 0.50
+    busy-start-hour: 8
+    busy-end-hour: 24
+  traffic:
+    nat-rmb-per-gb: 1.1
+    proxy-rmb-per-gb: 1.6
+    visit-multiplier: 5
+  estimate:
+    png-bytes1-k: 800000
+    png-bytes2-k: 1600000
+    png-bytes4-k: 3500000
+    jpg-bytes1-k: 500000
+    jpg-bytes2-k: 1100000
+    jpg-bytes4-k: 2200000

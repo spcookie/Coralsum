@@ -8,6 +8,7 @@ import coralsum.repository.NickNameBitmapRepository
 import coralsum.repository.OpenUserRepository
 import coralsum.repository.OutletUserRepository
 import coralsum.repository.UserPointsRepository
+import coralsum.service.IUserPointsService
 import coralsum.service.IWebUserService
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
@@ -20,11 +21,15 @@ class WebUserServiceImpl(
     private val outletUserRepository: OutletUserRepository,
     private val userPointsRepository: UserPointsRepository,
     private val nickNameBitmapRepository: NickNameBitmapRepository,
+    private val userPointsService: IUserPointsService,
 ) : IWebUserService {
     override suspend fun profile(uid: String): ProfileResponse? {
         val openUser = openUserRepository.findByUid(uid) ?: return null
         val outletWeb = outletUserRepository.findByOpenUserIdAndUserSource(openUser.id!!, UserSource.WEB)
-        val userPoints = userPointsRepository.findByOpenUserId(openUser.id)
+        var userPoints = userPointsRepository.findByOpenUserId(openUser.id)
+        if (userPoints != null) {
+            userPoints = userPointsService.reconcileTier(openUser.id!!)
+        }
         val finalNickBase = outletWeb?.nickName ?: ""
         val finalNickTag = outletWeb?.nickTag
         return ProfileResponse(

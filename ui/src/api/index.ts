@@ -74,7 +74,12 @@ export async function updateProfileName(name: string) {
 }
 
 export async function changePassword(email: string, oldPassword: string, newPassword: string, code: string) {
-    const {data} = await http.post('/user/change-password', {email, oldPassword, newPassword, code})
+    const {data} = await http.post('/user/change-password', {
+        email,
+        old_password: oldPassword,
+        new_password: newPassword,
+        code
+    })
     return data
 }
 
@@ -201,7 +206,7 @@ export async function register(email: string, password: string, code: string) {
 }
 
 export async function resetPassword(email: string, newPassword: string, code: string) {
-    const {data} = await http.post('/auth/reset-password', {email, newPassword, code})
+    const {data} = await http.post('/auth/reset-password', {email, new_password: newPassword, code})
     return data
 }
 
@@ -218,11 +223,20 @@ export async function createPointsKeyConfig(payload: {
     permanentPoints?: number
     subscribePoints?: number
     subscribeType?: string
-    subscribeDurationDays?: number
-    validFrom?: string
+    periodUnit?: string
+    periodCount?: number
     validTo?: string
 }) {
-    const {data} = await http.post('/ctl/points-keys/config', payload)
+    const body: any = {
+        name: payload.name,
+        permanent_points: payload.permanentPoints,
+        subscribe_points: payload.subscribePoints,
+        subscribe_type: payload.subscribeType,
+        period_unit: payload.periodUnit,
+        period_count: payload.periodCount,
+        valid_to: payload.validTo
+    }
+    const {data} = await http.post('/ctl/points-keys/config', body)
     return data
 }
 
@@ -230,7 +244,7 @@ export async function listPointsKeyConfigs(params?: {
     page?: number
     size?: number
     name?: string
-    sortBy?: 'id' | 'start' | 'end'
+    sortBy?: 'id' | 'end'
     order?: 'asc' | 'desc'
 }) {
     const {data} = await http.get('/ctl/points-keys/configs', {params})
@@ -238,7 +252,7 @@ export async function listPointsKeyConfigs(params?: {
 }
 
 export async function generatePointsKeys(configId: number, count: number) {
-    const {data} = await http.post('/ctl/points-keys/generate', {configId, count})
+    const {data} = await http.post('/ctl/points-keys/generate', {config_id: configId, count})
     return data
 }
 
@@ -277,5 +291,45 @@ export async function getGenerateTaskResult(): Promise<{
                 linkImages: r.link_images ?? r.linkImages ?? []
             }
             : undefined
+    }
+}
+
+export async function getEstimateParams(): Promise<{
+    usdToCny: number
+    coefficient: number
+    flashLiteTokensPerChar: number
+    imagePreviewTokensPerMb: number
+    flashLiteInputUsdPerMTokens: number
+    flashLiteOutputUsdPerMTokens: number
+    imagePreviewInputUsdPerMTokens: number
+    imagePreviewOutputUsdPerMTokens: number
+    imagePricePerResolutionUsd: Record<string, number>
+    estimatedBytesPerImage: Record<string, number>
+    ossBusyRmbPerGb: number
+    ossIdleRmbPerGb: number
+    natRmbPerGb: number
+    proxyRmbPerGb: number
+    visitMultiplier: number
+}> {
+    const headers: any = {'X-API-Version': 'v1'}
+    const user = useUserStore()
+    if (user?.token) headers.Authorization = `Bearer ${user.token}`
+    const {data} = await http.get('/points/estimate-params', {headers})
+    return {
+        usdToCny: data.usd_to_cny,
+        coefficient: data.coefficient,
+        flashLiteTokensPerChar: data.flash_lite_tokens_per_char,
+        imagePreviewTokensPerMb: data.image_preview_tokens_per_mb,
+        flashLiteInputUsdPerMTokens: data.flash_lite_input_usd_per_m_tokens,
+        flashLiteOutputUsdPerMTokens: data.flash_lite_output_usd_per_m_tokens,
+        imagePreviewInputUsdPerMTokens: data.image_preview_input_usd_per_m_tokens,
+        imagePreviewOutputUsdPerMTokens: data.image_preview_output_usd_per_m_tokens,
+        imagePricePerResolutionUsd: data.image_price_per_resolution_usd || {},
+        estimatedBytesPerImage: data.estimated_bytes_per_image || {},
+        ossBusyRmbPerGb: data.oss_busy_rmb_per_gb,
+        ossIdleRmbPerGb: data.oss_idle_rmb_per_gb,
+        natRmbPerGb: data.nat_rmb_per_gb,
+        proxyRmbPerGb: data.proxy_rmb_per_gb,
+        visitMultiplier: data.visit_multiplier
     }
 }

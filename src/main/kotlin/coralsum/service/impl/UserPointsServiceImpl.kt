@@ -137,8 +137,15 @@ class UserPointsServiceImpl(
                 val proxyRmb = gb * pricing.traffic.proxyRmbPerGb.toBigDecimal() * trafficMultiplier
 
                 // 成功：全部成本；失败：仅模型调用（评估+生成令牌）
-                val totalCostRmb = if (event.success) evalRmb + previewRmbTokens + imageRmb + ossRmb + natRmb + proxyRmb else evalRmb + previewRmbTokens + imageRmb
-                val pointsToDeduct = (totalCostRmb * coef).setScale(4, java.math.RoundingMode.HALF_UP) // 积分扣减
+                val baseCostRmb =
+                    if (event.success) evalRmb + previewRmbTokens + imageRmb + ossRmb + natRmb + proxyRmb else evalRmb + previewRmbTokens
+                val upExtra =
+                    if (event.success && pricing.upscayl.enabled && pricing.upscayl.chargeByScale && event.upscaylScale > 1) baseCostRmb * (event.upscaylScale - 1).toBigDecimal() else BigDecimal.ZERO
+                val totalCostRmb = baseCostRmb + upExtra
+                val pointsToDeduct = (totalCostRmb * coef * pricing.pointsPerRmb.toBigDecimal()).setScale(
+                    0,
+                    java.math.RoundingMode.HALF_UP
+                ) // 积分扣减
 
                 // 扣减优先使用订阅积分，不足部分再扣永久积分
                 var remaining = pointsToDeduct
@@ -163,6 +170,8 @@ class UserPointsServiceImpl(
                     "oss_rmb": ${ossRmb},
                     "nat_rmb": ${natRmb},
                     "proxy_rmb": ${proxyRmb},
+                    "upscayl_extra_rmb": ${upExtra},
+                    "upscayl_scale": ${event.upscaylScale},
                     "total_cost_rmb": ${totalCostRmb},
                     "points_to_deduct": ${pointsToDeduct}
                 }"""

@@ -23,6 +23,7 @@ export interface GenerateResponse {
     durationMs: number
     images: string[]
     text?: string
+    linkImages: any
 }
 
 export async function sendEmailCode(email: string, purpose?: 'REGISTER' | 'RESET'): Promise<{
@@ -314,6 +315,8 @@ export async function getEstimateParams(): Promise<{
     natRmbPerGb: number
     proxyRmbPerGb: number
     visitMultiplier: number
+    upscaylEnabled: boolean
+    upscaylChargeByScale: boolean
 }> {
     const headers: any = {'X-API-Version': 'v1'}
     const user = useUserStore()
@@ -334,6 +337,8 @@ export async function getEstimateParams(): Promise<{
         ossIdleRmbPerGb: data.oss_idle_rmb_per_gb,
         natRmbPerGb: data.nat_rmb_per_gb,
         proxyRmbPerGb: data.proxy_rmb_per_gb,
-        visitMultiplier: data.visit_multiplier
+        visitMultiplier: data.visit_multiplier,
+        upscaylEnabled: !!data.upscayl_enabled,
+        upscaylChargeByScale: !!data.upscayl_charge_by_scale
     }
 }

@@ -11,10 +11,10 @@
               <n-input v-model:value="form.name" maxlength="20" placeholder="如：新春活动礼包" show-count/>
             </n-form-item>
             <div class="col-span-1 md:col-span-2 flex items-start gap-3">
-              <n-form-item class="flex-1" label="永久积分" path="permanentPoints">
+              <n-form-item class="flex-1" label="永久积分(RMB)" path="permanentPoints">
                 <n-input-number v-model:value="form.permanentPoints" :precision="2" min="0"/>
               </n-form-item>
-              <n-form-item class="flex-1" label="订阅积分" path="subscribePoints">
+              <n-form-item class="flex-1" label="订阅积分(RMB)" path="subscribePoints">
                 <n-input-number v-model:value="form.subscribePoints" :precision="2" min="0"/>
               </n-form-item>
             </div>
@@ -29,7 +29,7 @@
             </n-form-item>
           </div>
           <div class="flex gap-2 justify-end mt-2">
-            <n-button @click="saveConfig">保存配置</n-button>
+            <n-button :disabled="saving || genLoading" :loading="saving" @click="saveConfig">保存配置</n-button>
           </div>
         </n-form>
       </n-collapse-item>
@@ -45,8 +45,11 @@
           <n-button @click="queryConfigs">查询</n-button>
         </div>
         <div class="flex items-center gap-2">
-          <n-input-number v-model:value="genCount" :precision="0" max="200" min="1" style="width: 120px"/>
-          <n-button :disabled="!selectedConfigId" type="primary" @click="generateKeys">生成密钥</n-button>
+          <n-input-number v-model:value="genCount" :disabled="genLoading || saving" :precision="0" max="200" min="1"
+                          style="width: 120px"/>
+          <n-button :disabled="!selectedConfigId || genLoading || saving" :loading="genLoading" type="primary"
+                    @click="generateKeys">生成密钥
+          </n-button>
           <n-button @click="resetConfigs">重置</n-button>
           <n-button @click="loadConfigs">刷新配置</n-button>
         </div>
@@ -128,6 +131,8 @@ const form = reactive({
 })
 const genCount = ref(1)
 const canGenerate = computed(() => (form.name || '').trim().length > 0)
+const saving = ref(false)
+const genLoading = ref(false)
 
 const formRef = ref<FormInst | null>(null)
 const rules: FormRules = {
@@ -183,6 +188,7 @@ const periodUnitOptions = [
 
 async function saveConfig() {
   try {
+    saving.value = true
     const ok = await formRef.value?.validate().then(() => true).catch(() => false)
     if (!ok) {
       message.warning('请修正表单错误');
@@ -197,11 +203,14 @@ async function saveConfig() {
   } catch (e: any) {
     const msg = parseProblemMessage(e) || e?.message || '保存失败'
     message.error(msg)
+  } finally {
+    saving.value = false
   }
 }
 
 async function generateKeys() {
   try {
+    genLoading.value = true
     const id = selectedConfigId.value
     if (!id) {
       message.warning('请先选择配置或保存配置')
@@ -218,6 +227,8 @@ async function generateKeys() {
   } catch (e: any) {
     const msg = parseProblemMessage(e) || e?.message || '生成失败'
     message.error(msg)
+  } finally {
+    genLoading.value = false
   }
 }
 

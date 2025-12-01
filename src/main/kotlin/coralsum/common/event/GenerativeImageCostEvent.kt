@@ -14,4 +14,5 @@ data class GenerativeImageCostEvent(
     val inputCharCount: Int,
     val timestampMs: Long,
     val success: Boolean,
+    val upscaylScale: Int,
 )

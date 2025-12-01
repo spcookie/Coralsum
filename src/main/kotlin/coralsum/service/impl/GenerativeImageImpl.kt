@@ -114,18 +114,8 @@ class GenerativeImageImpl(
     fun init() {
         nano = NanoBanana(googleConfig.geminiApiKey)
         val userDir = System.getProperty("user.dir")
-        val libsDir = Path(userDir).resolve("libs")
-        val osName = System.getProperty("os.name").lowercase()
-        val candidates = listOf(
-            libsDir.resolve("win").resolve("upscayl-bin.exe"),
-            libsDir.resolve("mac").resolve("upscayl-bin"),
-            Path(userDir).resolve("upscayl-bin"),
-            Path(userDir).resolve("upscayl-bin.exe")
-        )
-        val executable = candidates.firstOrNull { it.toFile().exists() } ?: libsDir.resolve(
-            if (osName.contains("win")) "win/upscayl-bin.exe" else "mac/upscayl-bin"
-        )
-        upscayl = Upscayl(executable.toAbsolutePath().toString())
+        val executable = resolveUpscaylExecutable(userDir)
+        upscayl = Upscayl(executable)
 
         gemini = GoogleAiGeminiChatModel.builder()
             .apiKey(googleConfig.geminiApiKey)
@@ -262,7 +252,8 @@ class GenerativeImageImpl(
                         imageSizeBytes = sizes.sum(),
                         inputCharCount = imageReqRecord.requestText?.length ?: 0,
                         timestampMs = System.currentTimeMillis(),
-                        success = refs.isNotEmpty()
+                        success = refs.isNotEmpty(),
+                        upscaylScale = genRequest.upscaylScale?.scale ?: 1
                     )
                 )
                 try {
@@ -424,6 +415,36 @@ class GenerativeImageImpl(
         if (System.currentTimeMillis() > exp) return null
         val expect = sign(ref, uid, exp)
         return if (expect == sig) uid else null
+    }
+
+    private fun resolveUpscaylExecutable(userDir: String): String {
+        val libsDir = Path(userDir).resolve("libs")
+        val osName = System.getProperty("os.name").lowercase()
+        val isWindows = osName.contains("win")
+        val isMac = osName.contains("mac") || osName.contains("darwin")
+        val isLinux = osName.contains("nux") || osName.contains("nix") || osName.contains("linux")
+        val candidates = when {
+            isWindows -> listOf(
+                libsDir.resolve("win").resolve("upscayl-bin.exe"),
+                Path(userDir).resolve("upscayl-bin.exe")
+            )
+
+            isMac -> listOf(
+                libsDir.resolve("mac").resolve("upscayl-bin"),
+                Path(userDir).resolve("upscayl-bin")
+            )
+
+            else -> listOf(
+                libsDir.resolve("linux").resolve("upscayl-bin"),
+                Path(userDir).resolve("upscayl-bin")
+            )
+        }
+        val selected = candidates.firstOrNull { it.toFile().exists() } ?: when {
+            isWindows -> libsDir.resolve("win").resolve("upscayl-bin.exe")
+            isMac -> libsDir.resolve("mac").resolve("upscayl-bin")
+            else -> libsDir.resolve("linux").resolve("upscayl-bin")
+        }
+        return selected.toAbsolutePath().toString()
     }
 
     override suspend fun preview(ref: String, ip: String, token: String?): String? {

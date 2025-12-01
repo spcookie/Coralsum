@@ -62,6 +62,7 @@ try {
 } catch {
 }
 
+
 addIcon('mdi:account', mdiAccount)
 addIcon('mdi:account-cog', mdiAccountCog)
 addIcon('mdi:account-arrow-right', mdiAccountArrowRight)

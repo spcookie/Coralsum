@@ -1,12 +1,14 @@
 package coralsum.controller
 
+import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.enums.*
+import coralsum.common.response.EstimateParamsResponse
 import coralsum.common.response.GenResultResponse
 import coralsum.common.response.GenTaskResultResponse
 import coralsum.common.response.IntentAssessmentResponse
-import coralsum.convert.GenerativeConvert
 import coralsum.config.PricingConfig
+import coralsum.convert.GenerativeConvert
 import coralsum.repository.OpenUserRepository
 import coralsum.repository.OutletUserRepository
 import coralsum.service.GenRequest
@@ -17,13 +19,13 @@ import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.*
+import io.micronaut.http.exceptions.HttpStatusException
 import io.micronaut.http.multipart.CompletedFileUpload
 import io.micronaut.http.server.util.HttpClientAddressResolver
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import io.micronaut.validation.Validated
 import io.micronaut.views.ModelAndView
-import io.micronaut.http.exceptions.HttpStatusException
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -61,6 +63,7 @@ class GenerativeImageController(
         summary = "生成图片",
         description = "根据文本与可选图片（支持多张）生成结果，支持宽高比、采样、格式与放大设置"
     )
+    @Debounce(name = "gi.generate", windowMillis = 3000, byUid = true)
     @ApiResponse(
         responseCode = "200", description = "生成成功", content = [
             Content(mediaType = MediaType.APPLICATION_JSON, schema = Schema(implementation = GenResultResponse::class))
@@ -121,7 +124,12 @@ class GenerativeImageController(
             HttpResponse.notFound<Any>()
         } else {
             HttpResponse.status<Any>(HttpStatus.FOUND)
-                .headers { headers -> headers.location(URI.create(url)) }
+                .headers { headers ->
+                    headers.location(URI.create(url))
+                    headers.add("Cache-Control", "no-store, no-cache, must-revalidate")
+                    headers.add("Pragma", "no-cache")
+                    headers.add("Expires", "0")
+                }
         }
     }
 
@@ -188,13 +196,16 @@ class GenerativeImageController(
             "image-link",
             mapOf<String, Any>("src" to dataUrl, "time" to time, "user" to user, "dark" to (darkMode == true))
         )
-        return HttpResponse.ok(mv)
+        return HttpResponse.ok(mv).headers { headers ->
+            headers.add("Cache-Control", "no-store")
+        }
     }
 
     @Secured(SecurityRule.IS_AUTHENTICATED)
     @Version("v1")
     @Post("/assess-intent", consumes = [MediaType.TEXT_PLAIN])
     @Operation(summary = "评估生成意图", description = "基于用户文本判断是否为生成/修改图片意图")
+    @Debounce(name = "gi.assessIntent", windowMillis = 1500, byUid = true)
     @ApiResponse(
         responseCode = "200", description = "评估成功", content = [
             Content(
@@ -218,6 +229,7 @@ class GenerativeImageController(
     @Version("v1")
     @Post("/submit-task", consumes = ["multipart/form-data"])
     @Operation(summary = "提交生成任务", description = "提交异步图片生成任务")
+    @Debounce(name = "gi.submitTask", windowMillis = 3000, byUid = true)
     @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
     suspend fun submitGenerateTask(
         @Part("image") images: Publisher<CompletedFileUpload>?,
@@ -304,5 +316,43 @@ class GenerativeImageController(
         return Res.success(convert.toResponse(generateTaskResult))
     }
 
-    
+    @Secured(SecurityRule.IS_AUTHENTICATED)
+    @Version("v1")
+    @Get("/estimate-params")
+    @Operation(summary = "获取估算参数", description = "返回前端用于估算扣减的价格参数")
+    suspend fun estimateParams(): Res<EstimateParamsResponse> {
+        val p = pricingConfig
+        val resp = EstimateParamsResponse(
+            usdToCny = p.usdToCny,
+            coefficient = p.coefficient,
+            flashLiteTokensPerChar = p.flashLite.tokensPerChar,
+            imagePreviewTokensPerMb = p.imagePreview.tokensPerMb,
+            flashLiteInputUsdPerMTokens = p.flashLite.inputUsdPerMTokens,
+            flashLiteOutputUsdPerMTokens = p.flashLite.outputUsdPerMTokens,
+            imagePreviewInputUsdPerMTokens = p.imagePreview.inputUsdPerMTokens,
+            imagePreviewOutputUsdPerMTokens = p.imagePreview.outputUsdPerMTokens,
+            imagePricePerResolutionUsd = mapOf(
+                "1K" to p.imagePreview.pricePerImage1K2KUsd,
+                "2K" to p.imagePreview.pricePerImage1K2KUsd,
+                "4K" to p.imagePreview.pricePerImage4KUsd,
+            ),
+            estimatedBytesPerImage = mapOf(
+                "PNG:1K" to p.estimate.pngBytes1K,
+                "PNG:2K" to p.estimate.pngBytes2K,
+                "PNG:4K" to p.estimate.pngBytes4K,
+                "JPG:1K" to p.estimate.jpgBytes1K,
+                "JPG:2K" to p.estimate.jpgBytes2K,
+                "JPG:4K" to p.estimate.jpgBytes4K,
+            ),
+            ossBusyRmbPerGb = p.oss.busyRmbPerGb,
+            ossIdleRmbPerGb = p.oss.idleRmbPerGb,
+            natRmbPerGb = p.traffic.natRmbPerGb,
+            proxyRmbPerGb = p.traffic.proxyRmbPerGb,
+            visitMultiplier = p.traffic.visitMultiplier,
+            upscaylEnabled = p.upscayl.enabled,
+            upscaylChargeByScale = p.upscayl.chargeByScale,
+            pointsPerRmb = p.pointsPerRmb,
+        )
+        return Res.success(resp)
+    }
 }

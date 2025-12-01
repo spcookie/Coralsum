@@ -69,10 +69,15 @@
         <div v-if="loading && images.length > 0" class="absolute inset-0 z-10 pointer-events-none">
           <div class="flex flex-wrap justify-center gap-3">
             <div v-for="i in settings.candidateRadio" :key="i"
-                 class="rounded overflow-hidden bg-neutral-100/80 dark:bg-neutral-800/80 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px]">
-              <div :style="skeletonAspectStyle" class="w-full">
-                <div
-                    class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
+                 class="rounded overflow-hidden bg-neutral-100/80 dark:bg-neutral-800/80 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px] relative">
+              <div :style="skeletonAspectStyle" class="w-full relative">
+                <div class="h-full w-full skeleton-shimmer"></div>
+                <div class="absolute inset-0 grid place-items-center">
+                  <div class="flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
+                    <n-spin size="small"/>
+                    <span>生成中…</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -82,10 +87,15 @@
     <transition name="fade">
       <div v-if="loading && images.length === 0" class="flex flex-wrap justify-center gap-3">
         <div v-for="i in settings.candidateRadio" :key="i"
-             class="rounded overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px]">
-          <div :style="skeletonAspectStyle" class="w-full">
-            <div
-                class="h-full w-full bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-700 dark:via-neutral-800 dark:to-neutral-700 animate-pulse"></div>
+             class="rounded overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px] relative">
+          <div :style="skeletonAspectStyle" class="w-full relative">
+            <div class="h-full w-full skeleton-shimmer"></div>
+            <div class="absolute inset-0 grid place-items-center">
+              <div class="flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
+                <n-spin size="small"/>
+                <span>生成中…</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -104,7 +114,7 @@
 import {computed, onUnmounted, ref, watch} from 'vue'
 import {Icon} from '@iconify/vue'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
-import {NButton, NTooltip, useMessage} from 'naive-ui'
+import {NButton, NSpin, NTooltip, useMessage} from 'naive-ui'
 import {getImageShareLink} from '@/api'
 
 import {useSettingsStore} from '@/stores/settings'
@@ -226,7 +236,7 @@ function setImgRef(el: HTMLImageElement | null, i: number) {
   if (el) imgRefs.value[i] = el
 }
 
-async function onShare(i: number) {
+function onShare(i: number) {
   const raw = props.result?.linkImages?.[i] || props.result?.images?.[i]
   if (!raw) {
     message?.error('无可分享链接', {placement: 'top'})
@@ -240,17 +250,17 @@ async function onShare(i: number) {
       return raw
     }
   })()
-  try {
-    if ((navigator as any)?.share && cached) {
-      await (navigator as any).share({url: abs})
-      return
-    }
-    await copyText(abs)
+  const ok = copyTextSync(abs)
+  if (ok) {
     message?.success(cached ? '分享链接已复制，可直接发送' : '已复制原始链接', {placement: 'top'})
-  } catch (err: any) {
-    const msg = err?.message || '复制失败，请手动复制链接'
-    message?.error(msg, {placement: 'top'})
+    return
   }
+  copyTextAsync(abs)
+      .then(() => message?.success(cached ? '分享链接已复制，可直接发送' : '已复制原始链接', {placement: 'top'}))
+      .catch((err: any) => {
+        const msg = err?.message || '复制失败，请手动复制链接'
+        message?.error(msg, {placement: 'top'})
+      })
 }
 
 watch(images, () => {
@@ -403,28 +413,62 @@ watch(allImagesLoaded, async (v) => {
   } catch {}
 })
 
-async function copyText(text: string) {
+function isIOS() {
+  if (typeof navigator === 'undefined') return false
+  return /iphone|ipad|ipod/i.test(navigator.userAgent)
+}
+
+function copyTextSync(text: string): boolean {
   try {
-    if (navigator?.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text)
-      return
+    if (!isIOS()) return false
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.readOnly = true
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    ta.style.left = '0'
+    ta.style.top = '0'
+    document.body.appendChild(ta)
+    ta.focus()
+    ta.select()
+    try {
+      ta.setSelectionRange(0, ta.value.length)
+    } catch {
     }
-  } catch {}
-  const ta = document.createElement('textarea')
-  ta.value = text
-  ta.style.position = 'fixed'
-  ta.style.opacity = '0'
-  ta.style.left = '0'
-  ta.style.top = '0'
-  document.body.appendChild(ta)
-  ta.focus()
-  ta.select()
-  try { ta.setSelectionRange(0, ta.value.length) } catch {}
-  try {
-    document.execCommand('copy')
-  } finally {
+    const ok = document.execCommand('copy')
     document.body.removeChild(ta)
+    return ok
+  } catch {
+    return false
   }
+}
+
+function copyTextAsync(text: string): Promise<void> {
+  if (navigator?.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text)
+  }
+  return new Promise<void>((resolve, reject) => {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      ta.style.left = '0'
+      ta.style.top = '0'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      try {
+        ta.setSelectionRange(0, ta.value.length)
+      } catch {
+      }
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      ok ? resolve() : reject(new Error('复制失败'))
+    } catch (e) {
+      reject(e as any)
+    }
+  })
 }
 
 </script>
@@ -566,4 +610,34 @@ display: none !important;
 
 :deep(.dark) .share-btn.n-button:hover {
   background-color: rgba(255, 255, 255, 0.24) !important;
+}
+.skeleton-shimmer {
+position: relative;
+overflow: hidden;
+background-color: rgba(229, 231, 235, 0.9);
+}
+
+:deep(.dark) .skeleton-shimmer {
+background-color: rgba(55, 65, 81, 0.9);
+}
+
+.skeleton-shimmer::after {
+content: '';
+position: absolute;
+top: 0;
+left: -40%;
+width: 40%;
+height: 100%;
+background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+animation: skeletonShimmer 1200ms ease-in-out infinite;
+}
+
+:deep(.dark) .skeleton-shimmer::after {
+background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+}
+
+@keyframes skeletonShimmer {
+0% { left: -40%; }
+50% { left: 80%; }
+100% { left: 100%; }
 }

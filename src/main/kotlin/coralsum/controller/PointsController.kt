@@ -1,21 +1,22 @@
 package coralsum.controller
 
+import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.request.RedeemPointsReq
 import coralsum.common.response.EstimateParamsResponse
 import coralsum.config.PricingConfig
 import coralsum.service.IPointsKeyService
+import io.micronaut.core.version.annotation.Version
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
-import io.micronaut.core.version.annotation.Version
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.rules.SecurityRule
-import io.swagger.v3.oas.annotations.Operation
 import io.micronaut.validation.Validated
+import io.swagger.v3.oas.annotations.Operation
 import jakarta.validation.Valid
 
 @Controller("/api/points")
@@ -26,6 +27,7 @@ class PointsController(
     private val pricingConfig: PricingConfig,
 ) {
     @Post("/redeem")
+    @Debounce(name = "points.redeem", windowMillis = 2000, byUid = true)
     suspend fun redeem(authentication: Authentication, request: HttpRequest<*>, @Body @Valid req: RedeemPointsReq): Res<Any> {
         val uid = authentication.name
         val ip = request.remoteAddress?.address?.hostAddress
@@ -65,6 +67,9 @@ class PointsController(
             natRmbPerGb = p.traffic.natRmbPerGb,
             proxyRmbPerGb = p.traffic.proxyRmbPerGb,
             visitMultiplier = p.traffic.visitMultiplier,
+            upscaylEnabled = p.upscayl.enabled,
+            upscaylChargeByScale = p.upscayl.chargeByScale,
+            pointsPerRmb = p.pointsPerRmb,
         )
         return Res.success(resp)
     }

@@ -1,5 +1,6 @@
 package coralsum.controller
 
+import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.enums.UserSource
 import coralsum.common.request.ChangePasswordRequest
@@ -31,6 +32,7 @@ class UserController(
     @Secured(SecurityRule.IS_ANONYMOUS)
     @Post("/change-password")
     @Operation(summary = "修改密码", description = "基于邮箱验证码修改或重置密码")
+    @Debounce(name = "user.changePassword", windowMillis = 2000, byUid = false)
     suspend fun changePassword(@Body req: ChangePasswordRequest): Res<Map<String, Any>> {
         val ok = authService.changePassword(req.email, req.oldPassword, req.newPassword, req.code)
         return if (ok) Res.success(mapOf("ok" to true)) else Res.fail("修改失败或验证码无效")

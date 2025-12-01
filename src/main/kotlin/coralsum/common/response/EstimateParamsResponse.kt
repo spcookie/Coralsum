@@ -19,4 +19,7 @@ data class EstimateParamsResponse(
     val natRmbPerGb: Double,
     val proxyRmbPerGb: Double,
     val visitMultiplier: Double,
+    val upscaylEnabled: Boolean,
+    val upscaylChargeByScale: Boolean,
+    val pointsPerRmb: Double,
 )

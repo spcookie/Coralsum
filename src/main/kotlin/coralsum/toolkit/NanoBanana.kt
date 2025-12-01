@@ -7,6 +7,7 @@ import com.google.genai.types.*
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.Closeable
+import java.util.concurrent.CompletableFuture
 import javax.imageio.ImageIO
 import kotlin.jvm.optionals.getOrElse
 import kotlin.time.Duration.Companion.minutes
@@ -91,35 +92,72 @@ class NanoBanana(private val apiKey: String) : Closeable {
                     .build()
             )
             .build()
-        val response = client.models.generateContent(
-//            "gemini-2.5-flash-image",
-            "gemini-3-pro-image-preview",
-            Content.builder()
-                .parts(
-                    buildList {
-                        add(Part.builder().text(text).build())
-                        images?.forEach { img ->
+        val uploadedFiles = mutableListOf<com.google.genai.types.File>()
+        val contentParts: List<Part> = try {
+            val parts = buildList {
+                add(Part.builder().text(text).build())
+                if (images != null && images.isNotEmpty()) {
+                    val futures = images.map { img ->
+                        CompletableFuture.supplyAsync {
                             val type = FileTypeUtil.getType(img.inputStream())
                             val mimeType = when (type) {
                                 "png" -> "image/png"
-
                                 "jpg", "jpeg" -> "image/jpeg"
-
                                 else -> throw IllegalArgumentException("Unsupported image type: $type")
                             }
-                            add(
-                                Part.builder().inlineData(
-                                    Blob.builder().data(img)
-                                        .mimeType(mimeType).build()
-                                ).build()
+                            val tmp = java.io.File.createTempFile("gemini_upload_", ".${type}")
+                            tmp.writeBytes(img)
+                            val file = client.files.upload(
+                                tmp.absolutePath,
+                                UploadFileConfig.builder()
+                                    .mimeType(mimeType)
+                                    .build()
                             )
+                            tmp.delete()
+                            file
                         }
                     }
-                )
-                .role("user")
-                .build(),
-            contentConfig
-        )
+                    val files = futures.map { it.join() }
+                    uploadedFiles.addAll(files)
+                    files.forEach { f ->
+                        add(Part.fromUri(f.name().get(), f.mimeType().get()))
+                    }
+                }
+            }
+            parts
+        } catch (e: Exception) {
+            buildList<Part> {
+                add(Part.builder().text(text).build())
+                images?.forEach { img ->
+                    val type = FileTypeUtil.getType(img.inputStream())
+                    val mimeType = when (type) {
+                        "png" -> "image/png"
+                        "jpg", "jpeg" -> "image/jpeg"
+                        else -> throw IllegalArgumentException("Unsupported image type: $type")
+                    }
+                    add(
+                        Part.builder().inlineData(
+                            Blob.builder().data(img).mimeType(mimeType).build()
+                        ).build()
+                    )
+                }
+            }
+        }
+        val response: GenerateContentResponse = try {
+            val contentObj = Content.fromParts(*contentParts.toTypedArray())
+            client.models.generateContent(
+                "gemini-3-pro-image-preview",
+                contentObj,
+                contentConfig
+            )
+        } finally {
+            uploadedFiles.forEach { f ->
+                try {
+                    client.files.delete(f.name().get(), null)
+                } catch (_: Exception) {
+                }
+            }
+        }
         val result = response.candidates()
             .map { candidates ->
                 candidates.stream()

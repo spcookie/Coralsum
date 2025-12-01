@@ -15,6 +15,11 @@ class PricingConfig {
     var coefficient: Double = 1.5
 
     /**
+     * 每 1 元人民币折算为多少积分；用于将人民币成本转换为平台积分
+     */
+    var pointsPerRmb: Double = 100.0
+
+    /**
      * Gemini 2.5 Flash-Lite 评估环节的价格参数（按令牌计费）
      */
     val flashLite = FlashLite()
@@ -33,6 +38,7 @@ class PricingConfig {
      * 内网穿透与代理流量费用配置，以及访问倍数（考虑图片被多次访问）
      */
     val traffic = Traffic()
+    val upscayl = Upscayl()
 
     /**
      * Flash-Lite 评估价格：将字符转令牌，并按输入/输出的百万令牌单价计费
@@ -95,5 +101,10 @@ class PricingConfig {
         var jpgBytes1K: Long = 500_000
         var jpgBytes2K: Long = 1_100_000
         var jpgBytes4K: Long = 2_200_000
+    }
+
+    class Upscayl {
+        var enabled: Boolean = true
+        var chargeByScale: Boolean = true
     }
 }

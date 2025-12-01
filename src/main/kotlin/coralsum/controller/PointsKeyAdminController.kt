@@ -1,5 +1,6 @@
 package coralsum.controller
 
+import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.request.CreatePointsKeyConfigReq
 import coralsum.common.request.GeneratePointsKeysReq
@@ -21,6 +22,7 @@ class PointsKeyAdminController(
     private val securityService: SecurityService,
 ) {
     @Post("/config")
+    @Debounce(name = "pointsKey.createConfig", windowMillis = 2000, byUid = true)
     suspend fun createConfig(@Body @Valid req: CreatePointsKeyConfigReq): Res<Any> {
         val operator = securityService.authentication.get().name
         val saved = pointsKeyService.createConfig(req, operator)
@@ -40,6 +42,7 @@ class PointsKeyAdminController(
     }
 
     @Post("/generate")
+    @Debounce(name = "pointsKey.generate", windowMillis = 2000, byUid = true)
     suspend fun generate(@Body @Valid req: GeneratePointsKeysReq): Res<Any> {
         val operator = securityService.authentication.get().name
         val keys = pointsKeyService.generateKeys(req, operator)
@@ -59,12 +62,14 @@ class PointsKeyAdminController(
     }
 
     @Post("/toggle")
+    @Debounce(name = "pointsKey.toggle", windowMillis = 2000, byUid = true)
     suspend fun toggle(@Body @Valid req: ToggleKeysReq): Res<Any> {
         pointsKeyService.toggleKeys(req)
         return Res.success(message = "操作成功")
     }
 
     @Post("/config/toggle")
+    @Debounce(name = "pointsKey.toggleConfig", windowMillis = 2000, byUid = true)
     suspend fun toggleConfig(@Body @Valid req: ToggleConfigReq): Res<Any> {
         val updated = pointsKeyService.toggleConfig(req)
         return Res.success(updated)

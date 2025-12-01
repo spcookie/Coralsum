@@ -611,8 +611,13 @@ const estimatedPoints = computed(() => {
   const natRmb = gb * natRate
   const proxyRmb = gb * proxyRate
 
-  const total = evalRmb + previewRmbTokens + imageRmb + ossRmb + natRmb + proxyRmb
-  const pts = Math.round(total * 100 * coef)
+  let total = evalRmb + previewRmbTokens + imageRmb + ossRmb + natRmb + proxyRmb
+  const scaleMap: Record<string, number> = {'1x': 1, '2x': 2, '3x': 3, '4x': 4}
+  const scale = scaleMap[settings.resolution] || 1
+  if (p.upscaylEnabled && p.upscaylChargeByScale && scale > 1) {
+    total = total * scale
+  }
+  const pts = Math.round(total * coef * Number(p.pointsPerRmb || 100))
   return pts
 })
 

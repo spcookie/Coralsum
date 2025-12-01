@@ -1,5 +1,6 @@
 package coralsum.controller
 
+import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.request.RegisterRequest
 import coralsum.common.request.ResetPasswordRequest
@@ -21,6 +22,7 @@ class AuthController(
 ) {
     @Post("/send-code")
     @Operation(summary = "发送验证码")
+    @Debounce(name = "auth.sendCode", windowMillis = 5000, byUid = false)
     suspend fun sendCode(@Body req: SendCodeRequest): Res<Map<String, Any>> {
         val purpose = (req.purpose ?: "REGISTER").uppercase()
         val ok = authService.sendEmailCode(req.email, purpose)
@@ -29,6 +31,7 @@ class AuthController(
 
     @Post("/register")
     @Operation(summary = "邮箱注册")
+    @Debounce(name = "auth.register", windowMillis = 2000, byUid = false)
     suspend fun register(@Body req: RegisterRequest): Res<Map<String, Any>> {
         val ok = authService.register(req.email, req.password, req.code)
         return if (ok) Res.success(mapOf("ok" to true)) else Res.fail("注册失败或验证码无效")
@@ -36,6 +39,7 @@ class AuthController(
 
     @Post("/reset-password")
     @Operation(summary = "重置密码")
+    @Debounce(name = "auth.resetPassword", windowMillis = 2000, byUid = false)
     suspend fun resetPassword(@Body req: ResetPasswordRequest): Res<Map<String, Any>> {
         val ok = authService.resetPassword(req.email, req.newPassword, req.code)
         return if (ok) Res.success(mapOf("ok" to true)) else Res.fail("重置失败或验证码无效")

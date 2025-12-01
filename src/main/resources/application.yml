@@ -158,7 +158,8 @@ preview:
   ttlSeconds: 1500
 pricing:
   usd-to-cny: 7.01
-  coefficient: 1
+  coefficient: 1.5
+  points-per-rmb: 100
   flash-lite:
     tokens-per-char: 2.5
     input-usd-per-m-tokens: 0.10
@@ -185,3 +186,6 @@ pricing:
     jpg-bytes1-k: 500000
     jpg-bytes2-k: 1100000
     jpg-bytes4-k: 2200000
+  upscayl:
+    enabled: true
+    charge-by-scale: true

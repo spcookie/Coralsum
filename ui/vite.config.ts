@@ -5,19 +5,22 @@ export default defineConfig({
     plugins: [vue()],
     base: './',
     build: {
+        chunkSizeWarningLimit: 1200,
         rollupOptions: {
             output: {
+                entryFileNames: 'assets/[name]-[hash].js',
+                chunkFileNames: 'assets/[name]-[hash].js',
+                assetFileNames: 'assets/[name]-[hash][extname]',
                 manualChunks(id) {
-                    if (id.includes('node_modules')) {
-                        if (id.includes('/naive-ui/')) return 'naive-ui'
-                        if (id.includes('/@iconify/vue/')) return 'iconify'
-                        if (id.includes('/vue/')) return 'vue'
-                        if (id.includes('/vue-router/')) return 'vue'
-                        if (id.includes('/pinia/')) return 'vue'
-                        const parts = id.split('node_modules/')[1].split('/')
-                        if (parts[0]?.startsWith('@')) return parts.slice(0, 2).join('/')
-                        return parts[0]
-                    }
+                    if (!id.includes('node_modules')) return undefined
+                    if (id.includes('/naive-ui/')) return 'naive-ui'
+                    if (id.includes('/@iconify/vue/')) return 'iconify'
+                    if (id.includes('/vue/')) return 'vue'
+                    if (id.includes('/vue-router/')) return 'vue'
+                    if (id.includes('/pinia/')) return 'vue'
+                    const parts = id.split('node_modules/')[1].split('/')
+                    if (parts[0]?.startsWith('@')) return parts.slice(0, 2).join('/')
+                    return parts[0]
                 }
             }
         }

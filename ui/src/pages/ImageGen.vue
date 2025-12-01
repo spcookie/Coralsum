@@ -18,7 +18,7 @@
           </div>
           <div class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Model Crafted by Nano Banana Pro 🍌</div>
           <div class="mt-2 w-full px-4 text-center break-words text-xs text-neutral-500 dark:text-neutral-400">
-            Copyright © 2025 Spcookie. 项目开源，采用
+            Copyright © 2025 Coralsum. 项目开源，采用
             <a class="underline" href="https://opensource.org/licenses/MIT" rel="noopener noreferrer" target="_blank">MIT
               许可证</a>。
           </div>

@@ -1,5 +1,6 @@
 package coralsum.controller
 
+import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.request.UpdateProfileRequest
 import coralsum.common.response.ProfileResponse
@@ -43,6 +44,7 @@ class WebUserController(
             Content(schema = Schema(implementation = ProfileResponse::class))
         ]
     )
+    @Debounce(name = "web.updateProfile", windowMillis = 2000, byUid = true)
     suspend fun updateProfile(authentication: Authentication, @Body req: UpdateProfileRequest): Res<ProfileResponse> {
         val uid = authentication.name ?: return Res.fail("未登录")
         val ok = webUserService.updateNickName(uid, req.nickName)

@@ -18,12 +18,13 @@
 </template>
 
 <script lang="ts" setup>
-import SideMenu from '@/components/SideMenu.vue'
-import TopBar from '@/components/TopBar.vue'
+import {computed, defineAsyncComponent} from 'vue'
 import {darkTheme, dateZhCN, NConfigProvider, NDialogProvider, NMessageProvider, zhCN} from 'naive-ui'
-import {computed} from 'vue'
 import {useRoute} from 'vue-router'
 import {useSettingsStore} from '@/stores/settings'
+
+const SideMenu = defineAsyncComponent(() => import('@/components/SideMenu.vue'))
+const TopBar = defineAsyncComponent(() => import('@/components/TopBar.vue'))
 
 const settings = useSettingsStore()
 const theme = computed(() => (settings.darkMode ? darkTheme : null))

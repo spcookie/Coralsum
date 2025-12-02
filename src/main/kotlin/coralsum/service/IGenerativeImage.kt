@@ -25,7 +25,8 @@ interface IGenerativeImage {
 @Serdeable
 data class GenRequest(
     @field:Schema(description = "生成文本") val text: String? = null,
-    @field:Schema(description = "参考图片流列表") var images: List<java.io.InputStream>? = null,
+    @field:Schema(description = "参考图片URL列表") var imageUrls: List<String>? = null,
+    @field:Schema(description = "图片上传标识（会话ID）") var imageSessionId: String? = null,
     @field:Schema(description = "候选数量") var candidateCount: Int = 1,
     @field:Schema(description = "宽高比") var aspectRatio: AspectRatio? = null,
     @field:Schema(description = "模型类型") var modelType: ModelType? = ModelType.BASIC,
@@ -52,7 +53,7 @@ data class GenRequest(
         if (mediaResolution != other.mediaResolution) return false
         if (modelType != other.modelType) return false
         if (text != other.text) return false
-        // 流不参与 equals 比较
+        // 图片URL不参与 equals 比较
         if (aspectRatio != other.aspectRatio) return false
         if (system != other.system) return false
         if (format != other.format) return false
@@ -70,7 +71,7 @@ data class GenRequest(
         result = 31 * result + (mediaResolution?.hashCode() ?: 0)
         result = 31 * result + (modelType?.hashCode() ?: 0)
         result = 31 * result + text.hashCode()
-        // 流不参与 hash 计算
+        // 图片URL不参与 hash 计算
         result = 31 * result + (aspectRatio?.hashCode() ?: 0)
         result = 31 * result + (system?.hashCode() ?: 0)
         result = 31 * result + format.hashCode()

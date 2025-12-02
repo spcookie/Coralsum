@@ -36,6 +36,7 @@ import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import io.github.resilience4j.micronaut.annotation.RateLimiter
 import io.micronaut.context.event.ApplicationEventPublisher
 import io.micronaut.http.HttpRequest
+import io.micronaut.http.multipart.StreamingFileUpload
 import io.micronaut.json.JsonMapper
 import io.micronaut.json.tree.JsonNode
 import io.micronaut.objectstorage.aws.AwsS3Operations
@@ -83,6 +84,7 @@ class GenerativeImageImpl(
     val openUserRepository: OpenUserRepository,
     val outletUserRepository: OutletUserRepository,
     val previewConfig: PreviewConfig,
+    val uploadedImageCache: coralsum.cache.UploadedImageCache,
 ) : IGenerativeImage {
 
     private lateinit var nano: NanoBanana
@@ -154,9 +156,22 @@ class GenerativeImageImpl(
             throw BusinessException("积分不足")
         }
         val watch = StopWatch.createStarted()
-        val conf = jsonMapper.writeValueAsString(genRequest.copy(text = null, images = null))
+        val sid = genRequest.imageSessionId
+        val cachedRefs = if (sid != null) uploadedImageCache.list(uid, sid) ?: emptyList() else emptyList()
+        val effectiveUrls = genRequest.imageUrls
+        val finalRefs: List<NanoBanana.UriWithType> = effectiveUrls?.map { u ->
+            val mt = when (u.substringAfterLast('.', "").lowercase()) {
+                "png" -> "image/png"
+                "jpg", "jpeg" -> "image/jpeg"
+                else -> "image/jpeg"
+            }
+            NanoBanana.UriWithType(u, mt)
+        }
+            ?: cachedRefs.map { r -> NanoBanana.UriWithType(r.uri, r.mimeType) }
+        val effectiveReq = genRequest.copy(text = genRequest.text, imageUrls = finalRefs.map { it.uri })
+        val conf = jsonMapper.writeValueAsString(effectiveReq.copy(text = null, imageUrls = null))
         val imageReqRecord = GenerateImageReqRecord(
-            requestText = genRequest.text,
+            requestText = effectiveReq.text,
             requestImage = null,
             requestConfig = conf,
             userCode = uid,
@@ -167,7 +182,7 @@ class GenerativeImageImpl(
             val refs = mutableListOf<String>()
             val sizes = mutableListOf<Int>()
             try {
-                val pairs = doConcurrentGenerate(genRequest, imageReqRecord)
+                val pairs = doConcurrentGenerate(effectiveReq, imageReqRecord)
                 val images = pairs.mapIndexed { index, pair ->
                     val (_, bufferedImage) = pair
 
@@ -263,6 +278,11 @@ class GenerativeImageImpl(
                 } catch (e: Exception) {
                     log.warn("failed to clean temp directory: ${e.message}")
                 }
+                try {
+                    finalRefs.forEach { r -> nano.delete(r.uri) }
+                } catch (_: Exception) {
+                }
+                if (sid != null) uploadedImageCache.clear(uid, sid)
             }
         }
         return genResult
@@ -372,9 +392,24 @@ class GenerativeImageImpl(
         genRequest: GenRequest,
         imageReqRecord: GenerateImageReqRecord,
     ): Pair<String?, BufferedImage?> {
+        val uid = securityService.authentication.get().name
+        val sid = genRequest.imageSessionId
+        val cachedRefs = if (sid != null) uploadedImageCache.list(uid, sid) ?: emptyList() else emptyList()
+        val refs: List<NanoBanana.UriWithType> = if (genRequest.imageUrls != null) {
+            genRequest.imageUrls!!.map { u ->
+                val mt = when (u.substringAfterLast('.', "").lowercase()) {
+                    "png" -> "image/png"
+                    "jpg", "jpeg" -> "image/jpeg"
+                    else -> "image/jpeg"
+                }
+                NanoBanana.UriWithType(u, mt)
+            }
+        } else {
+            cachedRefs.map { r -> NanoBanana.UriWithType(r.uri, r.mimeType) }
+        }
         val pair = nano.gen(
             genRequest.text!!,
-            genRequest.images,
+            refs,
             genRequest.aspectRatio?.ratio,
             genRequest.system,
             genRequest.temperature,
@@ -396,6 +431,18 @@ class GenerativeImageImpl(
             throw BusinessException("模型返回内容为空")
         }
         return generateResult
+    }
+
+    suspend fun uploadImage(image: StreamingFileUpload?, sid: String?): String? {
+        val uid = securityService.authentication.get().name
+        if (image == null) return null
+        val finalSid = sid ?: uploadedImageCache.createSession(uid)
+        val up = withContext(Dispatchers.IO) {
+            val ins = runCatching { image.asInputStream() }.getOrNull() ?: return@withContext null
+            runCatching { nano.upload(ins) }.getOrNull()
+        }
+        if (up != null) uploadedImageCache.append(uid, finalSid, coralsum.cache.UploadedImageRef(up.uri, up.mimeType))
+        return finalSid
     }
 
     private fun sign(ref: String, uid: String, exp: Long): String {

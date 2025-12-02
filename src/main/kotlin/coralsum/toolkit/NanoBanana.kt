@@ -4,11 +4,11 @@ import cn.hutool.core.io.FileTypeUtil
 import com.google.common.collect.Lists
 import com.google.genai.Client
 import com.google.genai.types.*
+import io.micronaut.serde.annotation.Serdeable
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.Closeable
 import java.io.InputStream
-import java.util.concurrent.CompletableFuture
 import javax.imageio.ImageIO
 import kotlin.jvm.optionals.getOrElse
 import kotlin.time.Duration.Companion.minutes
@@ -29,9 +29,12 @@ class NanoBanana(private val apiKey: String) : Closeable {
         .apiKey(apiKey)
         .build()
 
+    @Serdeable
+    data class UriWithType(val uri: String, val mimeType: String)
+
     fun gen(
         text: String,
-        images: List<InputStream>? = null,
+        imageRefs: List<UriWithType>? = null,
         aspectRatio: String? = null,
         system: String? = null,
         temperature: Float = 1f,
@@ -100,32 +103,12 @@ class NanoBanana(private val apiKey: String) : Closeable {
                 }
             }
             .build()
-        val uploadedFiles = mutableListOf<File>()
         val contentParts: List<Part> = try {
             val parts = buildList {
                 add(Part.builder().text(text).build())
-                if (images != null && images.isNotEmpty()) {
-                    val futures = images.map { imgStream ->
-                        CompletableFuture.supplyAsync {
-                            val mimeType = when (val type = FileTypeUtil.getType(imgStream)) {
-                                "png" -> "image/png"
-                                "jpg", "jpeg" -> "image/jpeg"
-                                else -> throw IllegalArgumentException("Unsupported image type: $type")
-                            }
-                            val file = client.files.upload(
-                                imgStream,
-                                0,
-                                UploadFileConfig.builder()
-                                    .mimeType(mimeType)
-                                    .build()
-                            )
-                            file
-                        }
-                    }
-                    val files = futures.map { it.join() }
-                    uploadedFiles.addAll(files)
-                    files.forEach { f ->
-                        add(Part.fromUri(f.name().get(), f.mimeType().get()))
+                if (imageRefs != null && imageRefs.isNotEmpty()) {
+                    imageRefs.forEach { ref ->
+                        add(Part.fromUri(ref.uri, ref.mimeType))
                     }
                 }
             }
@@ -133,23 +116,7 @@ class NanoBanana(private val apiKey: String) : Closeable {
         } catch (_: Exception) {
             buildList {
                 add(Part.builder().text(text).build())
-                images?.forEach { imgStream ->
-                    val bytes = try {
-                        imgStream.readBytes()
-                    } catch (_: Exception) {
-                        ByteArray(0)
-                    }
-                    val mimeType = when (val type = FileTypeUtil.getType(ByteArrayInputStream(bytes))) {
-                        "png" -> "image/png"
-                        "jpg", "jpeg" -> "image/jpeg"
-                        else -> throw IllegalArgumentException("Unsupported image type: $type")
-                    }
-                    add(
-                        Part.builder().inlineData(
-                            Blob.builder().data(bytes).mimeType(mimeType).build()
-                        ).build()
-                    )
-                }
+                // 回退：不使用 File API
             }
         }
         val response: GenerateContentResponse = try {
@@ -163,12 +130,6 @@ class NanoBanana(private val apiKey: String) : Closeable {
                 contentConfig
             )
         } finally {
-            uploadedFiles.forEach { f ->
-                try {
-                    client.files.delete(f.name().get(), null)
-                } catch (_: Exception) {
-                }
-            }
         }
         val result = response.candidates()
             .map { candidates ->
@@ -200,6 +161,30 @@ class NanoBanana(private val apiKey: String) : Closeable {
             .getOrElse { Pair(null, null) }
         val usage = response.usageMetadata().get()
         return Pair(result, usage)
+    }
+
+    @Serdeable
+    data class UploadedFile(val uri: String, val mimeType: String)
+
+    fun upload(imgStream: InputStream): UploadedFile {
+        val mimeType = when (val type = FileTypeUtil.getType(imgStream)) {
+            "png" -> "image/png"
+            "jpg", "jpeg" -> "image/jpeg"
+            else -> throw IllegalArgumentException("Unsupported image type: $type")
+        }
+        val file = client.files.upload(
+            imgStream,
+            0,
+            UploadFileConfig.builder().mimeType(mimeType).build()
+        )
+        return UploadedFile(file.name().get(), mimeType)
+    }
+
+    fun delete(uriOrName: String) {
+        try {
+            client.files.delete(uriOrName, null)
+        } catch (_: Exception) {
+        }
     }
 
     override fun close() {

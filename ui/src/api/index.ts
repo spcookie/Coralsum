@@ -88,9 +88,12 @@ export async function changePassword(email: string, oldPassword: string, newPass
 export async function generate(req: GenerateRequest): Promise<GenerateResponse> {
     const fd = new FormData()
     if (Array.isArray(req.inputImages) && req.inputImages.length > 0) {
-        for (const f of req.inputImages) {
-            if (f) fd.append('image', f, (f as any).name || 'image')
+        const files = req.inputImages.filter(Boolean)
+        let sid: string | undefined
+        for (const f of files) {
+            sid = await uploadImage(f, sid)
         }
+        if (sid) fd.append('sid', sid)
     }
     fd.append('text', req.prompt)
     if (req.systemPrompt) fd.append('system', req.systemPrompt)
@@ -154,6 +157,18 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
         }
     }
     throw {message: '生成超时，请稍后重试', status: 504}
+}
+
+export async function uploadImage(file: File, sid?: string): Promise<string> {
+    const fd = new FormData()
+    fd.append('image', file, (file as any).name || 'image')
+    if (sid) fd.append('sid', sid)
+    const headers: any = {'X-API-Version': 'v1'}
+    const user = useUserStore()
+    if (user?.token) headers.Authorization = `Bearer ${user.token}`
+    const {data} = await http.post('/generative-image/upload', fd, {headers})
+    const sessionId = (data?.data ?? data?.sid ?? data) as any
+    return String(sessionId || '')
 }
 
 export async function assessIntent(text: string): Promise<{ generateIntent: boolean; guideMessage: string }> {

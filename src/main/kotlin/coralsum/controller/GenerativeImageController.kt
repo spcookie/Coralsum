@@ -6,7 +6,6 @@ import coralsum.common.enums.*
 import coralsum.common.response.GenResultResponse
 import coralsum.common.response.GenTaskResultResponse
 import coralsum.common.response.IntentAssessmentResponse
-import coralsum.config.PricingConfig
 import coralsum.convert.GenerativeConvert
 import coralsum.repository.OpenUserRepository
 import coralsum.repository.OutletUserRepository
@@ -35,7 +34,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.NotEmpty
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.slf4j.LoggerFactory
 import java.net.URI
 import java.net.URL
 
@@ -48,9 +46,7 @@ class GenerativeImageController(
     val addressResolver: HttpClientAddressResolver,
     val openUserRepository: OpenUserRepository,
     val outletUserRepository: OutletUserRepository,
-    val pricingConfig: PricingConfig,
 ) {
-    private val log = LoggerFactory.getLogger(GenerativeImageController::class.java)
 
     @Secured(SecurityRule.IS_AUTHENTICATED)
     @Version("v1")
@@ -67,7 +63,7 @@ class GenerativeImageController(
     )
     @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
     suspend fun generate(
-        @Parameter(description = "参考图片文件") @Part("image") images: List<StreamingFileUpload>?,
+        @Parameter(description = "图片上传标识（会话ID）") @Part("sid") sid: String?,
         @Parameter(description = "生成文本", required = true) @Part @NotEmpty text: String,
         @Parameter(description = "系统提示") @Part system: String?,
         @Parameter(description = "宽高比") @Part aspectRatio: AspectRatio?,
@@ -86,7 +82,7 @@ class GenerativeImageController(
         val result = service.generate(
             buildGenRequest(
                 text,
-                images,
+                sid,
                 modelType,
                 candidateCount,
                 aspectRatio,
@@ -154,7 +150,8 @@ class GenerativeImageController(
         request: HttpRequest<*>,
     ): HttpResponse<ModelAndView<Map<String, Any>>> {
         val ip = addressResolver.resolve(request)
-        val url = service.preview(ref, ip, token) ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "资源不存在或无权访问")
+        val url =
+            service.preview(ref, ip, token) ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "资源不存在或无权访问")
         val bytes = try {
             withContext(Dispatchers.IO) {
                 URL(url).openStream().use { it.readBytes() }
@@ -228,7 +225,7 @@ class GenerativeImageController(
     @Debounce(name = "gi.submitTask", windowMillis = 3000, byUid = true)
     @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
     suspend fun submitGenerateTask(
-        @Part("image") images: List<StreamingFileUpload>?,
+        @Part("sid") sid: String?,
         @Parameter(description = "生成文本", required = true) @Part @NotEmpty text: String,
         @Parameter(description = "系统提示") @Part system: String?,
         @Parameter(description = "宽高比") @Part aspectRatio: AspectRatio?,
@@ -247,7 +244,7 @@ class GenerativeImageController(
         service.submitGenerateTask(
             buildGenRequest(
                 text,
-                images,
+                sid,
                 modelType,
                 candidateCount,
                 aspectRatio,
@@ -266,9 +263,23 @@ class GenerativeImageController(
         return Res.success()
     }
 
+    @Secured(SecurityRule.IS_AUTHENTICATED)
+    @Version("v1")
+    @Post("/upload", consumes = [MediaType.MULTIPART_FORM_DATA])
+    @Operation(
+        summary = "上传参考图片",
+        description = "单文件上传至 Gemini File API，并缓存（并发安全，按追加顺序）；返回会话ID"
+    )
+    @Debounce(name = "gi.upload", windowMillis = 3000, byUid = true)
+    @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
+    suspend fun uploadImage(@Part("image") image: StreamingFileUpload, @Part("sid") sid: String?): Res<String?> {
+        val sessionId = service.uploadImage(image, sid)
+        return Res.success(sessionId)
+    }
+
     private fun buildGenRequest(
         text: String,
-        images: List<StreamingFileUpload>?,
+        sid: String?,
         modelType: ModelType?,
         candidateCount: Int?,
         aspectRatio: AspectRatio?,
@@ -283,7 +294,7 @@ class GenerativeImageController(
         mediaResolution: MediaResolution?,
     ): GenRequest = GenRequest(
         text = text,
-        images = images?.mapNotNull { runCatching { it.asInputStream() }.getOrNull() },
+        imageSessionId = sid,
         modelType = modelType ?: ModelType.BASIC,
         candidateCount = candidateCount ?: 1,
         aspectRatio = aspectRatio ?: AspectRatio.R1_1,

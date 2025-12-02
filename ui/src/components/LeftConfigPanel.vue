@@ -1,6 +1,6 @@
 <template>
   <div
-      class="relative z-20 w-full md:w-[420px] md:flex-shrink-0 md:h-[calc(100vh-56px)] h-auto md:overflow-y-auto p-4 md:p-5 md:border-r border-b md:border-b-0 border-neutral-200 dark:border-neutral-800 space-y-5 glass bg-white/40 dark:bg-black/30">
+      class="relative z-20 w-full md:w-[420px] md:flex-shrink-0 md:h-[calc(100vh-56px)] h-auto md:overflow-y-auto no-scrollbar p-4 md:p-5 md:border-r border-b md:border-b-0 border-neutral-200 dark:border-neutral-800 space-y-5 glass bg-white/40 dark:bg-black/30">
     <div class="space-y-2">
       <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1 justify-between">
         <div class="flex items-center gap-1">
@@ -125,6 +125,23 @@
           </template>
           <div class="text-xs text-white">估算基于当前配置与价格，实际扣减以生成结果为准</div>
         </n-tooltip>
+      </div>
+    </div>
+    <div class="space-y-2">
+      <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
+        <span>模型类型</span>
+        <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
+          <template #trigger>
+            <Icon class="text-neutral-400" icon="ph:info"/>
+          </template>
+          <div class="text-xs text-white">选择生成图片的模型类型。高级 更高质量，基本 更经济。</div>
+        </n-tooltip>
+      </div>
+      <div class="segmented radio-center">
+        <n-radio-group v-model:value="settings.modelType" :disabled="generating">
+          <n-radio-button value="Basic">基本</n-radio-button>
+          <n-radio-button value="Pro">高级</n-radio-button>
+        </n-radio-group>
       </div>
     </div>
     <div class="space-y-2">
@@ -260,7 +277,7 @@
           <!--              </n-radio-group>-->
           <!--            </div>-->
           <!--          </div>-->
-          <div class="space-y-2">
+          <div v-if="settings.modelType!=='Basic'" class="space-y-2">
             <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
               <span>图片分辨率</span>
               <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
@@ -567,46 +584,52 @@ watch(() => user.profileReady, (ready) => {
   if (ready) loadPricing()
 })
 
+watch(() => user.token, (t) => {
+  if (t && t.length > 0) loadPricing()
+})
+
 const estimatedPoints = computed(() => {
   const p = pricing.value
   if (!p) return null
   const chars = prompt.value.length
   const tokensPerChar = Number(p.flashLiteTokensPerChar || 2.5)
-  const inUsdPerM = Number(p.flashLiteInputUsdPerMTokens || 0.1)
-  const outUsdPerM = Number(p.flashLiteOutputUsdPerMTokens || 0.4)
+  const inUsdEvalPerM = Number(p.flashLiteInputUsdPerMTokens || 0.1)
+  const outUsdEvalPerM = Number(p.flashLiteOutputUsdPerMTokens || 0.4)
   const usdToCny = Number(p.usdToCny || 7.01)
   const coef = Number(p.coefficient || 1.5)
+  const isBasic = settings.modelType === 'Basic'
   // 评估阶段：文本 + 输入图片体积转换为令牌
   const inputTextTokens = chars * tokensPerChar
   const totalInputBytes = files.value.reduce((s: number, f: File) => s + (f?.size || 0), 0)
   const mb = totalInputBytes / (1024 * 1024)
+  const imageTokens = mb * Number(p.imagePreviewTokensPerMb || 2500)
   const evalInputTokens = inputTextTokens
   const evalOutputTokens = inputTextTokens * 2
-  const evalUsd = evalInputTokens / 1_000_000 * inUsdPerM + evalOutputTokens / 1_000_000 * outUsdPerM
+  const evalUsd = evalInputTokens / 1_000_000 * inUsdEvalPerM + evalOutputTokens / 1_000_000 * outUsdEvalPerM
   const evalRmb = evalUsd * usdToCny
 
   // 生成阶段：模型令牌成本（预估与评估一致策略）
-  const prevInUsdPerM = Number(p.imagePreviewInputUsdPerMTokens || 2.0)
-  const tokensPerMb = Number(p.imagePreviewTokensPerMb || 2500)
-  const inputImageTokens = mb * tokensPerMb
-  const previewInputTokens = evalInputTokens + inputImageTokens
+  const prevInUsdPerM = isBasic ? Number(p.basicInputUsdPerMTokens || 0.30) : Number(p.proInputUsdPerMTokens || 2.0)
+  const previewInputTokens = inputTextTokens + imageTokens
   const previewUsd = previewInputTokens / 1_000_000 * prevInUsdPerM
   const previewRmbTokens = previewUsd * usdToCny
 
   // 图片单价（按分辨率）
-  const perImageUsd = Number(p.imagePricePerResolutionUsd?.[settings.imageSize] || 0)
+  const perImageUsd = isBasic
+      ? Number(p.basicOutputPricePerImage1kUsd ?? 0.039)
+      : Number(p.imagePricePerResolutionUsd?.[settings.imageSize] ?? (settings.imageSize === '4K' ? 0.24 : 0.134))
   const images = Number(settings.candidateRadio || 1)
   const imageRmb = perImageUsd * usdToCny * images
 
   // 流量评估：按分辨率与格式估算图片体积，乘访问倍数与候选数量
   const key = `${settings.outputFormat}:${settings.imageSize}`
   const bytesPerImage = Number(p.estimatedBytesPerImage?.[key] || 0)
-  const visitMultiplier = Number(p.visitMultiplier || 5)
+  const visitMultiplier = Number(p.trafficVisitMultiplier || 5)
   const totalBytes = bytesPerImage * images * visitMultiplier
   const gb = totalBytes / (1024 * 1024 * 1024)
   const ossBusy = Number(p.ossBusyRmbPerGb || 0.5)
-  const natRate = Number(p.natRmbPerGb || 1.1)
-  const proxyRate = Number(p.proxyRmbPerGb || 1.6)
+  const natRate = Number(p.trafficNatRmbPerGb || 1.1)
+  const proxyRate = Number(p.trafficProxyRmbPerGb || 1.6)
   const ossRmb = gb * ossBusy
   const natRmb = gb * natRate
   const proxyRmb = gb * proxyRate

@@ -3,7 +3,6 @@ package coralsum.controller
 import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.enums.*
-import coralsum.common.response.EstimateParamsResponse
 import coralsum.common.response.GenResultResponse
 import coralsum.common.response.GenTaskResultResponse
 import coralsum.common.response.IntentAssessmentResponse
@@ -20,7 +19,7 @@ import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.*
 import io.micronaut.http.exceptions.HttpStatusException
-import io.micronaut.http.multipart.CompletedFileUpload
+import io.micronaut.http.multipart.StreamingFileUpload
 import io.micronaut.http.server.util.HttpClientAddressResolver
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
@@ -35,11 +34,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.NotEmpty
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.withContext
-import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
-import reactor.core.publisher.Flux
 import java.net.URI
 import java.net.URL
 
@@ -71,10 +67,11 @@ class GenerativeImageController(
     )
     @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
     suspend fun generate(
-        @Parameter(description = "参考图片文件") @Part("image") images: Publisher<CompletedFileUpload>?,
+        @Parameter(description = "参考图片文件") @Part("image") images: List<StreamingFileUpload>?,
         @Parameter(description = "生成文本", required = true) @Part @NotEmpty text: String,
         @Parameter(description = "系统提示") @Part system: String?,
         @Parameter(description = "宽高比") @Part aspectRatio: AspectRatio?,
+        @Parameter(description = "模型类型") @Part modelType: ModelType?,
         @Parameter(description = "候选数量") @Part candidateCount: Int?,
         @Parameter(description = "温度") @Part temperature: Float?,
         @Parameter(description = "TopP") @Part topP: Float?,
@@ -86,12 +83,11 @@ class GenerativeImageController(
         @Parameter(description = "媒体分辨率") @Part mediaResolution: MediaResolution?,
         request: HttpRequest<*>,
     ): Res<GenResultResponse> {
-        val imgs = images?.let { Flux.from(it).collectList().awaitSingle() }
-        log.info("接收图片数量: {}", imgs?.size ?: 0)
         val result = service.generate(
             buildGenRequest(
                 text,
-                imgs,
+                images,
+                modelType,
                 candidateCount,
                 aspectRatio,
                 system,
@@ -232,10 +228,11 @@ class GenerativeImageController(
     @Debounce(name = "gi.submitTask", windowMillis = 3000, byUid = true)
     @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
     suspend fun submitGenerateTask(
-        @Part("image") images: Publisher<CompletedFileUpload>?,
+        @Part("image") images: List<StreamingFileUpload>?,
         @Parameter(description = "生成文本", required = true) @Part @NotEmpty text: String,
         @Parameter(description = "系统提示") @Part system: String?,
         @Parameter(description = "宽高比") @Part aspectRatio: AspectRatio?,
+        @Parameter(description = "模型类型") @Part modelType: ModelType?,
         @Parameter(description = "候选数量") @Part candidateCount: Int?,
         @Parameter(description = "温度") @Part temperature: Float?,
         @Parameter(description = "TopP") @Part topP: Float?,
@@ -247,11 +244,11 @@ class GenerativeImageController(
         @Parameter(description = "媒体分辨率") @Part mediaResolution: MediaResolution?,
         request: HttpRequest<*>,
     ): Res<Unit> {
-        val imgs = images?.let { Flux.from(it).collectList().awaitSingle() }
         service.submitGenerateTask(
             buildGenRequest(
                 text,
-                imgs,
+                images,
+                modelType,
                 candidateCount,
                 aspectRatio,
                 system,
@@ -271,7 +268,8 @@ class GenerativeImageController(
 
     private fun buildGenRequest(
         text: String,
-        images: List<CompletedFileUpload>?,
+        images: List<StreamingFileUpload>?,
+        modelType: ModelType?,
         candidateCount: Int?,
         aspectRatio: AspectRatio?,
         system: String?,
@@ -285,7 +283,8 @@ class GenerativeImageController(
         mediaResolution: MediaResolution?,
     ): GenRequest = GenRequest(
         text = text,
-        images = images?.mapNotNull { it.bytes },
+        images = images?.mapNotNull { runCatching { it.asInputStream() }.getOrNull() },
+        modelType = modelType ?: ModelType.BASIC,
         candidateCount = candidateCount ?: 1,
         aspectRatio = aspectRatio ?: AspectRatio.R1_1,
         system = system,
@@ -316,43 +315,4 @@ class GenerativeImageController(
         return Res.success(convert.toResponse(generateTaskResult))
     }
 
-    @Secured(SecurityRule.IS_AUTHENTICATED)
-    @Version("v1")
-    @Get("/estimate-params")
-    @Operation(summary = "获取估算参数", description = "返回前端用于估算扣减的价格参数")
-    suspend fun estimateParams(): Res<EstimateParamsResponse> {
-        val p = pricingConfig
-        val resp = EstimateParamsResponse(
-            usdToCny = p.usdToCny,
-            coefficient = p.coefficient,
-            flashLiteTokensPerChar = p.flashLite.tokensPerChar,
-            imagePreviewTokensPerMb = p.imagePreview.tokensPerMb,
-            flashLiteInputUsdPerMTokens = p.flashLite.inputUsdPerMTokens,
-            flashLiteOutputUsdPerMTokens = p.flashLite.outputUsdPerMTokens,
-            imagePreviewInputUsdPerMTokens = p.imagePreview.inputUsdPerMTokens,
-            imagePreviewOutputUsdPerMTokens = p.imagePreview.outputUsdPerMTokens,
-            imagePricePerResolutionUsd = mapOf(
-                "1K" to p.imagePreview.pricePerImage1K2KUsd,
-                "2K" to p.imagePreview.pricePerImage1K2KUsd,
-                "4K" to p.imagePreview.pricePerImage4KUsd,
-            ),
-            estimatedBytesPerImage = mapOf(
-                "PNG:1K" to p.estimate.pngBytes1K,
-                "PNG:2K" to p.estimate.pngBytes2K,
-                "PNG:4K" to p.estimate.pngBytes4K,
-                "JPG:1K" to p.estimate.jpgBytes1K,
-                "JPG:2K" to p.estimate.jpgBytes2K,
-                "JPG:4K" to p.estimate.jpgBytes4K,
-            ),
-            ossBusyRmbPerGb = p.oss.busyRmbPerGb,
-            ossIdleRmbPerGb = p.oss.idleRmbPerGb,
-            natRmbPerGb = p.traffic.natRmbPerGb,
-            proxyRmbPerGb = p.traffic.proxyRmbPerGb,
-            visitMultiplier = p.traffic.visitMultiplier,
-            upscaylEnabled = p.upscayl.enabled,
-            upscaylChargeByScale = p.upscayl.chargeByScale,
-            pointsPerRmb = p.pointsPerRmb,
-        )
-        return Res.success(resp)
-    }
 }

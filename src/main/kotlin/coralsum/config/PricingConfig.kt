@@ -29,6 +29,13 @@ class PricingConfig {
      */
     val imagePreview = ImagePreview()
 
+    val pro = Pro()
+
+    /**
+     * BASIC 模型的简化计费（输入统一价格 + 每张1K输出图片价格）
+     */
+    val basic = Basic()
+
     /**
      * OSS 出网费用配置（按时间段区分单价）
      */
@@ -53,12 +60,23 @@ class PricingConfig {
      * Image Preview 生成价格：按输入/输出令牌计费，且每张图片按分辨率收取固定单价
      */
     class ImagePreview {
+        var tokensPerMb: Double = 2500.0
+    }
+
+    /**
+     * BASIC 模型：输入统一价格（文本/图片）与 1K 输出每张图片固定价格（USD）
+     */
+    class Basic {
+        var inputUsdPerMTokens: Double = 0.30
+        var outputPricePerImage1kUsd: Double = 0.039
+        var outputUsdPerMTokens: Double = 30.0
+    }
+
+    class Pro {
         var inputUsdPerMTokens: Double = 2.0
         var outputUsdPerMTokens: Double = 12.0
-        var pricePerImage1K2KUsd: Double = 0.134
-        var pricePerImage4KUsd: Double = 0.24
-        /** 输入图片体积折算为令牌的比例（tokens/MB），用于生成阶段估算图像令牌 */
-        var tokensPerMb: Double = 2500.0
+        var pricePerImage1k2kUsd: Double = 0.134
+        var pricePerImage4kUsd: Double = 0.24
     }
 
     /**

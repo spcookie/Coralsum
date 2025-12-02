@@ -1,6 +1,7 @@
 package coralsum.common.event
 
 import coralsum.common.enums.ImageSize
+import coralsum.common.enums.ModelType
 
 data class GenerativeImageCostEvent(
     val uid: String,
@@ -15,4 +16,5 @@ data class GenerativeImageCostEvent(
     val timestampMs: Long,
     val success: Boolean,
     val upscaylScale: Int,
+    val modelType: ModelType,
 )

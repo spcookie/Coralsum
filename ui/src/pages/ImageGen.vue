@@ -33,7 +33,14 @@ import {onMounted, onUnmounted, ref, watch} from 'vue'
 import LeftConfigPanel from '@/components/LeftConfigPanel.vue'
 import RightResultPanel from '@/components/RightResultPanel.vue'
 import {useSettingsStore} from '@/stores/settings'
-import {assessIntent, generate, getEstimateParams, getGenerateTaskResult, refreshUserInfoByEmail} from '@/api'
+import {
+  assessIntent,
+  generate,
+  getEstimateParams,
+  getGenerateTaskResult,
+  getImageBytes,
+  refreshUserInfoByEmail
+} from '@/api'
 import {useUserStore} from '@/stores/user'
 import {useMessage} from 'naive-ui'
 import {addHistoryFromResult} from '@/utils/indexedDb'
@@ -231,6 +238,7 @@ async function doGenerate(payload: { prompt: string; systemPrompt?: string; file
       systemPrompt: payload.systemPrompt,
       inputImages: payload.files,
       config: {
+        modelType: settings.modelType,
         candidateRadio: settings.candidateRadio,
         aspectRatio: settings.aspectRatio,
         topP: settings.topP,
@@ -246,6 +254,7 @@ async function doGenerate(payload: { prompt: string; systemPrompt?: string; file
       const urls = await convertImagesToBlobUrls(r.images || [])
       currentBlobUrls.value = urls
       result.value = {...r, images: urls}
+      loading.value = false
     } catch {
       result.value = r
     }
@@ -364,6 +373,7 @@ onMounted(() => {
 function onSaveHistory(dataUrls: string[]) {
   if (!result.value) return
   const cfg = {
+    modelType: settings.modelType,
     candidateRadio: settings.candidateRadio,
     aspectRatio: settings.aspectRatio,
     topP: settings.topP,

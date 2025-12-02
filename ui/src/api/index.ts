@@ -6,6 +6,7 @@ export interface GenerateRequest {
     systemPrompt?: string
     inputImages: File[]
     config: {
+        modelType: 'Basic' | 'Pro'
         candidateRadio: 1 | 2 | 3 | 4
         aspectRatio: string
         topP: number
@@ -105,6 +106,9 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
     }
     const ar = arMap[req.config.aspectRatio]
     if (ar) fd.append('aspectRatio', ar)
+    const mtMap: Record<string, string> = {Basic: 'BASIC', Pro: 'PRO'}
+    const mt = mtMap[req.config.modelType]
+    if (mt) fd.append('modelType', mt)
     fd.append('candidateCount', String(req.config.candidateRadio))
     const temp = Math.max(0, Math.min(2, req.config.temperature))
     const topp = Math.max(0, Math.min(1, req.config.topP))
@@ -302,21 +306,27 @@ export async function getGenerateTaskResult(): Promise<{
 export async function getEstimateParams(): Promise<{
     usdToCny: number
     coefficient: number
+    pointsPerRmb: number
     flashLiteTokensPerChar: number
     imagePreviewTokensPerMb: number
     flashLiteInputUsdPerMTokens: number
     flashLiteOutputUsdPerMTokens: number
+    proInputUsdPerMTokens: number
+    proOutputUsdPerMTokens: number
     imagePreviewInputUsdPerMTokens: number
     imagePreviewOutputUsdPerMTokens: number
     imagePricePerResolutionUsd: Record<string, number>
     estimatedBytesPerImage: Record<string, number>
     ossBusyRmbPerGb: number
     ossIdleRmbPerGb: number
-    natRmbPerGb: number
-    proxyRmbPerGb: number
-    visitMultiplier: number
+    trafficNatRmbPerGb: number
+    trafficProxyRmbPerGb: number
+    trafficVisitMultiplier: number
     upscaylEnabled: boolean
     upscaylChargeByScale: boolean
+    basicInputUsdPerMTokens: number
+    basicOutputUsdPerMTokens: number
+    basicOutputPricePerImage1kUsd: number
 }> {
     const headers: any = {'X-API-Version': 'v1'}
     const user = useUserStore()
@@ -325,20 +335,26 @@ export async function getEstimateParams(): Promise<{
     return {
         usdToCny: data.usd_to_cny,
         coefficient: data.coefficient,
+        pointsPerRmb: data.points_per_rmb,
         flashLiteTokensPerChar: data.flash_lite_tokens_per_char,
         imagePreviewTokensPerMb: data.image_preview_tokens_per_mb,
-        flashLiteInputUsdPerMTokens: data.flash_lite_input_usd_per_m_tokens,
-        flashLiteOutputUsdPerMTokens: data.flash_lite_output_usd_per_m_tokens,
-        imagePreviewInputUsdPerMTokens: data.image_preview_input_usd_per_m_tokens,
-        imagePreviewOutputUsdPerMTokens: data.image_preview_output_usd_per_m_tokens,
-        imagePricePerResolutionUsd: data.image_price_per_resolution_usd || {},
-        estimatedBytesPerImage: data.estimated_bytes_per_image || {},
+        flashLiteInputUsdPerMTokens: (data.flash_lite_input_usd_per_mtokens ?? data.flash_lite_input_usd_per_m_tokens),
+        flashLiteOutputUsdPerMTokens: (data.flash_lite_output_usd_per_mtokens ?? data.flash_lite_output_usd_per_m_tokens),
+        proInputUsdPerMTokens: (data.pro_input_usd_per_mtokens ?? data.pro_input_usd_per_m_tokens ?? data.image_preview_input_usd_per_mtokens ?? data.image_preview_input_usd_per_m_tokens),
+        proOutputUsdPerMTokens: (data.pro_output_usd_per_mtokens ?? data.pro_output_usd_per_m_tokens ?? data.image_preview_output_usd_per_mtokens ?? data.image_preview_output_usd_per_m_tokens),
+        imagePreviewInputUsdPerMTokens: (data.image_preview_input_usd_per_mtokens ?? data.image_preview_input_usd_per_m_tokens ?? data.pro_input_usd_per_m_tokens),
+        imagePreviewOutputUsdPerMTokens: (data.image_preview_output_usd_per_mtokens ?? data.image_preview_output_usd_per_m_tokens ?? data.pro_output_usd_per_m_tokens),
+        imagePricePerResolutionUsd: (data.image_price_per_resolution_usd || {}),
+        estimatedBytesPerImage: (data.estimated_bytes_per_image || {}),
         ossBusyRmbPerGb: data.oss_busy_rmb_per_gb,
         ossIdleRmbPerGb: data.oss_idle_rmb_per_gb,
-        natRmbPerGb: data.nat_rmb_per_gb,
-        proxyRmbPerGb: data.proxy_rmb_per_gb,
-        visitMultiplier: data.visit_multiplier,
+        trafficNatRmbPerGb: (data.traffic_nat_rmb_per_gb ?? data.nat_rmb_per_gb),
+        trafficProxyRmbPerGb: (data.traffic_proxy_rmb_per_gb ?? data.proxy_rmb_per_gb),
+        trafficVisitMultiplier: (data.traffic_visit_multiplier ?? data.visit_multiplier),
         upscaylEnabled: !!data.upscayl_enabled,
-        upscaylChargeByScale: !!data.upscayl_charge_by_scale
+        upscaylChargeByScale: !!data.upscayl_charge_by_scale,
+        basicInputUsdPerMTokens: (data.basic_input_usd_per_mtokens ?? data.basic_input_usd_per_m_tokens),
+        basicOutputUsdPerMTokens: (data.basic_output_usd_per_mtokens ?? data.basic_output_usd_per_m_tokens),
+        basicOutputPricePerImage1kUsd: (data.basic_output_price_per_image1_kusd ?? data.basic_output_price_per_image1k_usd ?? 0.039)
     }
 }

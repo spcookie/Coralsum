@@ -157,8 +157,8 @@ resilience4j:
 preview:
   ttlSeconds: 1500
 pricing:
-  usd-to-cny: 7.01
-  coefficient: 1.5
+  usd-to-cny: 7
+  coefficient: 1
   points-per-rmb: 100
   flash-lite:
     tokens-per-char: 2.5
@@ -167,9 +167,18 @@ pricing:
   image-preview:
     input-usd-per-m-tokens: 2.0
     output-usd-per-m-tokens: 12.0
-    price-per-image1-k2-k-usd: 0.134
-    price-per-image4-k-usd: 0.24
+    price-per-image-1k2k-usd: 0.134
+    price-per-image-4k-usd: 0.24
     tokens-per-mb: 2500
+  pro:
+    input-usd-per-m-tokens: 2.0
+    output-usd-per-m-tokens: 12.0
+    price-per-image-1k2k-usd: 0.134
+    price-per-image-4k-usd: 0.24
+  basic:
+    input-usd-per-m-tokens: 0.30
+    output-usd-per-m-tokens: 30.0
+    output-price-per-image-1k-usd: 0.039
   oss:
     idle-rmb-per-gb: 0.25
     busy-rmb-per-gb: 0.50

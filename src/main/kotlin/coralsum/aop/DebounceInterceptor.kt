@@ -24,7 +24,7 @@ class DebounceInterceptor(
         val uid = if (byUid && securityService.authentication.isPresent) {
             securityService.authentication.get().name
         } else ""
-        val methodKey = if (name.isNotBlank()) name else "${context.declaringType.name}.${context.methodName}"
+        val methodKey = name.ifBlank { "${context.declaringType.name}.${context.methodName}" }
         val key = buildString {
             append(methodKey)
             if (uid.isNotBlank()) append(":").append(uid)

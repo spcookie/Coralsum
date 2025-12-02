@@ -5,6 +5,7 @@ export type ResolutionScale = '1x' | '2x' | '3x' | '4x'
 export type OutputFormat = 'PNG' | 'JPG'
 export type ImageSize = '1K' | '2K' | '4K'
 export type MediaResolution = 'auto' | 'low' | 'medium' | 'high'
+export type ModelType = 'Basic' | 'Pro'
 
 export const useSettingsStore = defineStore('settings', {
     state: () => ({
@@ -17,6 +18,7 @@ export const useSettingsStore = defineStore('settings', {
         outputFormat: 'PNG' as OutputFormat,
         imageSize: '1K' as ImageSize,
         mediaResolution: 'auto' as MediaResolution,
+        modelType: 'Basic' as ModelType,
         darkMode: false,
         advancedExpanded: false
     }),
@@ -34,6 +36,7 @@ export const useSettingsStore = defineStore('settings', {
             this.outputFormat = 'PNG'
             this.imageSize = '1K'
             this.mediaResolution = 'auto'
+            this.modelType = 'Basic'
         }
     }
 })

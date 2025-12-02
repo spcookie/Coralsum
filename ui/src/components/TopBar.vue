@@ -416,7 +416,8 @@ async function login() {
   } catch (e: any) {
     const status = e?.status
     if (status === 401 || status === 403) {
-      message.error('未登录或未授权，请先登录')
+      const expired = !!(e?.__authExpired)
+      message.error(expired ? '登录已过期，请重新登录' : '未登录，请先登录')
       user.requireLogin()
     } else if (status === 500) {
       message.error('服务异常，请稍后重试')
@@ -486,7 +487,8 @@ async function saveProfile() {
   } catch (e: any) {
     const status = e?.status
     if (status === 401 || status === 403) {
-      message.error('未登录或未授权，请先登录')
+      const expired = !!(e?.__authExpired)
+      message.error(expired ? '登录已过期，请重新登录' : '未登录，请先登录')
       user.requireLogin()
     } else if (status === 500) {
       message.error('服务异常，请稍后重试')
@@ -521,7 +523,8 @@ function redeemMobile() {
         .catch((e: any) => {
           const status = e?.status
           if (status === 401 || status === 403) {
-            message.error('未登录或未授权，请先登录')
+            const expired = !!(e?.__authExpired)
+            message.error(expired ? '登录已过期，请重新登录' : '未登录，请先登录')
             user.requireLogin()
           } else if (status === 500) {
             message.error('服务异常，请稍后重试')

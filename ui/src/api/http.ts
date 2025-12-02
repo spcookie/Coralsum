@@ -23,11 +23,17 @@ http.interceptors.response.use(
             if (typeof maybeStatus === 'number' && maybeStatus >= 400) {
                 const message = (data as any).message
                 const user = useUserStore()
+                const hadAuthHeader = !!((res as any)?.config?.headers)?.Authorization
+                const hadToken = !!user?.token
+                const authExpired = hadAuthHeader || hadToken
                 if (maybeStatus === 401 || maybeStatus === 403) {
+                    if (authExpired) {
+                        ;(res as any).__authExpired = true
+                    }
                     user.token = ''
                     user.requireLogin()
                 }
-                return Promise.reject({status: maybeStatus, message})
+                return Promise.reject({status: maybeStatus, message, __authExpired: authExpired})
             }
         }
         if (data && typeof data === 'object' && 'code' in (data as any)) {
@@ -36,11 +42,17 @@ http.interceptors.response.use(
             const payload = (data as any).data
             if (code !== 'SUCCESS') {
                 const user = useUserStore()
+                const hadAuthHeader = !!((res as any)?.config?.headers)?.Authorization
+                const hadToken = !!user?.token
+                const authExpired = hadAuthHeader || hadToken
                 if (code === 'UNAUTHORIZED' || code === 'FORBIDDEN') {
+                    if (authExpired) {
+                        ;(res as any).__authExpired = true
+                    }
                     user.token = ''
                     user.requireLogin()
                 }
-                return Promise.reject({code, message, data: payload})
+                return Promise.reject({code, message, data: payload, __authExpired: authExpired})
             }
             ;(res as any).data = payload
         }
@@ -49,7 +61,13 @@ http.interceptors.response.use(
     (err) => {
         const user = useUserStore()
         const status = err?.response?.status
+        const hadAuthHeader = !!(err?.config?.headers)?.Authorization
+        const hadToken = !!user?.token
+        const authExpired = hadAuthHeader || hadToken
         if (status === 401 || status === 403) {
+            if (authExpired) {
+                ;(err as any).__authExpired = true
+            }
             user.token = ''
             user.requireLogin()
         }

@@ -1,6 +1,5 @@
 package coralsum.service.impl
 
-import coralsum.common.enums.ImageSize
 import coralsum.common.enums.MembershipTier
 import coralsum.common.enums.SubscribeType
 import coralsum.common.event.GenerativeImageCostEvent
@@ -86,13 +85,6 @@ class UserPointsServiceImpl(
 
     @EventListener
     fun onGenerativeImageCostEvent(event: GenerativeImageCostEvent) {
-        // 费用计算说明（参考 price.md）：
-        // - 评估阶段（Gemini 2.5 Flash-Lite）：输入字符→令牌（2.5/token/char），输出令牌≈输入字符×2×2.5；
-        //   输入按 0.10 USD/百万令牌，输出按 0.40 USD/百万令牌，最终按汇率转人民币。
-        // - 生成阶段（gemini-3-pro-image-preview）：输入/输出令牌按 2.00/12.00 USD/百万令牌；
-        //   图片单价：1K/2K 为 0.134 USD/张，4K 为 0.24 USD/张。
-        // - 流量费用：OSS 按时段（闲时 0.25 RMB/GB，忙时 0.50 RMB/GB），内网穿透 1.1 RMB/GB，代理 1.6 RMB/GB。
-        // - 积分扣减：总成本 × 系数（默认 1.5）。成功生成时计入全部成本；失败仅计模型调用（评估+生成令牌）。
         runBlocking {
             try {
                 val openUser = openUserRepository.findByUid(event.uid) ?: return@runBlocking
@@ -102,28 +94,38 @@ class UserPointsServiceImpl(
                 val usdToCny = pricing.usdToCny.toBigDecimal() // 汇率 USD→CNY
                 val coef = pricing.coefficient.toBigDecimal() // 成本抽成系数（积分换算系数）
 
-                // 评估阶段（Flash-Lite）按字符估算令牌与美元成本
-                val evalInputChars = event.inputCharCount.toBigDecimal() // 输入字符数
-                val evalTokensPerChar = pricing.flashLite.tokensPerChar.toBigDecimal() // 每字符令牌数（2.5）
-                val evalInputTokens = evalInputChars * evalTokensPerChar // 输入令牌
-                val evalOutputTokens = evalInputChars * (2.toBigDecimal()) * evalTokensPerChar // 输出令牌≈输入×2
-                val evalInputUsd = evalInputTokens / 1_000_000.toBigDecimal() * pricing.flashLite.inputUsdPerMTokens.toBigDecimal() // 输入美元成本
-                val evalOutputUsd = evalOutputTokens / 1_000_000.toBigDecimal() * pricing.flashLite.outputUsdPerMTokens.toBigDecimal() // 输出美元成本
-                val evalRmb = (evalInputUsd + evalOutputUsd) * usdToCny // 评估人民币成本
+                // 评估阶段成本（按模型类型）
+                val evalInputChars = event.inputCharCount.toBigDecimal()
+                val evalTokensPerChar = pricing.flashLite.tokensPerChar.toBigDecimal()
+                val evalInputTokens = evalInputChars * evalTokensPerChar
+                val evalOutputTokens = evalInputChars * (2.toBigDecimal()) * evalTokensPerChar
+                val evalInputUsd =
+                    evalInputTokens / 1_000_000.toBigDecimal() * pricing.flashLite.inputUsdPerMTokens.toBigDecimal()
+                val evalOutputUsd =
+                    evalOutputTokens / 1_000_000.toBigDecimal() * pricing.flashLite.outputUsdPerMTokens.toBigDecimal()
+                val evalRmb = (evalInputUsd + evalOutputUsd) * usdToCny
 
-                // 生成阶段（Image Preview）令牌成本（美元→人民币）
+                // 生成阶段 输入 令牌成本（美元→人民币）
                 val previewInputTokens = event.inputTokens.toBigDecimal()
-                val previewInputUsd = previewInputTokens / 1_000_000.toBigDecimal() * pricing.imagePreview.inputUsdPerMTokens.toBigDecimal()
+                val inputUsdPerMTokens = if (event.modelType.name == "BASIC") {
+                    pricing.basic.inputUsdPerMTokens.toBigDecimal()
+                } else {
+                    pricing.pro.inputUsdPerMTokens.toBigDecimal()
+                }
+                val previewInputUsd = previewInputTokens / 1_000_000.toBigDecimal() * inputUsdPerMTokens
                 val previewRmbTokens = previewInputUsd * usdToCny
 
-                // 图片单价（按分辨率）
-                val perImageUsd = when (event.imageSizeCategory) {
-                    ImageSize.X4 -> pricing.imagePreview.pricePerImage4KUsd.toBigDecimal()
-                    ImageSize.X1, ImageSize.X2 -> pricing.imagePreview.pricePerImage1K2KUsd.toBigDecimal()
+                // 图片输出令牌单价
+                val outputUsdPerMTokens = if (event.modelType.name == "BASIC") {
+                    pricing.basic.outputUsdPerMTokens.toBigDecimal()
+                } else {
+                    pricing.pro.outputUsdPerMTokens.toBigDecimal()
                 }
-                val imageCount = event.imageCount.toBigDecimal() // 生成图片数量
-                val imageUsd = perImageUsd * imageCount // 图片美元成本
-                val imageRmb = imageUsd * usdToCny // 图片人民币成本
+
+                // 图片输出成本
+                val outTokens = event.outputTokens.toBigDecimal()
+                val outUsd = outTokens / 1_000_000.toBigDecimal() * outputUsdPerMTokens
+                val imageRmb = outUsd * usdToCny
 
                 // 流量成本（GB 为单位）：OSS（按时段），内网穿透与代理
                 val bytes = event.imageSizeBytes.toBigDecimal() // 总字节大小（所有图片）
@@ -160,7 +162,7 @@ class UserPointsServiceImpl(
                 userPointsRepository.update(userPoints)
 
                 // 扣减后根据到期时间与剩余积分修正会员等级
-                reconcileTier(openUser.id!!)
+                reconcileTier(openUser.id)
 
                 // 记录成本明细（JSON），用于审计与对账
                 val costDetail = """{

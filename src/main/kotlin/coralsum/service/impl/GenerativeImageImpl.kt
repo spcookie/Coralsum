@@ -253,7 +253,8 @@ class GenerativeImageImpl(
                         inputCharCount = imageReqRecord.requestText?.length ?: 0,
                         timestampMs = System.currentTimeMillis(),
                         success = refs.isNotEmpty(),
-                        upscaylScale = genRequest.upscaylScale?.scale ?: 1
+                        upscaylScale = genRequest.upscaylScale?.scale ?: 1,
+                        modelType = genRequest.modelType ?: coralsum.common.enums.ModelType.BASIC
                     )
                 )
                 try {
@@ -310,11 +311,8 @@ class GenerativeImageImpl(
             )
 //            jsonMapper.readValue(json.toByteArray(), IntentAssessment::class.java)
         } catch (e: Exception) {
-            log.warn("assessIntent fallback due to: ${e.message}")
-            IntentAssessment(
-                generateIntent = false,
-                guideMessage = ""
-            )
+            log.error("assessIntent fallback due to: ${e.message}")
+            throw BusinessException("服务异常")
         }
     }
 
@@ -383,7 +381,8 @@ class GenerativeImageImpl(
             genRequest.maxOutputTokens,
             genRequest.topP,
             genRequest.imageSize?.size ?: ImageSize.X1.size,
-            genRequest.mediaResolution?.name ?: MediaResolution.AUTO.name
+            genRequest.mediaResolution?.name ?: MediaResolution.AUTO.name,
+            genRequest.modelType?.name ?: "BASIC"
         )
         val usageMetadata = pair.second
         synchronized(imageReqRecord) {

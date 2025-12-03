@@ -47,10 +47,23 @@ micronaut:
         paths: classpath:public
         mapping: /**
   caches:
+    storage-path: ${user.dir}/caches
     generate-task-result:
       expire-after-access: 5m
+      heap:
+        max-size: 100Mb
+      offheap:
+        max-size: 250Mb
+      disk:
+        max-size: 500Mb
     generate-task-statue:
       expire-after-access: 5m
+      heap:
+        max-size: 100Mb
+      offheap:
+        max-size: 500Mb
+      disk:
+        max-size: 1Gb
   security:
     authentication: bearer
     reject-not-found: false
@@ -102,6 +115,9 @@ micronaut:
       accept-case-insensitive-enums: true
     date-format: yyyy-MM-dd HH:mm:ss
     property-naming-strategy: SNAKE_CASE
+  email:
+    from:
+      email: noreply@spcookie.top
 datasources:
   default:
     url: jdbc:h2:file:${store.base}/store/data;DB_CLOSE_ON_EXIT=FALSE

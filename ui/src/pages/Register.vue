@@ -28,7 +28,14 @@
             <n-form-item class="flex-1" path="code">
               <n-input v-model:value="form.code" maxlength="6" placeholder="邮箱验证码"/>
             </n-form-item>
-            <n-button size="small" tertiary @click="sendCode">发送验证码</n-button>
+            <n-button
+                :disabled="sendCodeCd > 0 || sendCodeLoading"
+                :loading="sendCodeLoading"
+                size="small"
+                tertiary
+                @click="sendCode"
+            >{{ sendCodeLabel }}
+            </n-button>
           </div>
           <div class="flex gap-2 justify-end">
             <n-button @click="goLogin">已有账号？去登录</n-button>
@@ -41,7 +48,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, reactive, ref} from 'vue'
+import {computed, onUnmounted, reactive, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import type {FormInst, FormRules} from 'naive-ui'
 import {NButton, NCard, NForm, NFormItem, NInput, useMessage} from 'naive-ui'
@@ -57,6 +64,10 @@ const form = reactive({email: '', password: '', confirm: '', code: ''})
 const regPwdVisible = ref(false)
 const regConfirmVisible = ref(false)
 const registerLoading = ref(false)
+const sendCodeLoading = ref(false)
+const sendCodeCd = ref(0)
+const sendCodeLabel = computed(() => sendCodeCd.value > 0 ? `重新发送(${sendCodeCd.value}s)` : '发送验证码')
+let sendCodeTimer: any = null
 const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
 const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/
 const codeRegex = /^\d{4,6}$/
@@ -90,8 +101,30 @@ async function sendCode() {
     message.error('请先填写正确邮箱');
     return
   }
-  await sendEmailCode(email)
+  if (sendCodeLoading.value || sendCodeCd.value > 0) return
+  sendCodeLoading.value = true
+  try {
+    await sendEmailCode(email)
+    message.success('验证码已发送，请注意查收')
+    sendCodeCd.value = 5
+    if (sendCodeTimer) clearInterval(sendCodeTimer)
+    sendCodeTimer = setInterval(() => {
+      sendCodeCd.value = Math.max(0, sendCodeCd.value - 1)
+      if (sendCodeCd.value === 0) {
+        clearInterval(sendCodeTimer)
+        sendCodeTimer = null
+      }
+    }, 1000)
+  } catch (e: any) {
+    message.error(e?.message || '发送失败')
+  } finally {
+    sendCodeLoading.value = false
+  }
 }
+
+onUnmounted(() => {
+  if (sendCodeTimer) clearInterval(sendCodeTimer)
+})
 
 async function doRegister() {
   try {

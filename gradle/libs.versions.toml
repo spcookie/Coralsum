@@ -45,6 +45,8 @@ micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway" }
 micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari" }
 micronaut-cache-core = { module = "io.micronaut.cache:micronaut-cache-core" }
 micronaut-cache-caffeine = { module = "io.micronaut.cache:micronaut-cache-caffeine" }
+micronaut-cache-ehcache = { module = "io.micronaut.cache:micronaut-cache-ehcache" }
+micronaut-email-amazon-ses = { module = "io.micronaut.email:micronaut-email-amazon-ses" }
 micronaut-data-r2dbc = { module = "io.micronaut.data:micronaut-data-r2dbc" }
 micronaut-kotlin-ext-fns = { module = "io.micronaut.kotlin:micronaut-kotlin-extension-functions" }
 micronaut-kotlin-runtime = { module = "io.micronaut.kotlin:micronaut-kotlin-runtime" }
@@ -56,6 +58,7 @@ resilience4j-reactor = { module = "io.github.resilience4j:resilience4j-reactor",
 resilience4j-micronaut = { module = "io.github.resilience4j:resilience4j-micronaut", version.ref = "resilience4j" }
 micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json" }
 micronaut-objectstorage-aws = { module = "io.micronaut.objectstorage:micronaut-object-storage-aws", version.ref = "objectstorage" }
+aws-sdk = { module = "io.micronaut.aws:micronaut-aws-sdk-v2" }
 micronaut-reactor = { module = "io.micronaut.reactor:micronaut-reactor" }
 micronaut-reactor-http-client = { module = "io.micronaut.reactor:micronaut-reactor-http-client" }
 micronaut-serde-jackson = { module = "io.micronaut.serde:micronaut-serde-jackson" }

@@ -28,8 +28,7 @@ export interface GenerateResponse {
 }
 
 export async function sendEmailCode(email: string, purpose?: 'REGISTER' | 'RESET'): Promise<{
-    ok: true;
-    code: string
+    ok: true
 }> {
     const {data} = await http.post('/auth/send-code', {email, purpose})
     return data

@@ -30,6 +30,8 @@ data class GenerateImageReqRecord(
 
     var inputTokens: Int = 0,
 
+    var thoughtsTokens: Int = 0,
+
     var outputTokens: Int = 0,
 
     var durationMs: Long = 0,
@@ -53,13 +55,13 @@ data class GenerateImageReqRecord(
         if (id != other.id) return false
         if (retryCount != other.retryCount) return false
         if (inputTokens != other.inputTokens) return false
+        if (thoughtsTokens != other.thoughtsTokens) return false
         if (outputTokens != other.outputTokens) return false
         if (durationMs != other.durationMs) return false
         if (userCode != other.userCode) return false
         if (requestText != other.requestText) return false
         if (!requestImage.contentEquals(other.requestImage)) return false
         if (requestConfig != other.requestConfig) return false
-
         if (createTime != other.createTime) return false
         if (updateTime != other.updateTime) return false
         if (createBy != other.createBy) return false
@@ -72,17 +74,18 @@ data class GenerateImageReqRecord(
         var result = id?.hashCode() ?: 0
         result = 31 * result + retryCount
         result = 31 * result + inputTokens
+        result = 31 * result + thoughtsTokens
         result = 31 * result + outputTokens
         result = 31 * result + durationMs.hashCode()
-        result = 31 * result + userCode.hashCode()
+        result = 31 * result + (userCode?.hashCode() ?: 0)
         result = 31 * result + (requestText?.hashCode() ?: 0)
         result = 31 * result + (requestImage?.contentHashCode() ?: 0)
         result = 31 * result + (requestConfig?.hashCode() ?: 0)
-
         result = 31 * result + (createTime?.hashCode() ?: 0)
         result = 31 * result + (updateTime?.hashCode() ?: 0)
         result = 31 * result + (createBy?.hashCode() ?: 0)
         result = 31 * result + (updateBy?.hashCode() ?: 0)
         return result
     }
+
 }

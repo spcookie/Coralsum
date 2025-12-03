@@ -4,6 +4,7 @@ import cn.hutool.core.codec.Base64
 import cn.hutool.crypto.digest.HMac
 import cn.hutool.crypto.digest.HmacAlgorithm
 import coralsum.cache.GenerateTaskCache
+import coralsum.cache.UploadedImageRef
 import coralsum.common.enums.GenTaskStatue
 import coralsum.common.enums.ImageSize
 import coralsum.common.enums.MediaResolution
@@ -65,7 +66,7 @@ import javax.imageio.ImageIO
 import kotlin.io.path.Path
 import kotlin.io.path.createTempDirectory
 import kotlin.jvm.optionals.getOrElse
-import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 @Singleton
@@ -109,7 +110,6 @@ class GenerativeImageImpl(
 
         private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-        private const val MAX_PRE_COUNT = 5
     }
 
     @PostConstruct
@@ -136,7 +136,7 @@ class GenerativeImageImpl(
                                 )
                             }
                         }
-                        .connectTimeout(1.minutes.toJavaDuration())
+                        .connectTimeout(30.seconds.toJavaDuration())
                 )
             )
             .maxRetries(2)
@@ -148,7 +148,6 @@ class GenerativeImageImpl(
         nano.close()
     }
 
-    @RateLimiter(name = "callGenerateImage")
     override suspend fun generate(genRequest: GenRequest, request: HttpRequest<*>): GenResult {
         val uid = securityService.authentication.get().name
         val openUser = openUserRepository.findByUid(uid)
@@ -158,17 +157,8 @@ class GenerativeImageImpl(
         val watch = StopWatch.createStarted()
         val sid = genRequest.imageSessionId
         val cachedRefs = if (sid != null) uploadedImageCache.list(uid, sid) ?: emptyList() else emptyList()
-        val effectiveUrls = genRequest.imageUrls
-        val finalRefs: List<NanoBanana.UriWithType> = effectiveUrls?.map { u ->
-            val mt = when (u.substringAfterLast('.', "").lowercase()) {
-                "png" -> "image/png"
-                "jpg", "jpeg" -> "image/jpeg"
-                else -> "image/jpeg"
-            }
-            NanoBanana.UriWithType(u, mt)
-        }
-            ?: cachedRefs.map { r -> NanoBanana.UriWithType(r.uri, r.mimeType) }
-        val effectiveReq = genRequest.copy(text = genRequest.text, imageUrls = finalRefs.map { it.uri })
+        val finalRefs: List<String> = cachedRefs.map { r -> r.uri }
+        val effectiveReq = genRequest.copy(text = genRequest.text, imageUrls = finalRefs)
         val conf = jsonMapper.writeValueAsString(effectiveReq.copy(text = null, imageUrls = null))
         val imageReqRecord = GenerateImageReqRecord(
             requestText = effectiveReq.text,
@@ -182,7 +172,7 @@ class GenerativeImageImpl(
             val refs = mutableListOf<String>()
             val sizes = mutableListOf<Int>()
             try {
-                val pairs = doConcurrentGenerate(effectiveReq, imageReqRecord)
+                val pairs = doConcurrentGenerate(effectiveReq, imageReqRecord, uid)
                 val images = pairs.mapIndexed { index, pair ->
                     val (_, bufferedImage) = pair
 
@@ -260,11 +250,13 @@ class GenerativeImageImpl(
                         uid = imageReqRecord.userCode!!,
                         recordId = recordId,
                         inputTokens = imageReqRecord.inputTokens,
+                        thoughtsTokens = imageReqRecord.thoughtsTokens,
                         outputTokens = imageReqRecord.outputTokens,
                         candidateCount = genRequest.candidateCount,
                         imageCount = refs.size,
                         imageSizeCategory = genRequest.imageSize ?: ImageSize.X1,
                         imageSizeBytes = sizes.sum(),
+                        imageFormat = genRequest.format,
                         inputCharCount = imageReqRecord.requestText?.length ?: 0,
                         timestampMs = System.currentTimeMillis(),
                         success = refs.isNotEmpty(),
@@ -279,7 +271,7 @@ class GenerativeImageImpl(
                     log.warn("failed to clean temp directory: ${e.message}")
                 }
                 try {
-                    finalRefs.forEach { r -> nano.delete(r.uri) }
+                    finalRefs.forEach { r -> nano.delete(r) }
                 } catch (_: Exception) {
                 }
                 if (sid != null) uploadedImageCache.clear(uid, sid)
@@ -329,7 +321,6 @@ class GenerativeImageImpl(
                 node["generateIntent"].booleanValue,
                 node["guideMessage"]?.stringValue ?: ""
             )
-//            jsonMapper.readValue(json.toByteArray(), IntentAssessment::class.java)
         } catch (e: Exception) {
             log.error("assessIntent fallback due to: ${e.message}")
             throw BusinessException("服务异常")
@@ -379,33 +370,28 @@ class GenerativeImageImpl(
     private fun doConcurrentGenerate(
         genRequest: GenRequest,
         imageReqRecord: GenerateImageReqRecord,
+        uid: String,
     ): List<Pair<String?, BufferedImage?>> {
         val futures = (0 until genRequest.candidateCount).map {
-            CompletableFuture.supplyAsync({ doGenerate(genRequest, imageReqRecord) }, executor)
+            CompletableFuture.supplyAsync({ doGenerate(genRequest, imageReqRecord, uid) }, executor)
         }.toList()
         CompletableFuture.allOf(*futures.toTypedArray()).get()
         return futures.map { it.get() }
     }
 
-    @Retryable(attempts = "3", delay = "500ms")
+    @RateLimiter(name = "callGenerateImage")
+    @Retryable(attempts = "2", delay = "2s")
     fun doGenerate(
         genRequest: GenRequest,
         imageReqRecord: GenerateImageReqRecord,
+        uid: String,
     ): Pair<String?, BufferedImage?> {
-        val uid = securityService.authentication.get().name
         val sid = genRequest.imageSessionId
         val cachedRefs = if (sid != null) uploadedImageCache.list(uid, sid) ?: emptyList() else emptyList()
-        val refs: List<NanoBanana.UriWithType> = if (genRequest.imageUrls != null) {
-            genRequest.imageUrls!!.map { u ->
-                val mt = when (u.substringAfterLast('.', "").lowercase()) {
-                    "png" -> "image/png"
-                    "jpg", "jpeg" -> "image/jpeg"
-                    else -> "image/jpeg"
-                }
-                NanoBanana.UriWithType(u, mt)
-            }
+        val refs: List<String> = if (genRequest.imageUrls != null) {
+            genRequest.imageUrls!!
         } else {
-            cachedRefs.map { r -> NanoBanana.UriWithType(r.uri, r.mimeType) }
+            cachedRefs.map { ref -> ref.uri }.toList()
         }
         val pair = nano.gen(
             genRequest.text!!,
@@ -422,6 +408,7 @@ class GenerativeImageImpl(
         val usageMetadata = pair.second
         synchronized(imageReqRecord) {
             imageReqRecord.inputTokens += usageMetadata.promptTokenCount().getOrElse { 0 }
+            imageReqRecord.thoughtsTokens += usageMetadata.thoughtsTokenCount().getOrElse { 0 }
             imageReqRecord.outputTokens += usageMetadata.candidatesTokenCount().getOrElse { 0 }
             imageReqRecord.retryCount += 1
         }
@@ -439,9 +426,9 @@ class GenerativeImageImpl(
         val finalSid = sid ?: uploadedImageCache.createSession(uid)
         val up = withContext(Dispatchers.IO) {
             val ins = runCatching { image.asInputStream() }.getOrNull() ?: return@withContext null
-            runCatching { nano.upload(ins) }.getOrNull()
+            runCatching { nano.upload(ins, image.filename) }.getOrNull()
         }
-        if (up != null) uploadedImageCache.append(uid, finalSid, coralsum.cache.UploadedImageRef(up.uri, up.mimeType))
+        if (up != null) uploadedImageCache.append(uid, finalSid, UploadedImageRef(up.uri, up.mimeType))
         return finalSid
     }
 
@@ -480,6 +467,11 @@ class GenerativeImageImpl(
                 Path(userDir).resolve("upscayl-bin")
             )
 
+            isLinux -> listOf(
+                libsDir.resolve("linux").resolve("upscayl-bin"),
+                Path(userDir).resolve("upscayl-bin")
+            )
+
             else -> listOf(
                 libsDir.resolve("linux").resolve("upscayl-bin"),
                 Path(userDir).resolve("upscayl-bin")
@@ -496,7 +488,7 @@ class GenerativeImageImpl(
     override suspend fun preview(ref: String, ip: String, token: String?): String? {
         val tokenUid = verifyToken(ref, token)
         val isTokenVisit = tokenUid != null
-        val limit = if (isTokenVisit) 10 else 3
+        val limit = if (isTokenVisit) 5 else 2
         val count = retrievalImageReqRecordRepository.countByImageRefAndIsTokenVisit(ref, isTokenVisit)
         if (count >= limit) return null
         val imageRef = generateImageReqRefRepository.findByImageRef(ref) ?: return null
@@ -519,7 +511,7 @@ class GenerativeImageImpl(
         if (record.userCode != uid) return null
         val exp = System.currentTimeMillis() + previewConfig.ttlSeconds * 1000
         val token = sign(ref, uid, exp)
-        val src = "/api/generative-image/share?ref=" + ref + "&pt=" + "$uid:$exp:$token"
+        val src = "/api/generative-image/share?ref=$ref&pt=$uid:$exp:$token"
         val time = record.createTime?.let {
             java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(it)
         } ?: ""

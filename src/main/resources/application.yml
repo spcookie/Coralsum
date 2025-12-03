@@ -161,18 +161,15 @@ pricing:
   coefficient: 1
   points-per-rmb: 100
   flash-lite:
-    tokens-per-char: 2.5
+    tokens-per-char: 1
     input-usd-per-m-tokens: 0.10
     output-usd-per-m-tokens: 0.40
   image-preview:
-    input-usd-per-m-tokens: 2.0
-    output-usd-per-m-tokens: 12.0
-    price-per-image-1k2k-usd: 0.134
-    price-per-image-4k-usd: 0.24
     tokens-per-mb: 2500
   pro:
     input-usd-per-m-tokens: 2.0
-    output-usd-per-m-tokens: 12.0
+    thoughts-usd-per-m-tokens: 12.0
+    output-usd-per-m-tokens: 120.0
     price-per-image-1k2k-usd: 0.134
     price-per-image-4k-usd: 0.24
   basic:
@@ -187,7 +184,7 @@ pricing:
   traffic:
     nat-rmb-per-gb: 1.1
     proxy-rmb-per-gb: 1.6
-    visit-multiplier: 5
+    visit-multiplier: 4
   estimate:
     png-bytes1-k: 800000
     png-bytes2-k: 1600000

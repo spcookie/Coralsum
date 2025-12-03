@@ -74,7 +74,8 @@ class PricingConfig {
 
     class Pro {
         var inputUsdPerMTokens: Double = 2.0
-        var outputUsdPerMTokens: Double = 12.0
+        var thoughtsUsdPerMTokens: Double = 12.0
+        var outputUsdPerMTokens: Double = 120.0
         var pricePerImage1k2kUsd: Double = 0.134
         var pricePerImage4kUsd: Double = 0.24
     }

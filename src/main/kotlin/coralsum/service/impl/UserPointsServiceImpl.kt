@@ -1,5 +1,6 @@
 package coralsum.service.impl
 
+import coralsum.common.enums.ImageSize
 import coralsum.common.enums.MembershipTier
 import coralsum.common.enums.SubscribeType
 import coralsum.common.event.GenerativeImageCostEvent
@@ -18,7 +19,10 @@ import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
 import java.math.BigDecimal
+import java.math.RoundingMode
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Singleton
 class UserPointsServiceImpl(
@@ -31,6 +35,8 @@ class UserPointsServiceImpl(
 
     companion object {
         private val log = logger<UserPointsServiceImpl>()
+        private const val COST_SCALE = 18
+        private val COST_ROUND = RoundingMode.HALF_UP
     }
 
     @Transactional(rollbackFor = [Exception::class])
@@ -83,6 +89,8 @@ class UserPointsServiceImpl(
         return points
     }
 
+    fun BigDecimal.divSafe(divisor: BigDecimal): BigDecimal = divide(divisor, COST_SCALE, COST_ROUND)
+
     @EventListener
     fun onGenerativeImageCostEvent(event: GenerativeImageCostEvent) {
         runBlocking {
@@ -91,95 +99,165 @@ class UserPointsServiceImpl(
                 val userPoints = getOrCreateByOpenUserId(openUser.id!!)
 
                 val pricing = pricingConfig
-                val usdToCny = pricing.usdToCny.toBigDecimal() // 汇率 USD→CNY
-                val coef = pricing.coefficient.toBigDecimal() // 成本抽成系数（积分换算系数）
 
-                // 评估阶段成本（按模型类型）
+                val usdToCny = pricing.usdToCny.toBigDecimal()
+                val coef = pricing.coefficient.toBigDecimal()
+
+                // ========= 评估阶段 =========
+
                 val evalInputChars = event.inputCharCount.toBigDecimal()
                 val evalTokensPerChar = pricing.flashLite.tokensPerChar.toBigDecimal()
-                val evalInputTokens = evalInputChars * evalTokensPerChar
-                val evalOutputTokens = evalInputChars * (2.toBigDecimal()) * evalTokensPerChar
-                val evalInputUsd =
-                    evalInputTokens / 1_000_000.toBigDecimal() * pricing.flashLite.inputUsdPerMTokens.toBigDecimal()
-                val evalOutputUsd =
-                    evalOutputTokens / 1_000_000.toBigDecimal() * pricing.flashLite.outputUsdPerMTokens.toBigDecimal()
-                val evalRmb = (evalInputUsd + evalOutputUsd) * usdToCny
 
-                // 生成阶段 输入 令牌成本（美元→人民币）
+                val evalInputTokens = evalInputChars.divSafe(evalTokensPerChar)
+                val evalOutputTokens = evalInputTokens.multiply(BigDecimal("2"))
+
+                val evalInputUsd = evalInputTokens
+                    .divSafe(BigDecimal("1000000"))
+                    .multiply(pricing.flashLite.inputUsdPerMTokens.toBigDecimal())
+
+                val evalOutputUsd = evalOutputTokens
+                    .divSafe(BigDecimal("1000000"))
+                    .multiply(pricing.flashLite.outputUsdPerMTokens.toBigDecimal())
+
+                val evalRmb = (evalInputUsd + evalOutputUsd).multiply(usdToCny)
+
+                // ========= 生成阶段 =========
+
                 val previewInputTokens = event.inputTokens.toBigDecimal()
-                val inputUsdPerMTokens = if (event.modelType.name == "BASIC") {
+
+                val inputUsdPerMTokens = if (event.modelType.name == "BASIC")
                     pricing.basic.inputUsdPerMTokens.toBigDecimal()
-                } else {
+                else
                     pricing.pro.inputUsdPerMTokens.toBigDecimal()
-                }
-                val previewInputUsd = previewInputTokens / 1_000_000.toBigDecimal() * inputUsdPerMTokens
-                val previewRmbTokens = previewInputUsd * usdToCny
 
-                // 图片输出令牌单价
-                val outputUsdPerMTokens = if (event.modelType.name == "BASIC") {
-                    pricing.basic.outputUsdPerMTokens.toBigDecimal()
+                val previewInputUsd = previewInputTokens
+                    .divSafe(BigDecimal("1000000"))
+                    .multiply(inputUsdPerMTokens)
+
+                val previewRmbTokens = previewInputUsd.multiply(usdToCny)
+
+                // ========= 输出阶段 =========
+
+                val thoughtsTokens = event.outputTokens.toBigDecimal()
+
+                val thoughtsUsdPerMTokens = if (event.modelType.name != "BASIC") {
+                    pricing.pro.thoughtsUsdPerMTokens.toBigDecimal()
                 } else {
-                    pricing.pro.outputUsdPerMTokens.toBigDecimal()
+                    BigDecimal.ZERO
                 }
 
-                // 图片输出成本
+                val thoughtsUsd = thoughtsUsdPerMTokens
+                    .divSafe(BigDecimal("1000000"))
+                    .multiply(thoughtsTokens)
+
+                val thoughtsRmb = thoughtsUsd.multiply(usdToCny)
+
+                val outputUsdPerMTokens = if (event.modelType.name == "BASIC")
+                    pricing.basic.outputUsdPerMTokens.toBigDecimal()
+                else
+                    pricing.pro.outputUsdPerMTokens.toBigDecimal()
+
                 val outTokens = event.outputTokens.toBigDecimal()
-                val outUsd = outTokens / 1_000_000.toBigDecimal() * outputUsdPerMTokens
-                val imageRmb = outUsd * usdToCny
 
-                // 流量成本（GB 为单位）：OSS（按时段），内网穿透与代理
-                val bytes = event.imageSizeBytes.toBigDecimal() // 总字节大小（所有图片）
-                val gb = bytes / 1024.toBigDecimal() / 1024.toBigDecimal() / 1024.toBigDecimal() // 字节→GB
-                val hour = java.time.Instant.ofEpochMilli(event.timestampMs).atZone(java.time.ZoneId.systemDefault()).hour
-                val busy = hour >= pricing.oss.busyStartHour && hour < pricing.oss.busyEndHour // 忙时判定
-                val ossRate = (if (busy) pricing.oss.busyRmbPerGb else pricing.oss.idleRmbPerGb).toBigDecimal() // OSS 单价
+                val outUsd = outTokens
+                    .divSafe(BigDecimal("1000000"))
+                    .multiply(outputUsdPerMTokens)
+
+                val imageRmb = outUsd.multiply(usdToCny)
+
+                // ========= 图片估算 =========
+
+                val estimateOutUsd = if (event.modelType.name == "BASIC") {
+                    pricing.basic.outputPricePerImage1kUsd
+                } else {
+                    when (event.imageSizeCategory) {
+                        ImageSize.X1, ImageSize.X2 -> pricing.pro.pricePerImage1k2kUsd
+                        else -> pricing.pro.pricePerImage4kUsd
+                    }
+                }.toBigDecimal()
+
+                val estimateImageRmb = estimateOutUsd.multiply(usdToCny)
+
+                // ========= 流量成本 =========
+
+                val bytes = event.imageSizeBytes.toBigDecimal()
+
+                val gb = bytes
+                    .divSafe(BigDecimal("1024"))
+                    .divSafe(BigDecimal("1024"))
+                    .divSafe(BigDecimal("1024"))
+
+                val hour = Instant.ofEpochMilli(event.timestampMs)
+                    .atZone(ZoneId.systemDefault())
+                    .hour
+
+                val busy = hour in pricing.oss.busyStartHour until pricing.oss.busyEndHour
+
+                val ossRate = (if (busy)
+                    pricing.oss.busyRmbPerGb
+                else
+                    pricing.oss.idleRmbPerGb).toBigDecimal()
+
                 val trafficMultiplier = pricing.traffic.visitMultiplier.toBigDecimal()
-                val ossRmb = gb * ossRate * trafficMultiplier
-                val natRmb = gb * pricing.traffic.natRmbPerGb.toBigDecimal() * trafficMultiplier
-                val proxyRmb = gb * pricing.traffic.proxyRmbPerGb.toBigDecimal() * trafficMultiplier
 
-                // 成功：全部成本；失败：仅模型调用（评估+生成令牌）
-                val baseCostRmb =
-                    if (event.success) evalRmb + previewRmbTokens + imageRmb + ossRmb + natRmb + proxyRmb else evalRmb + previewRmbTokens
+                val ossRmb = gb.multiply(ossRate).multiply(trafficMultiplier)
+                val natRmb = gb.multiply(pricing.traffic.natRmbPerGb.toBigDecimal()).multiply(trafficMultiplier)
+                val proxyRmb = gb.multiply(pricing.traffic.proxyRmbPerGb.toBigDecimal()).multiply(trafficMultiplier)
+
+                // ========= 总成本 =========
+
+                val baseCostRmb = if (event.success) {
+                    evalRmb + previewRmbTokens + thoughtsRmb + imageRmb + ossRmb + natRmb + proxyRmb
+                } else {
+                    evalRmb + previewRmbTokens + estimateImageRmb
+                }
+
                 val upExtra =
-                    if (event.success && pricing.upscayl.enabled && pricing.upscayl.chargeByScale && event.upscaylScale > 1) baseCostRmb * (event.upscaylScale - 1).toBigDecimal() else BigDecimal.ZERO
-                val totalCostRmb = baseCostRmb + upExtra
-                val pointsToDeduct = (totalCostRmb * coef * pricing.pointsPerRmb.toBigDecimal()).setScale(
-                    0,
-                    java.math.RoundingMode.HALF_UP
-                ) // 积分扣减
+                    if (event.success && pricing.upscayl.enabled && pricing.upscayl.chargeByScale && event.upscaylScale > 1)
+                        baseCostRmb.multiply((event.upscaylScale - 1).toBigDecimal())
+                    else BigDecimal.ZERO
 
-                // 扣减优先使用订阅积分，不足部分再扣永久积分
+                val totalCostRmb = baseCostRmb + upExtra
+
+                val pointsToDeduct = totalCostRmb
+                    .multiply(coef)
+                    .setScale(2, RoundingMode.HALF_UP)
+
+                // ========= 扣减逻辑 =========
+
                 var remaining = pointsToDeduct
                 if (userPoints.subscribePoints >= remaining) {
-                    userPoints.subscribePoints = userPoints.subscribePoints - remaining
+                    userPoints.subscribePoints -= remaining
                 } else {
-                    val sub = userPoints.subscribePoints
-                    remaining = remaining - sub
+                    remaining -= userPoints.subscribePoints
                     userPoints.subscribePoints = BigDecimal.ZERO
-                    userPoints.permanentPoints = userPoints.permanentPoints - remaining
+                    userPoints.permanentPoints -= remaining
                 }
-                userPointsRepository.update(userPoints)
 
-                // 扣减后根据到期时间与剩余积分修正会员等级
+                userPointsRepository.update(userPoints)
                 reconcileTier(openUser.id)
 
-                // 记录成本明细（JSON），用于审计与对账
-                val costDetail = """{
-                    "eval_rmb": ${evalRmb},
-                    "preview_rmb_tokens": ${previewRmbTokens},
-                    "image_rmb": ${imageRmb},
-                    "oss_rmb": ${ossRmb},
-                    "nat_rmb": ${natRmb},
-                    "proxy_rmb": ${proxyRmb},
-                    "upscayl_extra_rmb": ${upExtra},
-                    "upscayl_scale": ${event.upscaylScale},
-                    "total_cost_rmb": ${totalCostRmb},
-                    "points_to_deduct": ${pointsToDeduct}
-                }"""
-                val refs = if (event.recordId != null) generateImageReqRefRepository.findAllByRecordId(event.recordId) else emptyList()
+                // ========= 记录 =========
+                val costDetail = """
+                        {
+                          "eval_rmb": $evalRmb,
+                          "preview_rmb_tokens": $previewRmbTokens,
+                          "image_rmb": $imageRmb,
+                          "oss_rmb": $ossRmb,
+                          "nat_rmb": $natRmb,
+                          "proxy_rmb": $proxyRmb,
+                          "upscayl_extra_rmb": $upExtra,
+                          "upscayl_scale": ${event.upscaylScale},
+                          "total_cost_rmb": $totalCostRmb,
+                          "points_to_deduct": $pointsToDeduct
+                        }
+                        """.trimIndent()
+
+                val refs = if (event.recordId != null)
+                    generateImageReqRefRepository.findAllByRecordId(event.recordId)
+                else emptyList()
+
                 if (refs.isEmpty()) {
-                    // 失败或无图片场景：写入一条无 image_ref 的扣减记录
                     userPointsDeductionRepository.save(
                         UserPointsDeduction(
                             uid = event.uid,
@@ -191,7 +269,6 @@ class UserPointsServiceImpl(
                         )
                     )
                 } else {
-                    // 成功场景：按图片引用逐条写入扣减记录
                     for (r in refs) {
                         userPointsDeductionRepository.save(
                             UserPointsDeduction(
@@ -205,10 +282,12 @@ class UserPointsServiceImpl(
                         )
                     }
                 }
+
             } catch (e: Exception) {
                 log.error("Failed to update user points", e)
             }
         }
     }
+
 
 }

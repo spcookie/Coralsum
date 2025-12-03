@@ -1,6 +1,7 @@
 <template>
   <div class="p-4 space-y-4">
-    <div v-if="!showOverlay" class="flex flex-wrap items-center gap-1 sm:gap-1.5 text-[10px] sm:text-[11px]">
+    <div v-if="!loading && !showOverlay && (images.length === 0 || allImagesLoaded)"
+         class="flex flex-wrap items-center gap-1 sm:gap-1.5 text-[10px] sm:text-[11px]">
       <div
           class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
         <Icon class="text-[0.75rem]" icon="ph:code"/>
@@ -30,9 +31,9 @@
       <span>图片预览链接有效时间为 30 分钟，且仅有 5 次有效预览次数，请注意保存图片！</span>
     </div>
     <div class="relative">
-      <div v-if="images.length > 0" class="flex flex-wrap justify-center gap-3">
+      <div v-if="images.length > 0" class="flex flex-wrap justify-center gap-4">
         <div v-for="(img, i) in images" :key="i"
-             class="group rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px] relative">
+             class="group rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[240px] md:w-[320px] lg:w-[400px] xl:w-[480px] relative">
           <div :style="skeletonAspectStyle" class="w-full relative">
             <img
                 :ref="el => setImgRef(el, i)"
@@ -67,15 +68,15 @@
       </div>
       <transition name="fade">
         <div v-if="loading && images.length > 0" class="absolute inset-0 z-10 pointer-events-none">
-          <div class="flex flex-wrap justify-center gap-3">
+          <div class="flex flex-wrap justify-center gap-4">
             <div v-for="i in settings.candidateRadio" :key="i"
-                 class="rounded overflow-hidden bg-neutral-100/80 dark:bg-neutral-800/80 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px] relative">
+                 class="rounded overflow-hidden bg-neutral-100/80 dark:bg-neutral-800/80 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[240px] md:w-[320px] lg:w-[400px] xl:w-[480px] relative">
               <div :style="skeletonAspectStyle" class="w-full relative">
                 <div class="h-full w-full skeleton-shimmer"></div>
                 <div class="absolute inset-0 grid place-items-center">
                   <div class="flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
                     <n-spin size="small"/>
-                    <span>生成中…</span>
+                    <span>AI正在创作中...</span>
                   </div>
                 </div>
               </div>
@@ -85,15 +86,15 @@
       </transition>
     </div>
     <transition name="fade">
-      <div v-if="loading && images.length === 0" class="flex flex-wrap justify-center gap-3">
+      <div v-if="loading && images.length === 0" class="flex flex-wrap justify-center gap-4">
         <div v-for="i in settings.candidateRadio" :key="i"
-             class="rounded overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[144px] md:w-[216px] lg:w-[288px] xl:w-[360px] relative">
+             class="rounded overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-dashed border-neutral-300 dark:border-neutral-700 w-full sm:w-[240px] md:w-[320px] lg:w-[400px] xl:w-[480px] relative">
           <div :style="skeletonAspectStyle" class="w-full relative">
             <div class="h-full w-full skeleton-shimmer"></div>
             <div class="absolute inset-0 grid place-items-center">
               <div class="flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
                 <n-spin size="small"/>
-                <span>生成中…</span>
+                <span>AI正在创作中...</span>
               </div>
             </div>
           </div>

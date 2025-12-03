@@ -266,10 +266,12 @@ async function doGenerate(payload: { prompt: string; systemPrompt?: string; file
 
   } catch (e: any) {
     const msg = e?.message || '服务异常'
-    // 模拟状态码处理
     const status = e?.status
-    if (status === 401 || status === 403) {
-      message.error('未登录或未授权，请先登录')
+    if (e?.__authExpired) {
+      message.error('登录已过期，请重新登录')
+      user.requireLogin()
+    } else if (status === 401 || status === 403) {
+      message.error('未登录，请先登录')
       user.requireLogin()
     } else if (status === 500) {
       message.error('服务异常，请稍后重试')
@@ -356,8 +358,11 @@ async function pollTaskResultLoop() {
   } catch (e: any) {
     loading.value = false
     const status = e?.status
-    if (status === 401 || status === 403) {
-      message.error('未登录或未授权，请先登录')
+    if (e?.__authExpired) {
+      message.error('登录已过期，请重新登录')
+      user.requireLogin()
+    } else if (status === 401 || status === 403) {
+      message.error('未登录，请先登录')
       user.requireLogin()
     } else if (status === 500) {
       message.error('服务异常，请稍后重试')

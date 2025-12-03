@@ -640,8 +640,7 @@ const estimatedPoints = computed(() => {
   if (p.upscaylEnabled && p.upscaylChargeByScale && scale > 1) {
     total = total * scale
   }
-  const pts = Math.round(total * coef * Number(p.pointsPerRmb || 100))
-  return pts
+  return Math.round(total * coef * Number(p.pointsPerRmb || 100))
 })
 
 const badgeHidden = computed(() => estimatedPoints.value === null || promptEmpty.value)

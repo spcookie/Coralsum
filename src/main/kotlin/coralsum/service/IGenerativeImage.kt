@@ -26,7 +26,7 @@ interface IGenerativeImage {
 data class GenRequest(
     @field:Schema(description = "生成文本") val text: String? = null,
     @field:Schema(description = "参考图片URL列表") var imageUrls: List<String>? = null,
-    @field:Schema(description = "图片上传标识（会话ID）") var imageSessionId: String? = null,
+    @field:Schema(description = "图片上传标识") var imageSessionId: String? = null,
     @field:Schema(description = "候选数量") var candidateCount: Int = 1,
     @field:Schema(description = "宽高比") var aspectRatio: AspectRatio? = null,
     @field:Schema(description = "模型类型") var modelType: ModelType? = ModelType.BASIC,

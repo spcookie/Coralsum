@@ -1,6 +1,5 @@
 package coralsum.toolkit
 
-import cn.hutool.core.io.FileTypeUtil
 import com.google.common.collect.Lists
 import com.google.genai.Client
 import com.google.genai.types.*
@@ -29,12 +28,9 @@ class NanoBanana(private val apiKey: String) : Closeable {
         .apiKey(apiKey)
         .build()
 
-    @Serdeable
-    data class UriWithType(val uri: String, val mimeType: String)
-
     fun gen(
         text: String,
-        imageRefs: List<UriWithType>? = null,
+        imageRefs: List<String>? = null,
         aspectRatio: String? = null,
         system: String? = null,
         temperature: Float = 1f,
@@ -105,10 +101,11 @@ class NanoBanana(private val apiKey: String) : Closeable {
             .build()
         val contentParts: List<Part> = try {
             val parts = buildList {
-                add(Part.builder().text(text).build())
+                add(Part.fromText(text))
                 if (imageRefs != null && imageRefs.isNotEmpty()) {
                     imageRefs.forEach { ref ->
-                        add(Part.fromUri(ref.uri, ref.mimeType))
+                        val file = client.files.get(ref, GetFileConfig.builder().build())
+                        add(Part.fromUri(file.uri().get(), file.mimeType().get()))
                     }
                 }
             }
@@ -116,7 +113,6 @@ class NanoBanana(private val apiKey: String) : Closeable {
         } catch (_: Exception) {
             buildList {
                 add(Part.builder().text(text).build())
-                // 回退：不使用 File API
             }
         }
         val response: GenerateContentResponse = try {
@@ -166,15 +162,14 @@ class NanoBanana(private val apiKey: String) : Closeable {
     @Serdeable
     data class UploadedFile(val uri: String, val mimeType: String)
 
-    fun upload(imgStream: InputStream): UploadedFile {
-        val mimeType = when (val type = FileTypeUtil.getType(imgStream)) {
+    fun upload(imgStream: InputStream, fileName: String): UploadedFile {
+        val mimeType = when (val type = fileName.substringAfterLast(".")) {
             "png" -> "image/png"
             "jpg", "jpeg" -> "image/jpeg"
             else -> throw IllegalArgumentException("Unsupported image type: $type")
         }
         val file = client.files.upload(
-            imgStream,
-            0,
+            imgStream.readAllBytes(),
             UploadFileConfig.builder().mimeType(mimeType).build()
         )
         return UploadedFile(file.name().get(), mimeType)

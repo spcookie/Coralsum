@@ -328,8 +328,6 @@ export async function getEstimateParams(): Promise<{
     flashLiteOutputUsdPerMTokens: number
     proInputUsdPerMTokens: number
     proOutputUsdPerMTokens: number
-    imagePreviewInputUsdPerMTokens: number
-    imagePreviewOutputUsdPerMTokens: number
     imagePricePerResolutionUsd: Record<string, number>
     estimatedBytesPerImage: Record<string, number>
     ossBusyRmbPerGb: number
@@ -347,29 +345,41 @@ export async function getEstimateParams(): Promise<{
     const user = useUserStore()
     if (user?.token) headers.Authorization = `Bearer ${user.token}`
     const {data} = await http.get('/points/estimate-params', {headers})
+    const payload: any = (data && typeof data === 'object' && 'data' in data) ? (data as any).data : data
+    const imagePricePerResolutionUsd: Record<string, number> = {
+        '1K': Number(payload.pro_price_per_image1k2k_usd ?? 0.134),
+        '2K': Number(payload.pro_price_per_image1k2k_usd ?? 0.134),
+        '4K': Number(payload.pro_price_per_image4k_usd ?? 0.24)
+    }
+    const estimatedBytesPerImage: Record<string, number> = {
+        'PNG:1K': Number(payload.estimate_png_bytes1_k ?? 0),
+        'PNG:2K': Number(payload.estimate_png_bytes2_k ?? 0),
+        'PNG:4K': Number(payload.estimate_png_bytes4_k ?? 0),
+        'JPG:1K': Number(payload.estimate_jpg_bytes1_k ?? 0),
+        'JPG:2K': Number(payload.estimate_jpg_bytes2_k ?? 0),
+        'JPG:4K': Number(payload.estimate_jpg_bytes4_k ?? 0)
+    }
     return {
-        usdToCny: data.usd_to_cny,
-        coefficient: data.coefficient,
-        pointsPerRmb: data.points_per_rmb,
-        flashLiteTokensPerChar: data.flash_lite_tokens_per_char,
-        imagePreviewTokensPerMb: data.image_preview_tokens_per_mb,
-        flashLiteInputUsdPerMTokens: (data.flash_lite_input_usd_per_mtokens ?? data.flash_lite_input_usd_per_m_tokens),
-        flashLiteOutputUsdPerMTokens: (data.flash_lite_output_usd_per_mtokens ?? data.flash_lite_output_usd_per_m_tokens),
-        proInputUsdPerMTokens: (data.pro_input_usd_per_mtokens ?? data.pro_input_usd_per_m_tokens ?? data.image_preview_input_usd_per_mtokens ?? data.image_preview_input_usd_per_m_tokens),
-        proOutputUsdPerMTokens: (data.pro_output_usd_per_mtokens ?? data.pro_output_usd_per_m_tokens ?? data.image_preview_output_usd_per_mtokens ?? data.image_preview_output_usd_per_m_tokens),
-        imagePreviewInputUsdPerMTokens: (data.image_preview_input_usd_per_mtokens ?? data.image_preview_input_usd_per_m_tokens ?? data.pro_input_usd_per_m_tokens),
-        imagePreviewOutputUsdPerMTokens: (data.image_preview_output_usd_per_mtokens ?? data.image_preview_output_usd_per_m_tokens ?? data.pro_output_usd_per_m_tokens),
-        imagePricePerResolutionUsd: (data.image_price_per_resolution_usd || {}),
-        estimatedBytesPerImage: (data.estimated_bytes_per_image || {}),
-        ossBusyRmbPerGb: data.oss_busy_rmb_per_gb,
-        ossIdleRmbPerGb: data.oss_idle_rmb_per_gb,
-        trafficNatRmbPerGb: (data.traffic_nat_rmb_per_gb ?? data.nat_rmb_per_gb),
-        trafficProxyRmbPerGb: (data.traffic_proxy_rmb_per_gb ?? data.proxy_rmb_per_gb),
-        trafficVisitMultiplier: (data.traffic_visit_multiplier ?? data.visit_multiplier),
-        upscaylEnabled: !!data.upscayl_enabled,
-        upscaylChargeByScale: !!data.upscayl_charge_by_scale,
-        basicInputUsdPerMTokens: (data.basic_input_usd_per_mtokens ?? data.basic_input_usd_per_m_tokens),
-        basicOutputUsdPerMTokens: (data.basic_output_usd_per_mtokens ?? data.basic_output_usd_per_m_tokens),
-        basicOutputPricePerImage1kUsd: (data.basic_output_price_per_image1_kusd ?? data.basic_output_price_per_image1k_usd ?? 0.039)
+        usdToCny: Number(payload.usd_to_cny ?? 0),
+        coefficient: Number(payload.coefficient ?? 1),
+        pointsPerRmb: Number(payload.points_per_rmb ?? 100),
+        flashLiteTokensPerChar: Number(payload.flash_lite_tokens_per_char ?? 2.5),
+        imagePreviewTokensPerMb: Number(payload.image_preview_tokens_per_mb ?? 2500),
+        flashLiteInputUsdPerMTokens: Number(payload.flash_lite_input_usd_per_mtokens ?? 0),
+        flashLiteOutputUsdPerMTokens: Number(payload.flash_lite_output_usd_per_mtokens ?? 0),
+        proInputUsdPerMTokens: Number(payload.pro_input_usd_per_mtokens ?? 0),
+        proOutputUsdPerMTokens: Number(payload.pro_output_usd_per_mtokens ?? 0),
+        imagePricePerResolutionUsd,
+        estimatedBytesPerImage,
+        ossBusyRmbPerGb: Number(payload.oss_busy_rmb_per_gb ?? 0),
+        ossIdleRmbPerGb: Number(payload.oss_idle_rmb_per_gb ?? 0),
+        trafficNatRmbPerGb: Number(payload.traffic_nat_rmb_per_gb ?? 0),
+        trafficProxyRmbPerGb: Number(payload.traffic_proxy_rmb_per_gb ?? 0),
+        trafficVisitMultiplier: Number(payload.traffic_visit_multiplier ?? 1),
+        upscaylEnabled: !!payload.upscayl_enabled,
+        upscaylChargeByScale: !!payload.upscayl_charge_by_scale,
+        basicInputUsdPerMTokens: Number(payload.basic_input_usd_per_mtokens ?? 0.3),
+        basicOutputUsdPerMTokens: Number(payload.basic_output_usd_per_mtokens ?? 0.4),
+        basicOutputPricePerImage1kUsd: Number(payload.basic_output_price_per_image1k_usd ?? 0.039)
     }
 }

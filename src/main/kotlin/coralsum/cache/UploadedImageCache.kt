@@ -5,6 +5,8 @@ import io.micronaut.cache.annotation.CachePut
 import io.micronaut.cache.annotation.Cacheable
 import io.micronaut.serde.annotation.Serdeable
 import jakarta.inject.Singleton
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 @Serdeable
 data class UploadedImageRef(val uri: String, val mimeType: String)
@@ -12,7 +14,7 @@ data class UploadedImageRef(val uri: String, val mimeType: String)
 @Singleton
 class UploadedImageCache {
 
-    private val locks = java.util.concurrent.ConcurrentHashMap<String, Any>()
+    private val locks = ConcurrentHashMap<String, Any>()
 
     @Cacheable(cacheNames = ["uploaded-image-urls"], parameters = ["uid", "sid"])
     fun list(uid: String, sid: String): List<UploadedImageRef>? = null
@@ -34,7 +36,7 @@ class UploadedImageCache {
     }
 
     fun createSession(uid: String): String {
-        val sid = java.util.UUID.randomUUID().toString()
+        val sid = UUID.randomUUID().toString()
         put(uid, sid, emptyList())
         return sid
     }

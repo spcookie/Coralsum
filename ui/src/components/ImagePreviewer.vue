@@ -5,6 +5,8 @@
       :show="modelValue"
       :show-icon="false"
       :style="fullscreenModalStyle"
+      :z-index="10000"
+      to="body"
       :trap-focus="false"
       class="image-previewer-modal fullscreen"
       @update:show="onVisibleChange"
@@ -90,7 +92,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, onMounted, ref, watch} from 'vue'
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
 import {Icon} from '@iconify/vue'
 import {NButton, NModal, NSpin, useMessage} from 'naive-ui'
 import {getPreview, savePreview} from '@/utils/indexedDb'
@@ -130,6 +132,24 @@ function onVisibleChange(v: boolean) {
 
 function close() {
   emit('update:modelValue', false)
+}
+
+function onEsc(e: KeyboardEvent) {
+  if (e.key === 'Escape' && props.modelValue) close()
+}
+
+let escBound = false
+
+function bindEsc() {
+  if (escBound) return
+  window.addEventListener('keydown', onEsc)
+  escBound = true
+}
+
+function unbindEsc() {
+  if (!escBound) return
+  window.removeEventListener('keydown', onEsc)
+  escBound = false
 }
 
 function reset() {
@@ -339,6 +359,9 @@ watch(() => props.modelValue, v => {
     imgLoading.value = true
     reset();
     resolveSrc()
+    bindEsc()
+  } else {
+    unbindEsc()
   }
 })
 watch(() => props.src, () => {
@@ -350,7 +373,11 @@ onMounted(() => {
   if (props.modelValue) {
     reset();
     resolveSrc()
+    bindEsc()
   }
+})
+onUnmounted(() => {
+  unbindEsc()
 })
 
 async function resolveSrc() {

@@ -26,16 +26,13 @@ import io.micronaut.validation.Validated
 import io.micronaut.views.ModelAndView
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
-import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.Schema
-import io.swagger.v3.oas.annotations.parameters.RequestBody
-import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.NotEmpty
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URI
 import java.net.URL
+import java.util.*
 
 @Validated
 @Controller("/api/generative-image")
@@ -56,14 +53,8 @@ class GenerativeImageController(
         description = "根据文本与可选图片（支持多张）生成结果，支持宽高比、采样、格式与放大设置"
     )
     @Debounce(name = "gi.generate", windowMillis = 3000, byUid = true)
-    @ApiResponse(
-        responseCode = "200", description = "生成成功", content = [
-            Content(mediaType = MediaType.APPLICATION_JSON, schema = Schema(implementation = GenResultResponse::class))
-        ]
-    )
-    @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
     suspend fun generate(
-        @Parameter(description = "图片上传标识（会话ID）") @Part("sid") sid: String?,
+        @Parameter(description = "图片上传标识") @Part("sid") sid: String?,
         @Parameter(description = "生成文本", required = true) @Part @NotEmpty text: String,
         @Parameter(description = "系统提示") @Part system: String?,
         @Parameter(description = "宽高比") @Part aspectRatio: AspectRatio?,
@@ -165,7 +156,7 @@ class GenerativeImageController(
             "webp" -> "image/webp"
             else -> "application/octet-stream"
         }
-        val base64 = java.util.Base64.getEncoder().encodeToString(bytes)
+        val base64 = Base64.getEncoder().encodeToString(bytes)
         val dataUrl = "data:${mime};base64,${base64}"
         val parts = token.split(":")
         val uid = parts.getOrNull(0) ?: ""
@@ -199,15 +190,6 @@ class GenerativeImageController(
     @Post("/assess-intent", consumes = [MediaType.TEXT_PLAIN])
     @Operation(summary = "评估生成意图", description = "基于用户文本判断是否为生成/修改图片意图")
     @Debounce(name = "gi.assessIntent", windowMillis = 1500, byUid = true)
-    @ApiResponse(
-        responseCode = "200", description = "评估成功", content = [
-            Content(
-                mediaType = MediaType.APPLICATION_JSON,
-                schema = Schema(implementation = IntentAssessmentResponse::class)
-            )
-        ]
-    )
-    @RequestBody(content = [Content(mediaType = MediaType.TEXT_PLAIN)])
     suspend fun assessIntent(@Body @NotEmpty text: String): Res<IntentAssessmentResponse> {
         val assessment = service.assessIntent(text)
         return Res.success(
@@ -223,9 +205,8 @@ class GenerativeImageController(
     @Post("/submit-task", consumes = ["multipart/form-data"])
     @Operation(summary = "提交生成任务", description = "提交异步图片生成任务")
     @Debounce(name = "gi.submitTask", windowMillis = 3000, byUid = true)
-    @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
     suspend fun submitGenerateTask(
-        @Part("sid") sid: String?,
+        @Parameter(description = "图片上传标识") @Part("sid") sid: String?,
         @Parameter(description = "生成文本", required = true) @Part @NotEmpty text: String,
         @Parameter(description = "系统提示") @Part system: String?,
         @Parameter(description = "宽高比") @Part aspectRatio: AspectRatio?,
@@ -268,11 +249,10 @@ class GenerativeImageController(
     @Post("/upload", consumes = [MediaType.MULTIPART_FORM_DATA])
     @Operation(
         summary = "上传参考图片",
-        description = "单文件上传至 Gemini File API，并缓存（并发安全，按追加顺序）；返回会话ID"
+        description = "单文件上传，并缓存，返回会话ID"
     )
     @Debounce(name = "gi.upload", windowMillis = 3000, byUid = true)
-    @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA)])
-    suspend fun uploadImage(@Part("image") image: StreamingFileUpload, @Part("sid") sid: String?): Res<String?> {
+    suspend fun uploadImage(image: StreamingFileUpload, @Part("sid") sid: String?): Res<String?> {
         val sessionId = service.uploadImage(image, sid)
         return Res.success(sessionId)
     }
@@ -313,14 +293,6 @@ class GenerativeImageController(
     @Version("v1")
     @Get("/get-task-result")
     @Operation(summary = "查询生成任务结果", description = "获取最近一次生成任务的状态与结果")
-    @ApiResponse(
-        responseCode = "200", description = "查询成功", content = [
-            Content(
-                mediaType = MediaType.APPLICATION_JSON,
-                schema = Schema(implementation = GenTaskResultResponse::class)
-            )
-        ]
-    )
     suspend fun getGenerateTaskResult(): Res<GenTaskResultResponse> {
         val generateTaskResult = service.getGenerateTaskResult()
         return Res.success(convert.toResponse(generateTaskResult))

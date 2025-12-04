@@ -1,11 +1,11 @@
 <template>
   <n-dropdown :options="options" trigger="hover" @select="onSelect">
-    <n-button quaternary size="small">{{ currentLabel }}</n-button>
+    <n-button class="min-w-[40px] px-2" quaternary size="small">{{ currentLabel }}</n-button>
   </n-dropdown>
 </template>
 
 <script lang="ts" setup>
-import {computed} from 'vue'
+import {computed, onMounted, onUnmounted, ref} from 'vue'
 import {useI18n} from 'vue-i18n'
 import {NButton, NDropdown} from 'naive-ui'
 import http from '@/api/http'
@@ -20,7 +20,26 @@ const options = [
   {label: '繁體中文', key: 'zh-TW'}
 ]
 
+const compact = ref(false)
+
+function updateCompact() {
+  compact.value = window.innerWidth <= 640
+}
+
+onMounted(() => {
+  updateCompact()
+  window.addEventListener('resize', updateCompact)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', updateCompact)
+})
+
 const currentLabel = computed(() => {
+  if (compact.value) {
+    if (locale.value === 'zh-CN') return '简'
+    if (locale.value === 'zh-TW') return '繁'
+    return 'EN'
+  }
   const found = options.find(o => o.key === locale.value)
   return found?.label || 'Lang'
 })

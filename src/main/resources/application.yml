@@ -35,8 +35,7 @@ micronaut:
         path: ${user.dir}/s3
     aws:
       default:
-        enabled: true
-        bucket: mac-nano
+        enabled: false
   router:
     static-resources:
       swagger:
@@ -51,19 +50,21 @@ micronaut:
     generate-task-result:
       expire-after-access: 5m
       heap:
-        max-size: 100Mb
+        max-size: 50Mb
       offheap:
-        max-size: 250Mb
+        max-size: 10Mb
       disk:
         max-size: 500Mb
+        persistent: true
     generate-task-statue:
       expire-after-access: 5m
       heap:
-        max-size: 100Mb
+        max-size: 50Mb
       offheap:
-        max-size: 500Mb
+        max-size: 10Mb
       disk:
-        max-size: 1Gb
+        max-size: 500Mb
+        persistent: true
   security:
     authentication: bearer
     reject-not-found: false
@@ -117,7 +118,7 @@ micronaut:
     property-naming-strategy: SNAKE_CASE
   email:
     from:
-      email: noreply@spcookie.top
+      email: no-reply@spcookie.top
 datasources:
   default:
     url: jdbc:h2:file:${store.base}/store/data;DB_CLOSE_ON_EXIT=FALSE
@@ -150,13 +151,9 @@ jobrunr:
   dashboard:
     enabled: true
 aws:
-  region: aws-global
-  services:
-    s3:
-      endpoint-override: ${oss.endpoint}
-  s3:
-    path-style-access-enabled: false
-    chunked-encoding-enabled: false
+  region: ap-southeast-1
+oss:
+  bucket: mac-nano
 resilience4j:
   ratelimiter:
     enabled: true

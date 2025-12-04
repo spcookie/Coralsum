@@ -1,0 +1,410 @@
+{
+  "common": {
+    "ok": "確定",
+    "cancel": "取消",
+    "error": "錯誤",
+    "query": "查詢",
+    "empty": "暫無數據",
+    "action_failed": "操作失敗"
+  },
+  "auth": {
+    "login": {
+      "title": "登入"
+    },
+    "register": "註冊",
+    "forgot": "忘記密碼",
+    "reset": "重設密碼",
+    "register_title": "註冊",
+    "forgot_title": "忘記密碼"
+  },
+  "user": {
+    "profile": {
+      "language": "語言",
+      "language_updated": "語言偏好已更新"
+    }
+  },
+  "points": {
+    "balance": {
+      "title": "積分餘額",
+      "label": "目前積分"
+    },
+    "subscribe": "訂閱積分",
+    "permanent": "永久積分",
+    "expire": "訂閱到期時間",
+    "insufficient": "積分不足"
+  },
+  "app": {
+    "title": "Coralsum 生圖"
+  },
+  "profile": {
+    "modal": {
+      "title": "使用者資訊",
+      "email": "電子郵件",
+      "password": "密碼",
+      "name": "名稱",
+      "save": "儲存",
+      "cancel": "取消",
+      "send_code": "發送驗證碼",
+      "change_password": "修改密碼",
+      "old_password": "舊密碼",
+      "new_password": "新密碼",
+      "confirm_password": "確認密碼",
+      "email_code": "郵件驗證碼"
+    },
+    "logout": {
+      "title": "登出",
+      "confirm": "確定要登出嗎？",
+      "ok": "確認登出",
+      "cancel": "取消"
+    },
+    "history": {
+      "title": "歷史記錄",
+      "refresh": "刷新",
+      "empty": "暫無歷史記錄",
+      "count": "共",
+      "warning": "歷史記錄保存在您的瀏覽器本地，不會上傳到伺服器。更換設備或清理瀏覽器資料可能會丟失歷史。",
+      "expand_images": "展開圖片",
+      "delete": "刪除",
+      "confirm_delete": "確認刪除該條歷史記錄？"
+    }
+  },
+  "metrics": {
+    "input": "輸入",
+    "output": "輸出",
+    "duration": "耗時",
+    "images": "圖片"
+  },
+  "redeem": {
+    "title": "兌換積分密鑰",
+    "placeholder": "輸入密鑰",
+    "cancel": "取消",
+    "ok": "兌換",
+    "loading": "兌換中...",
+    "success": "兌換成功，積分+{points}",
+    "failed": "兌換失敗"
+  },
+  "messages": {
+    "email_required": "請輸入郵箱",
+    "email_invalid": "郵箱格式不正確",
+    "password_required": "請輸入密碼",
+    "password_invalid": "密碼需6-16位，且含字母與數字；可包含@._-!#$%^&*等符號",
+    "check_inputs": "請檢查輸入項",
+    "login_success": "登入成功",
+    "auth_expired": "登入已過期，請重新登入",
+    "auth_required": "未登入，請先登入",
+    "service_error": "服務異常，請稍後再試",
+    "login_failed": "登入失敗",
+    "please_login": "請先登入",
+    "fill_all_fields": "請完整填寫原密碼、新密碼、確認密碼與郵件驗證碼",
+    "new_pwd_len": "新密碼長度需至少 6 位",
+    "new_pwd_mismatch": "兩次輸入的新密碼不一致",
+    "no_changes": "未檢測到可保存的更改",
+    "saved_user_info": "已保存使用者資訊",
+    "logout_success": "已登出",
+    "delete_success": "已刪除該條記錄",
+    "delete_failed": "刪除失敗",
+    "confirm_password_required": "請確認密碼",
+    "code_required": "請輸入驗證碼",
+    "code_rule": "驗證碼為 6 位數字",
+    "code_sent": "驗證碼已發送，請注意查收",
+    "send_failed": "發送失敗",
+    "register_success": "註冊成功，請登入",
+    "register_failed": "註冊失敗",
+    "reset_success": "重置成功，請登入",
+    "copied": "已複製",
+    "copy_failed": "複製失敗"
+  },
+  "error": {
+    "unauthorized": "未授權",
+    "forbidden": "禁止訪問",
+    "not_found": "資源未找到",
+    "internal": "伺服器內部錯誤"
+  },
+  "share": {
+    "copy": "複製分享連結",
+    "tip": "圖片預覽連結有效時間為 30 分鐘，且僅有 5 次有效預覽次數，請注意保存圖片！",
+    "none": "無可分享連結",
+    "copied_ready": "分享連結已複製，可直接發送",
+    "copied_raw": "已複製原始連結",
+    "copy_failed": "複製失敗，請手動複製連結"
+  },
+  "overlay": {
+    "text": "用文字驅動圖像創作與編輯：生圖、局部重繪、風格遷移與擴圖一應俱全。Coralsum 保持角色一致與場景連貫，速度快、細節穩。"
+  },
+  "loading": {
+    "creating": "AI正在創作中..."
+  },
+  "preview": {
+    "zoom": "縮放",
+    "zoom_out": "縮小",
+    "zoom_in": "放大",
+    "reset": "重置",
+    "rotate_left": "左旋",
+    "rotate_right": "右旋",
+    "copy": "複製",
+    "download": "下載",
+    "copy_clipboard": "已複製到剪貼簿",
+    "copy_link": "已複製圖片連結",
+    "download_failed": "下載失敗",
+    "invalid": "圖片預覽已失效"
+  },
+  "left": {
+    "prompt": {
+      "title": "提示詞",
+      "guide": "提示指南與策略",
+      "placeholder": "輸入你的創意想法，讓 AI 為你生成圖片",
+      "guide_title": "提示指南與最佳實踐",
+      "fill": "請填寫提示詞",
+      "desc": "以自然語言描述你想生成或編輯的內容。建議包含主體、風格、構圖與色調，明確限制條件與細節，避免歧義。",
+      "open_guide": "打開提示指南"
+    },
+    "image_input": {
+      "title": "輸入圖片",
+      "tip": "可拖拽、選擇或貼上一到多張參考圖，輔助生成或進行圖像編輯。建議使用 PNG/JPG，體積適中。",
+      "drag": "拖拽、點擊選擇或貼上圖片",
+      "only_png_jpg": "僅支援 PNG/JPG 格式"
+    },
+    "system_prompt": {
+      "title": "系統提示詞",
+      "tip": "面向模型的高階指令，用於約束整體風格、行為與安全策略。建議與提示詞分離，保持客觀、簡潔。",
+      "placeholder": "設定生成風格、光影或細節，讓 AI 更精準理解你的創意"
+    },
+    "actions": {
+      "reset": "重置",
+      "generate": "生成"
+    },
+    "estimate": {
+      "tip": "估算基於當前配置與價格，實際扣減以生成結果為準"
+    },
+    "model_type": {
+      "title": "模型類型",
+      "tip": "選擇生成圖片的模型類型。高階 更高品質，基本 更經濟。",
+      "basic": "基本",
+      "pro": "高階"
+    },
+    "candidate": {
+      "title": "候選圖片數量",
+      "tip": "一次返回的候選結果數量。數量越多，耗時與消耗越高，建議按需選擇 1–4。"
+    },
+    "advanced": {
+      "title": "進階配置",
+      "tip": "展開以管理寬高比、溫度、媒體解析度、思考等級、圖片解析度、核採樣、輸出格式與超解析度。"
+    },
+    "aspect_ratio": {
+      "title": "圖片寬高比",
+      "tip": "自動：沿用輸入圖片的原始比例。也可選擇固定比例（1:1、16:9 等）以適配社交/海報等場景。",
+      "auto": "自動"
+    },
+    "temperature": {
+      "title": "溫度",
+      "tip": "溫度控制隨機性；低溫更穩定、可控，高溫更有創意、發散。建議 ≥1.0，以獲得更豐富的創意與細節。"
+    },
+    "image_size": {
+      "title": "圖片解析度",
+      "tip": "選擇目標輸出的基礎解析度尺寸，數值越大越清晰，耗時與消耗越高。"
+    },
+    "top_p": {
+      "title": "核採樣",
+      "tip": "核採樣閾值，控制輸出多樣性；值越大越豐富，越小越保守。可按需微調以平衡品質與多樣性。"
+    },
+    "output_format": {
+      "title": "輸出格式",
+      "tip": "選擇最終圖片編碼格式：PNG（無損、支援透明）、JPG（體積更小）。"
+    },
+    "upscayl": {
+      "title": "超解析度",
+      "tip": "使用 AI 對圖像進行超分與細節重建，使畫面更清晰銳利；倍率越高耗時與消耗越大。",
+      "warn": "高倍率將顯著增加計算開銷與等待時長，建議按需選擇並優先嘗試較低倍率。"
+    },
+    "reset": {
+      "confirm_title": "確認重置",
+      "confirm_content": "是否重置所有配置？"
+    },
+    "guide": {
+      "generate_title": "用於生成圖片的提示",
+      "real_scene": {
+        "title": "逼真場景",
+        "desc": "使用攝影術語，說明角度、鏡頭、光線與細節，以獲得逼真效果。"
+      },
+      "stickers": {
+        "title": "風格化插畫與貼紙",
+        "desc": "建立貼紙/圖示/素材時，明確樣式並要求透明背景。"
+      },
+      "text_accuracy": {
+        "title": "圖片中文字準確",
+        "desc": "清楚說明文字、字體風格（描述性）與整體設計。"
+      },
+      "product_photography": {
+        "title": "產品模型與商業攝影",
+        "desc": "適用於電商、廣告或品牌宣傳，輸出清晰專業的商品照片。"
+      },
+      "minimal_style": {
+        "title": "極簡風格與負空間",
+        "desc": "適合作為網站、簡報或行銷背景，便於疊加文字。"
+      },
+      "sequential_art": {
+        "title": "連續藝術（漫畫/分鏡）",
+        "desc": "以角色一致性與場景描述為基礎，構建視覺敘事。"
+      },
+      "use_search": {
+        "title": "使用搜尋建立依據",
+        "desc": "根據即時/最新資訊生成圖片，適用於新聞、天氣等時效主題。"
+      },
+      "edit_title": "用於修改圖片的提示",
+      "add_remove": {
+        "title": "新增與移除元素",
+        "desc": "提供圖片並描述更改；模型匹配原圖風格、光照與透視。"
+      },
+      "inpaint": {
+        "title": "局部重繪（語義遮罩）",
+        "desc": "透過對話定義遮罩，修改特定區域並保持其他部分不變。"
+      },
+      "style_transfer": {
+        "title": "風格遷移",
+        "desc": "提供圖片，讓模型以不同藝術風格重新創作其內容。"
+      },
+      "advanced_composition": {
+        "title": "進階合成：組合多圖",
+        "desc": "提供多張圖片作為上下文，建立新合成場景，適合模型與拼貼。"
+      },
+      "high_fidelity": {
+        "title": "高保真細節保留",
+        "desc": "在編輯請求中詳細描述關鍵細節（如臉部/徽標）以保留。"
+      },
+      "bring_to_life": {
+        "title": "讓草圖煥發活力",
+        "desc": "上傳草圖或簡筆畫，讓模型優化為成品圖片。"
+      },
+      "character_consistency": {
+        "title": "角色一致性：360° 視圖",
+        "desc": "提示不同角度並加入先前生成的參考，以保持一致性。"
+      },
+      "best_title": "最佳作法",
+      "concretize": {
+        "title": "具體化：",
+        "desc": "越具體越可控。以細緻描述取代籠統詞語，提高輸出品質。"
+      },
+      "context_intent": {
+        "title": "提供上下文與意圖：",
+        "desc": "說明用途，模型對上下文的理解會影響最終輸出。"
+      },
+      "iterate": {
+        "title": "迭代與優化：",
+        "desc": "透過對話進行小幅更改，例如調整光線或表情以逐步優化。"
+      },
+      "stepwise": {
+        "title": "分步指令：",
+        "desc": "將複雜場景拆分為步驟：背景→前景→焦點元素。"
+      },
+      "negative_prompt": {
+        "title": "語義負面提示：",
+        "desc": "用正面描述目標場景來表達缺失（例：空曠無交通跡象的街道）。"
+      },
+      "control_camera": {
+        "title": "控制鏡頭：",
+        "desc": "使用攝影/電影語言控制構圖，如 wide-angle、macro、low-angle 等。"
+      }
+    }
+  },
+  "upload": {
+    "error": {
+      "title": "上傳校驗失敗",
+      "max_files": "最多上傳10張圖片",
+      "max_total": "圖片總大小不能超過50MB"
+    }
+  },
+  "menu": {
+    "image_generate": "生圖",
+    "key_manage": "密鑰管理"
+  },
+  "keys": {
+    "config": {
+      "title": "密鑰配置生成",
+      "name": "配置名稱",
+      "placeholder_name": "例：新春活動禮包",
+      "permanent": "永久積分(RMB)",
+      "subscribe": "訂閱積分(RMB)",
+      "subscribe_type": "訂閱類型",
+      "period_unit": "週期單位",
+      "period_count": "週期數量",
+      "save": "保存配置",
+      "list": "配置列表",
+      "current": "當前選擇",
+      "query_by_name": "按名稱查詢",
+      "sort_by_id": "按ID",
+      "sort_by_status": "按狀態",
+      "none_selected": "未選擇",
+      "refresh": "刷新配置",
+      "empty": "暫無配置",
+      "choose": "選擇",
+      "confirm_enable": "確認啟用該配置？",
+      "confirm_disable": "確認禁用該配置？",
+      "summary": "配置摘要",
+      "raw_json": "原始JSON"
+    },
+    "order": {
+      "asc": "升序",
+      "desc": "降序"
+    },
+    "list": {
+      "title": "密鑰列表",
+      "query_by_key": "按 Key 查詢",
+      "sort_by_status": "按狀態",
+      "sort_by_used_time": "按使用時間",
+      "enable_batch": "批量啟用",
+      "disable_batch": "批量禁用",
+      "refresh": "刷新",
+      "columns": {
+        "id": "ID",
+        "key": "Key",
+        "status": "狀態",
+        "create_time": "創建時間",
+        "used_time": "使用時間",
+        "used_ip": "使用IP",
+        "used_uid": "使用UID",
+        "action": "操作"
+      },
+      "status": {
+        "used": "已使用",
+        "enabled": "啟用",
+        "disabled": "禁用"
+      },
+      "enable_selected_success": "已啟用選中密鑰",
+      "disable_selected_success": "已禁用選中密鑰"
+    },
+    "generate": "生成密鑰",
+    "columns": {
+      "id": "ID",
+      "name": "名稱",
+      "permanent": "永久積分",
+      "subscribe": "訂閱積分",
+      "subscribe_type": "訂閱類型",
+      "period_unit": "週期單位",
+      "period_count": "週期數量",
+      "status": "狀態",
+      "action": "操作"
+    },
+    "status": {
+      "enabled": "啟用",
+      "disabled": "禁用"
+    },
+    "view_config": "查看配置",
+    "copy": {
+      "json": "複製 JSON"
+    },
+    "msg": {
+      "select_or_save_first": "請先選擇配置或保存配置",
+      "gen_count_range": "生成數量需在 1-200 之間",
+      "generate_success": "密鑰生成成功",
+      "generate_failed": "生成失敗",
+      "config_enabled": "配置已啟用",
+      "config_disabled": "配置已禁用",
+      "save_success": "配置已保存",
+      "save_failed": "保存失敗"
+    }
+  },
+  "footer": {
+    "opensource": "Copyright © 2025 Coralsum. 專案開源，採用",
+    "mit": "MIT 授權"
+  }
+}

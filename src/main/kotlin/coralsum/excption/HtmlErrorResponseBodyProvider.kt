@@ -1,17 +1,22 @@
 package coralsum.excption
 
+import io.micronaut.context.LocalizedMessageSource
 import io.micronaut.context.annotation.Primary
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
 import io.micronaut.http.server.exceptions.response.ErrorContext
 import io.micronaut.http.server.exceptions.response.HtmlErrorResponseBodyProvider
+import io.micronaut.http.server.util.locale.HttpLocaleResolver
 import jakarta.inject.Singleton
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 @Singleton
 @Primary
-class HtmlErrorResponseBodyProvider : HtmlErrorResponseBodyProvider {
+class HtmlErrorResponseBodyProvider(
+    private val lms: LocalizedMessageSource,
+    private val localeResolver: HttpLocaleResolver,
+) : HtmlErrorResponseBodyProvider {
     override fun contentType(): String = MediaType.TEXT_HTML
 
     private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -20,10 +25,16 @@ class HtmlErrorResponseBodyProvider : HtmlErrorResponseBodyProvider {
         val status = response.status.code
         val reason = response.status.reason
         val now = ZonedDateTime.now().format(formatter)
-        val message = ""
+        val desc = lms.getMessage("error.page.description").orElse("Error occurred.")
+        val backHome = lms.getMessage("error.page.back_home").orElse("Back to Home")
+        val backPrev = lms.getMessage("error.page.back_prev").orElse("Back")
+        val timeLabel = lms.getMessage("error.page.time_label").orElse("Time")
+        val request = errorContext.request
+        val langTag =
+            request?.let { localeResolver.resolve(it).orElse(java.util.Locale.ENGLISH).toLanguageTag() } ?: "en"
         return """
         <!DOCTYPE html>
-        <html lang="zh-CN">
+        <html lang="$langTag">
         <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -56,13 +67,13 @@ class HtmlErrorResponseBodyProvider : HtmlErrorResponseBodyProvider {
         <span class="badge">$status</span>
         <h1 class="title">$reason</h1>
         </div>
-        <p class="desc">${message.ifBlank { "请求在处理过程中出现错误。请稍后再试或返回首页。" }}</p>
+        <p class="desc">$desc</p>
         <div class="meta">
-        <span>时间：$now</span>
+        <span>$timeLabel：$now</span>
         </div>
         <div class="actions">
-        <a class="btn primary" href="/">返回首页</a>
-        <a class="btn" href="javascript:history.back()">返回上一页</a>
+        <a class="btn primary" href="/">$backHome</a>
+        <a class="btn" href="javascript:history.back()">$backPrev</a>
         </div>
         </div>
         </body>

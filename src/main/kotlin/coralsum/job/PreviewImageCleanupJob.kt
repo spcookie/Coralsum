@@ -1,9 +1,10 @@
 package coralsum.job
 
+import com.aliyun.oss.OSS
+import coralsum.config.OssConfig
 import coralsum.repository.GenerateImageReqRecordRepository
 import coralsum.repository.GenerateImageReqRefRepository
 import coralsum.toolkit.logger
-import io.micronaut.objectstorage.aws.AwsS3Operations
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
 import org.jobrunr.jobs.annotations.Job
@@ -12,7 +13,8 @@ import java.time.LocalDateTime
 
 @Singleton
 class PreviewImageCleanupJob(
-    private val store: AwsS3Operations,
+    private val oss: OSS,
+    private val ossConfig: OssConfig,
     private val generateImageReqRecordRepository: GenerateImageReqRecordRepository,
     private val generateImageReqRefRepository: GenerateImageReqRefRepository,
 ) {
@@ -28,7 +30,8 @@ class PreviewImageCleanupJob(
             val refs = runBlocking { generateImageReqRefRepository.findAllByRecordId(record.id!!) }
             refs.forEach { r ->
                 try {
-                    store.delete(r.imageRef)
+                    val bucket = ossConfig.bucket ?: throw RuntimeException("OSS桶未配置")
+                    oss.deleteObject(bucket, r.imageRef)
                 } catch (e: Exception) {
                     log.warn("预览图片删除失败: {}", e.message, e)
                 }

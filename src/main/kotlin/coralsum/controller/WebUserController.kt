@@ -2,9 +2,11 @@ package coralsum.controller
 
 import coralsum.aop.Debounce
 import coralsum.common.dto.Res
+import coralsum.common.request.UpdateLanguageRequest
 import coralsum.common.request.UpdateProfileRequest
 import coralsum.common.response.ProfileResponse
 import coralsum.service.IWebUserService
+import io.micronaut.context.LocalizedMessageSource
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -23,6 +25,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 @Tag(name = "Web用户")
 class WebUserController(
     private val webUserService: IWebUserService,
+    private val lms: LocalizedMessageSource,
 ) {
     @Get("/profile")
     @Operation(summary = "获取个人档案", description = "查询当前认证用户的档案信息")
@@ -32,8 +35,14 @@ class WebUserController(
         ]
     )
     suspend fun getProfile(authentication: Authentication): Res<ProfileResponse> {
-        val uid = authentication.name ?: return Res.fail("未登录")
-        val resp = webUserService.profile(uid) ?: return Res.fail("用户不存在")
+        val uid = authentication.name ?: run {
+            val msg = lms.getMessage("error.unauthorized").orElse("Unauthorized")
+            return Res.fail(msg)
+        }
+        val resp = webUserService.profile(uid) ?: run {
+            val msg = lms.getMessage("error.not_found").orElse("Not found")
+            return Res.fail(msg)
+        }
         return Res.success(resp)
     }
 
@@ -46,10 +55,41 @@ class WebUserController(
     )
     @Debounce(name = "web.updateProfile", windowMillis = 2000, byUid = true)
     suspend fun updateProfile(authentication: Authentication, @Body req: UpdateProfileRequest): Res<ProfileResponse> {
-        val uid = authentication.name ?: return Res.fail("未登录")
+        val uid = authentication.name ?: run {
+            val msg = lms.getMessage("error.unauthorized").orElse("Unauthorized")
+            return Res.fail(msg)
+        }
         val ok = webUserService.updateNickName(uid, req.nickName)
-        if (!ok) return Res.fail("更新失败")
-        val resp = webUserService.profile(uid) ?: return Res.fail("用户不存在")
+        if (!ok) {
+            val msg = lms.getMessage("common.error").orElse("Error")
+            return Res.fail(msg)
+        }
+        val resp = webUserService.profile(uid) ?: run {
+            val msg = lms.getMessage("error.not_found").orElse("Not found")
+            return Res.fail(msg)
+        }
         return Res.success(resp)
+    }
+
+    @Put("/profile/language")
+    @Operation(summary = "更新语言偏好", description = "修改当前认证用户的语言设置")
+    @ApiResponse(responseCode = "200", description = "更新成功")
+    @Debounce(name = "web.updateLanguage", windowMillis = 2000, byUid = true)
+    suspend fun updateLanguage(
+        authentication: Authentication,
+        @Body req: UpdateLanguageRequest,
+    ): Res<Map<String, Any>> {
+        val uid = authentication.name ?: run {
+            val msg = lms.getMessage("error.unauthorized").orElse("Unauthorized")
+            return Res.fail(msg)
+        }
+        val ok = webUserService.updateLanguage(uid, req.language)
+        return if (ok) {
+            val msg = lms.getMessage("user.profile.language.updated").orElse("Updated")
+            Res.success(mapOf("message" to msg))
+        } else {
+            val msg = lms.getMessage("common.error").orElse("Error")
+            Res.fail(msg)
+        }
     }
 }

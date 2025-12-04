@@ -3,7 +3,7 @@
       class="h-14 border-b border-transparent px-3 sm:px-4 flex items-center justify-between glass bg-white/40 dark:bg-black/30">
     <div class="font-medium text-neutral-700 dark:text-neutral-200 flex items-center gap-2">
       <Icon class="text-xl" icon="solar:stars-bold-duotone"/>
-      <span>Coralsum 生图</span>
+      <span>{{ t('app.title') }}</span>
     </div>
     <div class="flex items-center gap-2 sm:gap-3 flex-wrap text-sm">
       <div class="hidden sm:flex items-center gap-2">
@@ -22,8 +22,17 @@
             </div>
           </template>
           <div class="text-xs text-white space-y-1">
-            <div>订阅积分：{{ user.subscribePoints }}</div>
-            <div>永久积分：{{ user.permanentPoints }}</div>
+            <div>{{ t('points.subscribe') }}：{{ user.subscribePoints }}</div>
+            <div>{{ t('points.permanent') }}：{{ user.permanentPoints }}</div>
+            <div v-if="user.tier==='PRO' && typeof user.subscribeExpireTime === 'number'">
+              {{ t('points.expire') }}：{{
+                formatDate(user.subscribeExpireTime as number, {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit'
+                })
+              }}
+            </div>
           </div>
         </n-tooltip>
         <n-tag v-if="user.profileReady" :color="tierTagStyle"
@@ -62,6 +71,7 @@
             <Icon icon="mdi:white-balance-sunny"/>
           </template>
         </n-switch>
+        <LanguageSwitcher/>
       </div>
 
     </div>
@@ -88,51 +98,70 @@
   </div>
   <n-modal v-model:show="user.showProfileModal" :style="{ width: '520px', maxWidth: '92vw', margin: '0 auto' }"
            preset="card"
-           title="用户信息">
-    <div class="space-y-3">
-      <div class="text-sm text-neutral-500">邮箱：{{ user.email }}</div>
-      <n-input v-model:value="nameMobile" placeholder="名称"/>
-      <n-collapse>
-        <n-collapse-item name="pwd" title="修改密码">
-          <div class="space-y-2">
-            <n-input v-model:value="oldPwd" placeholder="原密码" type="password"/>
-            <n-input v-model:value="newPwd" placeholder="新密码" type="password"/>
-            <n-input v-model:value="confirmPwd" placeholder="确认密码" type="password"/>
-            <div class="flex items-center gap-2">
-              <n-input v-model:value="emailCode" placeholder="邮箱验证码"/>
-              <n-button size="small" tertiary @click="sendCode">发送验证码</n-button>
+           :title="t('profile.modal.title')">
+    <n-form ref="profileFormRef" :model="profileForm" :rules="profileRules">
+      <div class="space-y-3">
+        <div class="text-sm text-neutral-500">{{ t('profile.modal.email') }}：{{ user.email }}</div>
+        <n-form-item path="name">
+          <n-input v-model:value="profileForm.name" :placeholder="t('profile.modal.name')"/>
+        </n-form-item>
+        <n-collapse>
+          <n-collapse-item :title="t('profile.modal.change_password')" name="pwd">
+            <div class="space-y-2">
+              <n-form-item path="oldPwd">
+                <n-input v-model:value="profileForm.oldPwd" :placeholder="t('profile.modal.old_password')"
+                         type="password"/>
+              </n-form-item>
+              <n-form-item path="newPwd">
+                <n-input v-model:value="profileForm.newPwd" :placeholder="t('profile.modal.new_password')"
+                         type="password"/>
+              </n-form-item>
+              <n-form-item path="confirmPwd">
+                <n-input v-model:value="profileForm.confirmPwd" :placeholder="t('profile.modal.confirm_password')"
+                         type="password"/>
+              </n-form-item>
+              <n-form-item path="code">
+                <div class="flex items-center gap-2">
+                  <n-input v-model:value="profileForm.emailCode" :placeholder="t('profile.modal.email_code')"
+                           class="flex-1"/>
+                  <n-button :disabled="sendCodeCd > 0 || sendCodeLoading" :loading="sendCodeLoading" size="small"
+                            tertiary @click="sendCode">{{ sendCodeLabel }}
+                  </n-button>
+                </div>
+              </n-form-item>
             </div>
-          </div>
-        </n-collapse-item>
-      </n-collapse>
-      <div class="flex gap-2 justify-end">
-        <n-button @click="user.showProfileModal=false">取消</n-button>
-        <n-button type="primary" @click="saveProfile">保存</n-button>
+          </n-collapse-item>
+        </n-collapse>
+        <div class="flex gap-2 justify-end">
+          <n-button @click="user.showProfileModal=false">{{ t('profile.modal.cancel') }}</n-button>
+          <n-button type="primary" @click="saveProfile">{{ t('profile.modal.save') }}</n-button>
+        </div>
       </div>
-    </div>
+    </n-form>
   </n-modal>
   <n-modal v-model:show="showRedeemMobile" :style="{ width: '420px', maxWidth: '92vw', margin: '0 auto' }" preset="card"
            title="兑换积分密钥">
     <div class="space-y-3">
-      <n-input v-model:value="redeemKeyMobile" placeholder="输入密钥"/>
+      <n-input v-model:value="redeemKeyMobile" :placeholder="t('redeem.placeholder')"/>
       <div class="flex gap-2 justify-end">
-        <n-button @click="showRedeemMobile=false">取消</n-button>
+        <n-button @click="showRedeemMobile=false">{{ t('redeem.cancel') }}</n-button>
         <n-button :disabled="redeemingMobile || !redeemKeyMobile.trim()" type="primary" @click="redeemMobile">
-          {{ redeemingMobile ? '兑换中...' : '兑换' }}
+          {{ redeemingMobile ? t('redeem.loading') : t('redeem.ok') }}
         </n-button>
       </div>
     </div>
   </n-modal>
   <n-modal v-model:show="user.showLoginModal" :style="{ width: '520px', maxWidth: '92vw', margin: '0 auto' }"
-           preset="card" title="登录">
+           :title="t('auth.login.title')" preset="card">
     <n-form ref="formRef" :model="loginForm" :rules="rules">
       <div class="space-y-3">
         <n-form-item path="email">
-          <n-input v-model:value="loginForm.email" placeholder="邮箱" @keydown.enter.prevent="login"/>
+          <n-input v-model:value="loginForm.email" :placeholder="t('profile.modal.email')"
+                   @keydown.enter.prevent="login"/>
         </n-form-item>
         <n-form-item path="password">
           <n-input v-model:value="loginForm.password" :type="loginPwdVisible ? 'text' : 'password'" maxlength="16"
-                   placeholder="密码" @keydown.enter.prevent="login">
+                   :placeholder="t('profile.modal.password')" @keydown.enter.prevent="login">
             <template #suffix>
               <Icon :icon="loginPwdVisible ? 'mdi:eye-off-outline' : 'mdi:eye-outline'"
                     class="cursor-pointer text-neutral-400" @click="loginPwdVisible = !loginPwdVisible"/>
@@ -141,11 +170,13 @@
         </n-form-item>
         <div class="flex gap-2 justify-between items-center">
           <div class="flex gap-2">
-            <n-button quaternary @click="goRegister">注册</n-button>
-            <n-button quaternary @click="goForgot">忘记密码</n-button>
+            <n-button quaternary @click="goRegister">{{ t('auth.register') }}</n-button>
+            <n-button quaternary @click="goForgot">{{ t('auth.forgot') }}</n-button>
           </div>
           <div class="flex gap-2">
-            <n-button :disabled="!loginValid" :loading="loginLoading" type="primary" @click="login">登录</n-button>
+            <n-button :disabled="!loginValid" :loading="loginLoading" type="primary" @click="login">
+              {{ t('auth.login.title') }}
+            </n-button>
           </div>
         </div>
       </div>
@@ -154,29 +185,29 @@
   <n-modal v-model:show="showHistory" :style="{ width: 'min(96vw, 980px)', margin: '0 auto' }" preset="card">
     <template #header>
       <div class="flex items-center gap-2">
-        <span>历史记录</span>
+        <span>{{ t('profile.history.title') }}</span>
         <n-tooltip placement="top">
           <template #trigger>
             <Icon class="text-amber-500 dark:text-amber-400 text-[1rem]" icon="ph:warning"/>
           </template>
-          请注意：历史记录保存在您的浏览器本地，不会上传到服务器。更换设备或清理浏览器数据可能会丢失历史。
+          {{ t('profile.history.warning') }}
         </n-tooltip>
       </div>
     </template>
     <div class="flex flex-col gap-3">
       <div class="flex items-center justify-between">
-        <div class="text-xs text-neutral-500">共 {{ total }} 条</div>
+        <div class="text-xs text-neutral-500">{{ t('profile.history.count') }} {{ total }}</div>
         <div class="flex items-center gap-2">
           <n-button quaternary size="small" @click="loadHistory">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:refresh"/>
-              <span>刷新</span></div>
+              <span>{{ t('profile.history.refresh') }}</span></div>
           </n-button>
         </div>
       </div>
       <n-spin :show="loadingHistory">
         <div v-if="records.length === 0" class="p-6">
-          <div class="text-center text-neutral-500">暂无历史记录</div>
+          <div class="text-center text-neutral-500">{{ t('profile.history.empty') }}</div>
         </div>
         <div v-else class="flex flex-col gap-3">
           <div v-for="r in viewRecords" :key="r.id"
@@ -186,25 +217,25 @@
                 <div
                     class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                   <Icon class="text-[0.75rem]" icon="ph:code"/>
-                  <span class="font-medium">输入</span>
+                  <span class="font-medium">{{ t('metrics.input') }}</span>
                   <span class="font-semibold tabular-nums">{{ formatTokens(r.inputTokens) }}</span>
                 </div>
                 <div
                     class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800">
                   <Icon class="text-[0.75rem]" icon="ph:sparkle"/>
-                  <span class="font-medium">输出</span>
+                  <span class="font-medium">{{ t('metrics.output') }}</span>
                   <span class="font-semibold tabular-nums">{{ formatTokens(r.outputTokens) }}</span>
                 </div>
                 <div
                     class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
                   <Icon class="text-[0.75rem]" icon="ph:timer"/>
-                  <span class="font-medium">耗时</span>
+                  <span class="font-medium">{{ t('metrics.duration') }}</span>
                   <span class="font-semibold tabular-nums">{{ formatDuration(r.durationMs) }}</span>
                 </div>
                 <div
                     class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
                   <Icon class="text-[0.75rem]" icon="ph:image"/>
-                  <span class="font-medium">图片</span>
+                  <span class="font-medium">{{ t('metrics.images') }}</span>
                   <span class="font-semibold tabular-nums">{{ r.imageCount }}</span>
                 </div>
                 <div class="ml-auto text-[11px] text-neutral-500">{{ formatTime(r.createdAt) }}</div>
@@ -213,19 +244,20 @@
                 <n-button quaternary size="small" @click="toggle(r.id)">
                   <div class="flex items-center gap-1">
                     <Icon :icon="expanded.has(r.id) ? 'mdi:chevron-up' : 'mdi:chevron-down'"/>
-                    <span>展开图片</span></div>
+                    <span>{{ t('profile.history.expand_images') }}</span></div>
                 </n-button>
-                <n-popconfirm :show-icon="false" negative-text="取消" positive-text="删除"
+                <n-popconfirm :negative-text="t('profile.modal.cancel')" :positive-text="t('profile.history.delete')"
+                              :show-icon="false"
                               @positive-click="removeRecord(r)">
                   <template #trigger>
                     <n-button quaternary size="small">
                       <div class="flex items-center gap-1 text-red-600">
                         <Icon icon="mdi:delete-outline"/>
-                        <span>删除</span>
+                        <span>{{ t('profile.history.delete') }}</span>
                       </div>
                     </n-button>
                   </template>
-                  确认删除该条历史记录？
+                  {{ t('profile.history.confirm_delete') }}
                 </n-popconfirm>
               </div>
             </div>
@@ -250,23 +282,26 @@
     <ImagePreviewer v-model:modelValue="previewShow" :src="previewSrc"/>
   </n-modal>
   <n-modal v-model:show="showLogout" :style="{ width: '420px', maxWidth: '92vw', margin: '0 auto' }" preset="card"
-           title="退出登录">
+           :title="t('profile.logout.title')">
     <div class="space-y-3">
-      <div>确定要退出登录吗？</div>
+      <div>{{ t('profile.logout.confirm') }}</div>
       <div class="flex gap-2 justify-end">
-        <n-button @click="showLogout=false">取消</n-button>
-        <n-button type="error" @click="doLogout">确认退出</n-button>
+        <n-button @click="showLogout=false">{{ t('profile.logout.cancel') }}</n-button>
+        <n-button type="error" @click="doLogout">{{ t('profile.logout.ok') }}</n-button>
       </div>
     </div>
   </n-modal>
 </template>
 
 <script lang="ts" setup>
-import {computed, onMounted, reactive, ref, watch} from 'vue'
+import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {useRouter} from 'vue-router'
 import {Icon} from '@iconify/vue'
 import {useSettingsStore} from '@/stores/settings'
 import {useUserStore} from '@/stores/user'
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import {useI18nFormat} from '@/utils/i18nFormat'
 import type {FormInst, FormRules} from 'naive-ui'
 import {
   NBadge,
@@ -300,6 +335,8 @@ import {countHistory, deleteHistory, listHistory} from '@/utils/indexedDb'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 
 const settings = useSettingsStore()
+const {t} = useI18n()
+const {formatDate} = useI18nFormat()
 const router = useRouter()
 const user = useUserStore()
 const message = useMessage()
@@ -307,23 +344,28 @@ const message = useMessage()
 const loginForm = reactive({email: '', password: ''})
 const formRef = ref<FormInst | null>(null)
 const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
-const pwdRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,16}$/
+const pwdRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@._!#$%^&*-]{6,16}$/
+const codeRegex = /^\d{6}$/
 const rules: FormRules = {
   email: [
-    {required: true, message: '请输入邮箱', trigger: ['input', 'blur']},
-    {validator: (_, v) => emailRegex.test(String(v || '')), message: '邮箱格式不正确', trigger: ['input', 'blur']}
+    {required: true, message: () => t('messages.email_required'), trigger: ['input', 'blur']},
+    {
+      validator: (_, v) => emailRegex.test(String(v || '')),
+      message: () => t('messages.email_invalid'),
+      trigger: ['input', 'blur']
+    }
   ],
   password: [
-    {required: true, message: '请输入密码', trigger: ['input', 'blur']},
+    {required: true, message: () => t('messages.password_required'), trigger: ['input', 'blur']},
     {
-      validator: (_, v) => pwdRegex.test(String(v || '')),
-      message: '密码需6-16位且含字母与数字',
+      validator: (_, v) => pwdRegex.test(String(v || '').trim()),
+      message: () => t('messages.password_invalid'),
       trigger: ['input', 'blur']
     }
   ],
 }
 const loginValid = computed(() => emailRegex.test(loginForm.email.trim()) && pwdRegex.test(loginForm.password.trim()))
-const displayName = computed(() => user.name || user.email || '未登录')
+const displayName = computed(() => user.name || user.email || t('messages.auth_required'))
 const nameParts = computed(() => {
   const base = String(displayName.value || '')
   const tag = user.profileReady && typeof user.nickTag === 'number'
@@ -358,6 +400,44 @@ const oldPwd = ref('')
 const newPwd = ref('')
 const confirmPwd = ref('')
 const emailCode = ref('')
+const profileFormRef = ref<FormInst | null>(null)
+const profileForm = reactive({name: nameParts.value.base, oldPwd: '', newPwd: '', confirmPwd: '', emailCode: ''})
+const profileRules: FormRules = {
+  newPwd: [
+    {required: true, message: () => t('messages.password_required'), trigger: ['input', 'blur']},
+    {
+      validator: (_, v) => pwdRegex.test(String(v || '').trim()),
+      message: () => t('messages.password_invalid'),
+      trigger: ['input', 'blur']
+    },
+  ],
+  oldPwd: [
+    {required: true, message: () => t('messages.password_required'), trigger: ['input', 'blur']},
+  ],
+  confirmPwd: [
+    {required: true, message: () => t('messages.confirm_password_required'), trigger: ['input', 'blur']},
+    {
+      validator: (_, v) => String(v || '').trim() === String(profileForm.newPwd || '').trim(),
+      message: () => t('messages.new_pwd_mismatch'),
+      trigger: ['input', 'blur']
+    },
+  ],
+  code: [
+    {required: true, message: () => t('messages.code_required'), trigger: ['input', 'blur']},
+    {
+      validator: (_, v) => codeRegex.test(String(v || '').trim()),
+      message: () => t('messages.code_rule'),
+      trigger: ['input', 'blur']
+    },
+  ],
+}
+const sendCodeLoading = ref(false)
+const sendCodeCd = ref(0)
+const sendCodeLabel = computed(() => {
+  const base = t('profile.modal.send_code')
+  return sendCodeCd.value > 0 ? `${base}(${sendCodeCd.value}s)` : base
+})
+let sendCodeTimer: any = null
 const redeemKeyMobile = ref('')
 const redeemingMobile = ref(false)
 const showHistory = ref(false)
@@ -384,17 +464,35 @@ async function sendCode() {
   const targetEmail = user.email
   if (!targetEmail) return
   if (!emailRegex.test(targetEmail)) {
-    message.error('邮箱格式不正确');
+    message.error(t('messages.email_invalid'));
     return
   }
-  await sendEmailCode(targetEmail, 'RESET')
+  if (sendCodeLoading.value || sendCodeCd.value > 0) return
+  sendCodeLoading.value = true
+  try {
+    await sendEmailCode(targetEmail, 'RESET')
+    message.success(t('messages.code_sent'))
+    sendCodeCd.value = 60
+    if (sendCodeTimer) clearInterval(sendCodeTimer)
+    sendCodeTimer = setInterval(() => {
+      sendCodeCd.value = Math.max(0, sendCodeCd.value - 1)
+      if (sendCodeCd.value === 0) {
+        clearInterval(sendCodeTimer)
+        sendCodeTimer = null
+      }
+    }, 1000)
+  } catch (e: any) {
+    message.error(e?.message || t('messages.send_failed'))
+  } finally {
+    sendCodeLoading.value = false
+  }
 }
 
 async function login() {
   try {
     if (loginLoading.value) return
     if (!loginValid.value) {
-      message.error('请检查输入项');
+      message.error(t('messages.check_inputs'));
       return
     }
     loginLoading.value = true
@@ -411,18 +509,18 @@ async function login() {
     user.showLoginModal = false
     loginForm.email = ''
     loginForm.password = ''
-    message.success('登录成功')
+    message.success(t('messages.login_success'))
     // 历史记录模块已移除
   } catch (e: any) {
     const status = e?.status
     if (status === 401 || status === 403) {
       const expired = !!(e?.__authExpired)
-      message.error(expired ? '登录已过期，请重新登录' : '未登录，请先登录')
+      message.error(expired ? t('messages.auth_expired') : t('messages.auth_required'))
       user.requireLogin()
     } else if (status === 500) {
-      message.error('服务异常，请稍后重试')
+      message.error(t('messages.service_error'))
     } else {
-      message.error(e?.message || '登录失败')
+      message.error(e?.message || t('messages.login_failed'))
     }
   } finally {
     loginLoading.value = false
@@ -442,33 +540,27 @@ function goForgot() {
 
 async function saveProfile() {
   if (!user.profileReady) {
-    message.error('请先登录')
+    message.error(t('messages.please_login'))
     user.requireLogin()
     return
   }
-  const newName = nameMobile.value.trim()
+  const newName = String(profileForm.name || '').trim()
   const doName = !!newName && newName !== user.name
-  const hasPwdInput = !!(oldPwd.value || newPwd.value || confirmPwd.value || emailCode.value)
+  const hasPwdInput = !!(profileForm.oldPwd || profileForm.newPwd || profileForm.confirmPwd || profileForm.emailCode)
 
   try {
     if (hasPwdInput) {
-      if (!oldPwd.value || !newPwd.value || !confirmPwd.value || !emailCode.value) {
-        message.error('请完整填写原密码、新密码、确认密码与邮箱验证码')
-        return
-      }
-      if (newPwd.value.length < 6) {
-        message.error('新密码长度需至少 6 位')
-        return
-      }
-      if (newPwd.value !== confirmPwd.value) {
-        message.error('两次输入的新密码不一致')
-        return
-      }
-      await changePassword(user.email, oldPwd.value.trim(), newPwd.value.trim(), emailCode.value.trim())
-      oldPwd.value = ''
-      newPwd.value = ''
-      confirmPwd.value = ''
-      emailCode.value = ''
+      await profileFormRef.value?.validate()
+      await changePassword(
+          user.email,
+          String(profileForm.oldPwd || '').trim(),
+          String(profileForm.newPwd || '').trim(),
+          String(profileForm.emailCode || '').trim()
+      )
+      profileForm.oldPwd = ''
+      profileForm.newPwd = ''
+      profileForm.confirmPwd = ''
+      profileForm.emailCode = ''
     }
 
     if (doName) {
@@ -478,22 +570,22 @@ async function saveProfile() {
     }
 
     if (!hasPwdInput && !doName) {
-      message.warning('未检测到可保存的更改')
+      message.warning(t('messages.no_changes'))
       return
     }
 
     user.showProfileModal = false
-    message.success('已保存用户信息')
+    message.success(t('messages.saved_user_info'))
   } catch (e: any) {
     const status = e?.status
     if (status === 401 || status === 403) {
       const expired = !!(e?.__authExpired)
-      message.error(expired ? '登录已过期，请重新登录' : '未登录，请先登录')
+      message.error(expired ? t('messages.auth_expired') : t('messages.auth_required'))
       user.requireLogin()
     } else if (status === 500) {
-      message.error('服务异常，请稍后重试')
+      message.error(t('messages.service_error'))
     } else {
-      message.error(e?.message || '保存失败')
+      message.error(e?.message || t('messages.delete_failed'))
     }
   }
 }
@@ -501,7 +593,7 @@ async function saveProfile() {
 
 function redeemMobile() {
   if (!user.profileReady) {
-    message.error('请先登录')
+    message.error(t('messages.please_login'))
     user.requireLogin()
     return
   }
@@ -516,7 +608,7 @@ function redeemMobile() {
             user.setProfile({...profile})
           } catch {
           }
-          message.success(`兑换成功，积分+${addedView.toFixed(0)}`)
+          message.success(t('redeem.success', {points: addedView.toFixed(0)}))
           redeemKeyMobile.value = ''
           showRedeemMobile.value = false
         })
@@ -524,12 +616,12 @@ function redeemMobile() {
           const status = e?.status
           if (status === 401 || status === 403) {
             const expired = !!(e?.__authExpired)
-            message.error(expired ? '登录已过期，请重新登录' : '未登录，请先登录')
+            message.error(expired ? t('messages.auth_expired') : t('messages.auth_required'))
             user.requireLogin()
           } else if (status === 500) {
-            message.error('服务异常，请稍后重试')
+            message.error(t('messages.service_error'))
           } else {
-            message.error(e?.message || '兑换失败')
+            message.error(e?.message || t('redeem.failed'))
           }
         })
         .finally(() => {
@@ -579,7 +671,7 @@ watch(() => user.email, async (nv) => {
 })
 
 watch(() => user.showProfileModal, (v) => {
-  if (v) nameMobile.value = nameParts.value.base
+  if (v) profileForm.name = nameParts.value.base
 })
 
 function openHistory() {
@@ -667,11 +759,15 @@ function openPreview(src: string) {
 function doLogout() {
   try {
     user.logout()
-    message.success('已退出登录')
+    message.success(t('messages.logout_success'))
   } finally {
     showLogout.value = false
   }
 }
+
+onUnmounted(() => {
+  if (sendCodeTimer) clearInterval(sendCodeTimer)
+})
 
 async function removeRecord(r: any) {
   try {
@@ -687,9 +783,9 @@ async function removeRecord(r: any) {
     if (page.value > maxPage) page.value = maxPage
     expanded.value.delete(r.id)
     await loadHistory()
-    message.success('已删除该条记录')
+    message.success(t('messages.delete_success'))
   } catch {
-    message.error('删除失败')
+    message.error(t('messages.delete_failed'))
   }
 }
 

@@ -16,6 +16,10 @@ guava = "33.0.0-jre"
 jobrunr = "8.3.0"
 objectstorage = "2.10.0"
 r2dbc-h2 = "1.1.0.RELEASE"
+aliyun-oss = "3.17.4"
+jaxb-api = "2.3.1"
+activation = "1.1.1"
+jaxb-runtime = "2.3.3"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin-plugin" }
@@ -93,3 +97,7 @@ micronaut-serde-processor = { module = "io.micronaut.serde:micronaut-serde-proce
 micronaut-validation-processor = { module = "io.micronaut.validation:micronaut-validation-processor" }
 micronaut-security-annotations = { module = "io.micronaut.security:micronaut-security-annotations" }
 mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }
+aliyun-sdk-oss = { module = "com.aliyun.oss:aliyun-sdk-oss", version.ref = "aliyun-oss" }
+jaxb-api = { module = "javax.xml.bind:jaxb-api", version.ref = "jaxb-api" }
+javax-activation = { module = "javax.activation:activation", version.ref = "activation" }
+jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb-runtime" }

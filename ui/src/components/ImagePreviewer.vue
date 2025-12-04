@@ -18,7 +18,10 @@
         </n-button>
       </div>
       <div class="absolute top-8 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-        <div class="scale-indicator px-3 py-1 rounded-md text-xs">缩放 {{ (scale * 100).toFixed(0) }}%</div>
+        <div class="scale-indicator px-3 py-1 rounded-md text-xs">{{ t('preview.zoom') }} {{
+            (scale * 100).toFixed(0)
+          }}%
+        </div>
       </div>
       <div
           ref="canvasRef"
@@ -46,43 +49,43 @@
           <n-button class="control-btn" size="small" strong @click="zoomOut">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:magnify-minus-outline"/>
-              <span>缩小</span>
+              <span>{{ t('preview.zoom_out') }}</span>
             </div>
           </n-button>
           <n-button class="control-btn" size="small" strong @click="zoomIn">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:magnify-plus-outline"/>
-              <span>放大</span>
+              <span>{{ t('preview.zoom_in') }}</span>
             </div>
           </n-button>
           <n-button class="control-btn" size="small" strong @click="reset">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:restart"/>
-              <span>重置</span>
+              <span>{{ t('preview.reset') }}</span>
             </div>
           </n-button>
           <n-button class="control-btn" size="small" strong @click="rotateLeft">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:rotate-left"/>
-              <span>左旋</span>
+              <span>{{ t('preview.rotate_left') }}</span>
             </div>
           </n-button>
           <n-button class="control-btn" size="small" strong @click="rotateRight">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:rotate-right"/>
-              <span>右旋</span>
+              <span>{{ t('preview.rotate_right') }}</span>
             </div>
           </n-button>
           <n-button class="control-btn" size="small" strong @click="copyImage">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:content-copy"/>
-              <span>复制</span>
+              <span>{{ t('preview.copy') }}</span>
             </div>
           </n-button>
           <n-button class="control-btn" size="small" strong @click="downloadImage">
             <div class="flex items-center gap-1">
               <Icon icon="mdi:download"/>
-              <span>下载</span>
+              <span>{{ t('preview.download') }}</span>
             </div>
           </n-button>
         </div>
@@ -286,13 +289,13 @@ async function copyImage() {
     }
     if (blob && navigator.clipboard && 'write' in navigator.clipboard && (window as any).ClipboardItem) {
       await (navigator.clipboard as any).write([new (window as any).ClipboardItem({[blob.type]: blob})])
-      message?.success('已复制到剪贴板')
+      message?.success(t('preview.copy_clipboard'))
     } else {
       await copyText(props.src)
-      message?.success('已复制图片链接')
+      message?.success(t('preview.copy_link'))
     }
   } catch (e) {
-    message?.error('复制失败')
+    message?.error(t('share.copy_failed'))
   }
 }
 
@@ -350,7 +353,7 @@ async function downloadImage() {
       a.remove()
     }
   } catch (e) {
-    message?.error('下载失败')
+    message?.error(t('preview.download_failed'))
   }
 }
 
@@ -443,3 +446,4 @@ async function resolveSrc() {
   color: rgba(255, 255, 255, 0.85);
 }
 </style>
+const { t } = useI18n()

@@ -1,14 +1,14 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4">
-    <n-card style="max-width: 520px; width: 92vw" title="注册">
+    <n-card :title="t('auth.register_title')" style="max-width: 520px; width: 92vw">
       <n-form ref="formRef" :model="form" :rules="rules">
         <div class="space-y-3">
           <n-form-item path="email">
-            <n-input v-model:value="form.email" placeholder="邮箱"/>
+            <n-input v-model:value="form.email" :placeholder="t('profile.modal.email')"/>
           </n-form-item>
           <n-form-item path="password">
             <n-input v-model:value="form.password" :type="regPwdVisible ? 'text' : 'password'" maxlength="16"
-                     placeholder="密码">
+                     :placeholder="t('profile.modal.password')">
               <template #suffix>
                 <Icon :icon="regPwdVisible ? 'mdi:eye-off-outline' : 'mdi:eye-outline'"
                       class="cursor-pointer text-neutral-400" @click="regPwdVisible = !regPwdVisible"/>
@@ -17,29 +17,32 @@
           </n-form-item>
           <n-form-item path="confirm">
             <n-input v-model:value="form.confirm" :type="regConfirmVisible ? 'text' : 'password'" maxlength="16"
-                     placeholder="确认密码">
+                     :placeholder="t('profile.modal.confirm_password')">
               <template #suffix>
                 <Icon :icon="regConfirmVisible ? 'mdi:eye-off-outline' : 'mdi:eye-outline'"
                       class="cursor-pointer text-neutral-400" @click="regConfirmVisible = !regConfirmVisible"/>
               </template>
             </n-input>
           </n-form-item>
-          <div class="flex items-center gap-2">
-            <n-form-item class="flex-1" path="code">
-              <n-input v-model:value="form.code" maxlength="6" placeholder="邮箱验证码"/>
-            </n-form-item>
-            <n-button
-                :disabled="sendCodeCd > 0 || sendCodeLoading"
-                :loading="sendCodeLoading"
-                size="small"
-                tertiary
-                @click="sendCode"
-            >{{ sendCodeLabel }}
-            </n-button>
-          </div>
+          <n-form-item path="code">
+            <div class="flex items-center gap-2">
+              <n-input v-model:value="form.code" :placeholder="t('profile.modal.email_code')" class="flex-1"
+                       maxlength="6"/>
+              <n-button
+                  :disabled="sendCodeCd > 0 || sendCodeLoading"
+                  :loading="sendCodeLoading"
+                  size="medium"
+                  tertiary
+                  @click="sendCode"
+              >{{ sendCodeLabel }}
+              </n-button>
+            </div>
+          </n-form-item>
           <div class="flex gap-2 justify-end">
-            <n-button @click="goLogin">已有账号？去登录</n-button>
-            <n-button :disabled="!valid" :loading="registerLoading" type="primary" @click="doRegister">注册</n-button>
+            <n-button @click="goLogin">{{ t('auth.login.title') }}</n-button>
+            <n-button :disabled="!valid" :loading="registerLoading" type="primary" @click="doRegister">
+              {{ t('auth.register') }}
+            </n-button>
           </div>
         </div>
       </n-form>
@@ -49,6 +52,7 @@
 
 <script lang="ts" setup>
 import {computed, onUnmounted, reactive, ref} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {useRouter} from 'vue-router'
 import type {FormInst, FormRules} from 'naive-ui'
 import {NButton, NCard, NForm, NFormItem, NInput, useMessage} from 'naive-ui'
@@ -57,6 +61,7 @@ import {register, sendEmailCode} from '@/api'
 import {useUserStore} from '@/stores/user'
 
 const router = useRouter()
+const {t} = useI18n()
 const message = useMessage()
 const user = useUserStore()
 const formRef = ref<FormInst | null>(null)
@@ -66,47 +71,62 @@ const regConfirmVisible = ref(false)
 const registerLoading = ref(false)
 const sendCodeLoading = ref(false)
 const sendCodeCd = ref(0)
-const sendCodeLabel = computed(() => sendCodeCd.value > 0 ? `重新发送(${sendCodeCd.value}s)` : '发送验证码')
+const sendCodeLabel = computed(() => {
+  const base = t('profile.modal.send_code')
+  return sendCodeCd.value > 0 ? `${base}(${sendCodeCd.value}s)` : base
+})
 let sendCodeTimer: any = null
 const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
-const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/
-const codeRegex = /^\d{4,6}$/
+const pwdRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@._!#$%^&*-]{6,16}$/
+const codeRegex = /^\d{6}$/
 const rules: FormRules = {
   email: [
-    {required: true, message: '请输入邮箱', trigger: ['input', 'blur']},
-    {validator: (_, v) => emailRegex.test(String(v || '')), message: '邮箱格式不正确', trigger: ['input', 'blur']}
+    {required: true, message: () => t('messages.email_required'), trigger: ['input', 'blur']},
+    {
+      validator: (_, v) => emailRegex.test(String(v || '').trim()),
+      message: () => t('messages.email_invalid'),
+      trigger: ['input', 'blur']
+    }
   ],
   password: [
-    {required: true, message: '请输入密码', trigger: ['input', 'blur']},
+    {required: true, message: () => t('messages.password_required'), trigger: ['input', 'blur']},
     {
-      validator: (_, v) => pwdRegex.test(String(v || '')),
-      message: '至少8位且含大小写字母和数字',
+      validator: (_, v) => pwdRegex.test(String(v || '').trim()),
+      message: () => t('messages.password_invalid'),
       trigger: ['input', 'blur']
     }
   ],
   confirm: [
-    {required: true, message: '请确认密码', trigger: ['input', 'blur']},
-    {validator: (_, v) => String(v || '') === form.password, message: '两次输入不一致', trigger: ['input', 'blur']}
+    {required: true, message: () => t('messages.confirm_password_required'), trigger: ['input', 'blur']},
+    {
+      validator: (_, v) => String(v || '').trim() === form.password.trim(),
+      message: () => t('messages.new_pwd_mismatch'),
+      trigger: ['input', 'blur']
+    }
   ],
   code: [
-    {required: true, message: '请输入验证码', trigger: ['input', 'blur']},
-    {validator: (_, v) => codeRegex.test(String(v || '')), message: '验证码为4-6位数字', trigger: ['input', 'blur']}
+    {required: true, message: () => t('messages.code_required'), trigger: ['input', 'blur']},
+    {
+      validator: (_, v) => codeRegex.test(String(v || '').trim()),
+      message: () => t('messages.code_rule'),
+      trigger: ['input', 'blur']
+    }
   ]
 }
-const valid = computed(() => emailRegex.test(form.email.trim()) && pwdRegex.test(form.password.trim()) && form.confirm === form.password && codeRegex.test(form.code.trim()))
+const valid = computed(() => emailRegex.test(form.email.trim()) && pwdRegex.test(form.password.trim()) && form.confirm.trim() === form.password.trim() && codeRegex.test(form.code.trim()))
 
 async function sendCode() {
   const email = form.email.trim()
   if (!emailRegex.test(email)) {
-    message.error('请先填写正确邮箱');
+    message.error(t('messages.email_invalid'));
     return
   }
   if (sendCodeLoading.value || sendCodeCd.value > 0) return
   sendCodeLoading.value = true
   try {
     await sendEmailCode(email)
-    message.success('验证码已发送，请注意查收')
-    sendCodeCd.value = 5
+    message.success(t('messages.code_sent'))
+    sendCodeCd.value = 60
     if (sendCodeTimer) clearInterval(sendCodeTimer)
     sendCodeTimer = setInterval(() => {
       sendCodeCd.value = Math.max(0, sendCodeCd.value - 1)
@@ -116,7 +136,7 @@ async function sendCode() {
       }
     }, 1000)
   } catch (e: any) {
-    message.error(e?.message || '发送失败')
+    message.error(e?.message || t('messages.send_failed'))
   } finally {
     sendCodeLoading.value = false
   }
@@ -130,16 +150,16 @@ async function doRegister() {
   try {
     if (registerLoading.value) return
     if (!valid.value) {
-      message.error('请检查输入项');
+      message.error(t('messages.check_inputs'));
       return
     }
     registerLoading.value = true
     await register(form.email.trim(), form.password.trim(), form.code.trim())
-    message.success('注册成功，请登录')
+    message.success(t('messages.register_success'))
     user.requireLogin()
     router.push('/')
   } catch (e: any) {
-    message.error(e?.message || '注册失败')
+    message.error(e?.message || t('messages.register_failed'))
   } finally {
     registerLoading.value = false
   }

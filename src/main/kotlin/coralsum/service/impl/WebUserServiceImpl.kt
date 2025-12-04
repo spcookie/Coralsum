@@ -14,6 +14,7 @@ import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.ZoneId
 
 @Singleton
 class WebUserServiceImpl(
@@ -46,7 +47,11 @@ class WebUserServiceImpl(
                 2,
                 RoundingMode.HALF_UP
             ) * 100.toBigDecimal()).toInt(),
-            tier = userPoints?.tier ?: MembershipTier.FREE
+            subscribeExpireTime = userPoints?.subscribeExpireTime?.let {
+                it.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            },
+            tier = userPoints?.tier ?: MembershipTier.FREE,
+            language = openUser.language
         )
     }
 
@@ -176,5 +181,19 @@ class WebUserServiceImpl(
         val updated = outletWeb.copy(nickName = sanitized, nickTag = allocated)
         outletUserRepository.update(updated)
         return true
+    }
+
+    @Transactional(rollbackFor = [Exception::class])
+    override suspend fun updateLanguage(uid: String, language: String): Boolean {
+        // 更新用户语言偏好（简单校验与保存）
+        val openUser = openUserRepository.findByUid(uid) ?: return false
+        val normalized = coralsum.i18n.LocaleUtils.parseLocale(language).toLanguageTag()
+        val updated = openUser.copy(language = normalized)
+        return try {
+            openUserRepository.update(updated)
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 }

@@ -19,6 +19,9 @@ data class OpenUser(
 
     val assignRole: String? = null,
 
+    // 用户语言偏好（示例：en、zh-CN、zh-TW）
+    val language: String? = null,
+
     @field:DateCreated
     val createTime: LocalDateTime? = null,
 

@@ -7,7 +7,7 @@
           <Icon class="text-xl" icon="mdi:account-cog"/>
         </n-button>
       </template>
-      用户信息
+      {{ t('profile.modal.title') }}
     </n-tooltip>
 
     <n-tooltip v-if="user.profileReady && (user.permissions || []).includes('CTL')" placement="right">
@@ -16,7 +16,7 @@
           <Icon :icon="onCtlPage ? 'mdi:image' : 'mdi:key-chain'" class="text-xl"/>
         </n-button>
       </template>
-      {{ onCtlPage ? '图片生成' : '密钥管理' }}
+      {{ onCtlPage ? t('menu.image_generate') : t('menu.key_manage') }}
     </n-tooltip>
     <n-tooltip v-if="user.profileReady" placement="right">
       <template #trigger>
@@ -24,7 +24,7 @@
           <Icon class="text-xl" icon="mdi:key"/>
         </n-button>
       </template>
-      兑换密钥
+      {{ t('redeem.title') }}
     </n-tooltip>
     <n-tooltip v-if="user.profileReady" placement="right">
       <template #trigger>
@@ -32,7 +32,7 @@
           <Icon class="text-xl" icon="mdi:history"/>
         </n-button>
       </template>
-      历史记录
+      {{ t('profile.history.title') }}
     </n-tooltip>
 
     <n-tooltip v-if="!user.profileReady" placement="right">
@@ -41,7 +41,7 @@
           <Icon class="text-xl" icon="mdi:account-arrow-right"/>
         </n-button>
       </template>
-      登录
+      {{ t('auth.login.title') }}
     </n-tooltip>
 
     <n-tooltip v-if="user.profileReady" placement="right">
@@ -50,17 +50,17 @@
           <Icon class="text-xl" icon="mdi:logout"/>
         </n-button>
       </template>
-      退出登录
+      {{ t('profile.logout.title') }}
     </n-tooltip>
 
     <n-modal v-model:show="showRedeem" :style="{ width: '420px', maxWidth: '92vw', margin: '0 auto' }" preset="card"
-             title="兑换积分密钥">
+             :title="t('redeem.title')">
       <div class="space-y-3">
-        <n-input v-model:value="redeemKey" placeholder="输入密钥"/>
+        <n-input v-model:value="redeemKey" :placeholder="t('redeem.placeholder')"/>
         <div class="flex gap-2 justify-end">
-          <n-button @click="showRedeem=false">取消</n-button>
+          <n-button @click="showRedeem=false">{{ t('redeem.cancel') }}</n-button>
           <n-button :disabled="redeeming || !redeemKey.trim()" type="primary" @click="redeem">
-            {{ redeeming ? '兑换中...' : '兑换' }}
+            {{ redeeming ? t('redeem.loading') : t('redeem.ok') }}
           </n-button>
         </div>
       </div>
@@ -68,29 +68,29 @@
     <n-modal v-model:show="showHistory" :style="{ width: 'min(96vw, 980px)', margin: '0 auto' }" preset="card">
       <template #header>
         <div class="flex items-center gap-2">
-          <span>历史记录</span>
+          <span>{{ t('profile.history.title') }}</span>
           <n-tooltip placement="top">
             <template #trigger>
               <Icon class="text-amber-500 dark:text-amber-400 text-[1rem]" icon="ph:warning"/>
             </template>
-            请注意：历史记录保存在您的浏览器本地，不会上传到服务器。更换设备或清理浏览器数据可能会丢失历史。
+            {{ t('profile.history.warning') }}
           </n-tooltip>
         </div>
       </template>
       <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between">
-          <div class="text-xs text-neutral-500">共 {{ total }} 条</div>
+          <div class="text-xs text-neutral-500">{{ t('profile.history.count') }} {{ total }}</div>
           <div class="flex items-center gap-2">
             <n-button quaternary size="small" @click="loadHistory">
               <div class="flex items-center gap-1">
                 <Icon icon="mdi:refresh"/>
-                <span>刷新</span></div>
+                <span>{{ t('profile.history.refresh') }}</span></div>
             </n-button>
           </div>
         </div>
         <n-spin :show="loadingHistory">
           <div v-if="records.length === 0" class="p-6">
-            <div class="text-center text-neutral-500">暂无历史记录</div>
+            <div class="text-center text-neutral-500">{{ t('profile.history.empty') }}</div>
           </div>
           <div v-else class="flex flex-col gap-3">
             <div v-for="r in viewRecords" :key="r.id"
@@ -100,25 +100,25 @@
                   <div
                       class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                     <Icon class="text-[0.75rem]" icon="ph:code"/>
-                    <span class="font-medium">输入</span>
+                    <span class="font-medium">{{ t('metrics.input') }}</span>
                     <span class="font-semibold tabular-nums">{{ formatTokens(r.inputTokens) }}</span>
                   </div>
                   <div
                       class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800">
                     <Icon class="text-[0.75rem]" icon="ph:sparkle"/>
-                    <span class="font-medium">输出</span>
+                    <span class="font-medium">{{ t('metrics.output') }}</span>
                     <span class="font-semibold tabular-nums">{{ formatTokens(r.outputTokens) }}</span>
                   </div>
                   <div
                       class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
                     <Icon class="text-[0.75rem]" icon="ph:timer"/>
-                    <span class="font-medium">耗时</span>
+                    <span class="font-medium">{{ t('metrics.duration') }}</span>
                     <span class="font-semibold tabular-nums">{{ formatDuration(r.durationMs) }}</span>
                   </div>
                   <div
                       class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
                     <Icon class="text-[0.75rem]" icon="ph:image"/>
-                    <span class="font-medium">图片</span>
+                    <span class="font-medium">{{ t('metrics.images') }}</span>
                     <span class="font-semibold tabular-nums">{{ r.imageCount }}</span>
                   </div>
                   <div class="ml-auto text-[11px] text-neutral-500">{{ formatTime(r.createdAt) }}</div>
@@ -127,19 +127,20 @@
                   <n-button quaternary size="small" @click="toggle(r.id)">
                     <div class="flex items-center gap-1">
                       <Icon :icon="expanded.has(r.id) ? 'mdi:chevron-up' : 'mdi:chevron-down'"/>
-                      <span>展开图片</span></div>
+                      <span>{{ t('profile.history.expand_images') }}</span></div>
                   </n-button>
-                  <n-popconfirm :show-icon="false" negative-text="取消" positive-text="删除"
+                  <n-popconfirm :negative-text="t('profile.modal.cancel')" :positive-text="t('profile.history.delete')"
+                                :show-icon="false"
                                 @positive-click="removeRecord(r)">
                     <template #trigger>
                       <n-button quaternary size="small">
                         <div class="flex items-center gap-1 text-red-600">
                           <Icon icon="mdi:delete-outline"/>
-                          <span>删除</span>
+                          <span>{{ t('profile.history.delete') }}</span>
                         </div>
                       </n-button>
                     </template>
-                    确认删除该条历史记录？
+                    {{ t('profile.history.confirm_delete') }}
                   </n-popconfirm>
                 </div>
               </div>
@@ -164,12 +165,12 @@
       <ImagePreviewer v-model:modelValue="previewShow" :src="previewSrc"/>
     </n-modal>
     <n-modal v-model:show="showLogout" :style="{ width: '420px', maxWidth: '92vw', margin: '0 auto' }" preset="card"
-             title="退出登录">
+             :title="t('profile.logout.title')">
       <div class="space-y-3">
-        <div>确定要退出登录吗？</div>
+        <div>{{ t('profile.logout.confirm') }}</div>
         <div class="flex gap-2 justify-end">
-          <n-button @click="showLogout=false">取消</n-button>
-          <n-button type="error" @click="doLogout">确认退出</n-button>
+          <n-button @click="showLogout=false">{{ t('profile.logout.cancel') }}</n-button>
+          <n-button type="error" @click="doLogout">{{ t('profile.logout.ok') }}</n-button>
         </div>
       </div>
     </n-modal>
@@ -178,6 +179,7 @@
 
 <script lang="ts" setup>
 import {computed, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {Icon} from '@iconify/vue'
 import {useUserStore} from '@/stores/user'
 import {NButton, NInput, NModal, NPagination, NPopconfirm, NSpin, NTooltip, useMessage} from 'naive-ui'
@@ -187,6 +189,7 @@ import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {useRoute, useRouter} from 'vue-router'
 
 const user = useUserStore()
+const {t} = useI18n()
 const message = useMessage()
 const router = useRouter()
 const route = useRoute()
@@ -212,7 +215,7 @@ const showLogout = ref(false)
 
 function redeem() {
   if (!user.profileReady) {
-    message.error('请先登录')
+    message.error(t('messages.please_login'))
     user.requireLogin()
     return
   }
@@ -227,7 +230,7 @@ function redeem() {
             user.setProfile({...profile})
           } catch {
           }
-          message.success(`兑换成功，积分+${addedView.toFixed(0)}`)
+          message.success(t('redeem.success', {points: addedView.toFixed(0)}))
           redeemKey.value = ''
           showRedeem.value = false
         })
@@ -235,12 +238,12 @@ function redeem() {
           const status = e?.status
           if (status === 401 || status === 403) {
             const expired = !!(e?.__authExpired)
-            message.error(expired ? '登录已过期，请重新登录' : '未登录，请先登录')
+            message.error(expired ? t('messages.auth_expired') : t('messages.please_login'))
             user.requireLogin()
           } else if (status === 500) {
-            message.error('服务异常，请稍后重试')
+            message.error(t('messages.service_error'))
           } else {
-            message.error(e?.message || '兑换失败')
+            message.error(e?.message || t('redeem.failed'))
           }
         })
         .finally(() => {
@@ -262,7 +265,7 @@ const total = ref(0)
 
 function openHistory() {
   if (!user.profileReady) {
-    message.error('请先登录')
+    message.error(t('messages.please_login'))
     user.requireLogin()
     return
   }
@@ -343,7 +346,7 @@ function openPreview(src: string) {
 function doLogout() {
   try {
     user.logout()
-    message.success('已退出登录')
+    message.success(t('messages.logout_success'))
   } finally {
     showLogout.value = false
   }
@@ -363,9 +366,9 @@ async function removeRecord(r: any) {
     if (page.value > maxPage) page.value = maxPage
     expanded.value.delete(r.id)
     await loadHistory()
-    message.success('已删除该条记录')
+    message.success(t('messages.delete_success'))
   } catch {
-    message.error('删除失败')
+    message.error(t('messages.delete_failed'))
   }
 }
 

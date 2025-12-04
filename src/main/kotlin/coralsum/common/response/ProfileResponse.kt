@@ -14,5 +14,7 @@ data class ProfileResponse(
     @Schema(description = "来源标识码") val sourceCode: String,
     @Schema(description = "永久积分") val permanentPoints: Int,
     @Schema(description = "订阅积分") val subscribePoints: Int,
+    @Schema(description = "订阅到期时间（毫秒时间戳）") val subscribeExpireTime: Long? = null,
     @Schema(description = "会员层级") val tier: MembershipTier,
+    @Schema(description = "语言偏好", example = "zh-CN") val language: String? = null,
 )

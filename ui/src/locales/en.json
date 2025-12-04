@@ -1,0 +1,410 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "error": "Error",
+    "query": "Query",
+    "empty": "No data"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign In"
+    },
+    "register": "Register",
+    "forgot": "Forgot Password",
+    "reset": "Reset Password",
+    "register_title": "Register",
+    "forgot_title": "Forgot Password",
+    "reset_failed": "Reset failed"
+  },
+  "user": {
+    "profile": {
+      "language": "Language",
+      "language_updated": "Language preference updated"
+    }
+  },
+  "points": {
+    "balance": {
+      "title": "Points Balance",
+      "label": "Current Points"
+    },
+    "subscribe": "Subscribe Points",
+    "permanent": "Permanent Points",
+    "insufficient": "Insufficient points",
+    "expire": "Subscription Expiry"
+  },
+  "app": {
+    "title": "Coralsum Image"
+  },
+  "profile": {
+    "modal": {
+      "title": "User Info",
+      "email": "Email",
+      "name": "Name",
+      "save": "Save",
+      "cancel": "Cancel",
+      "send_code": "Send Code",
+      "change_password": "Change Password",
+      "old_password": "Old Password",
+      "new_password": "New Password",
+      "confirm_password": "Confirm Password",
+      "email_code": "Email Code",
+      "password": "Password"
+    },
+    "logout": {
+      "title": "Sign Out",
+      "confirm": "Are you sure to sign out?",
+      "ok": "Sign Out",
+      "cancel": "Cancel"
+    },
+    "history": {
+      "title": "History",
+      "refresh": "Refresh",
+      "empty": "No history yet",
+      "count": "Total",
+      "warning": "History is stored locally in your browser and not uploaded. Switching devices or clearing browser data may lose history.",
+      "expand_images": "Expand Images",
+      "delete": "Delete",
+      "confirm_delete": "Confirm delete this record?"
+    }
+  },
+  "metrics": {
+    "input": "Input",
+    "output": "Output",
+    "duration": "Duration",
+    "images": "Images"
+  },
+  "redeem": {
+    "title": "Redeem Points Key",
+    "placeholder": "Enter key",
+    "cancel": "Cancel",
+    "ok": "Redeem",
+    "loading": "Redeeming...",
+    "success": "Redeemed successfully, +{points} points",
+    "failed": "Redeem failed"
+  },
+  "messages": {
+    "email_required": "Please enter email",
+    "email_invalid": "Invalid email format",
+    "password_required": "Please enter password",
+    "password_invalid": "Password must be 6–16 chars, include letters and numbers; symbols @._-!#$%^&* allowed",
+    "check_inputs": "Please check inputs",
+    "login_success": "Signed in successfully",
+    "auth_expired": "Session expired, please sign in again",
+    "auth_required": "Not signed in, please sign in first",
+    "service_error": "Service error, please try again later",
+    "login_failed": "Sign in failed",
+    "please_login": "Please sign in first",
+    "fill_all_fields": "Please fill all required fields",
+    "new_pwd_len": "New password must be at least 6 characters",
+    "new_pwd_mismatch": "New passwords do not match",
+    "no_changes": "No changes detected",
+    "saved_user_info": "User info saved",
+    "logout_success": "Signed out",
+    "delete_success": "Record deleted",
+    "delete_failed": "Delete failed",
+    "confirm_password_required": "Please confirm password",
+    "code_required": "Please enter verification code",
+    "code_rule": "Verification code must be 6 digits",
+    "code_sent": "Verification code sent",
+    "send_failed": "Send failed",
+    "register_success": "Registered successfully, please sign in",
+    "register_failed": "Registration failed",
+    "reset_success": "Reset successfully, please sign in",
+    "copied": "Copied",
+    "copy_failed": "Copy failed"
+  },
+  "error": {
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "not_found": "Resource not found",
+    "internal": "Internal server error"
+  },
+  "share": {
+    "copy": "Copy Share Link",
+    "tip": "Share links are valid for 30 minutes with 5 previews. Please save images in time.",
+    "none": "No share link available",
+    "copied_ready": "Share link copied, ready to send",
+    "copied_raw": "Original link copied",
+    "copy_failed": "Copy failed, please copy manually"
+  },
+  "overlay": {
+    "text": "Drive image creation and editing with text: generate, inpaint, style transfer and outpainting are all supported. Coralsum keeps character consistency and scene coherence, fast and stable details."
+  },
+  "loading": {
+    "creating": "AI is creating..."
+  },
+  "preview": {
+    "zoom": "Zoom",
+    "zoom_out": "Zoom Out",
+    "zoom_in": "Zoom In",
+    "reset": "Reset",
+    "rotate_left": "Rotate Left",
+    "rotate_right": "Rotate Right",
+    "copy": "Copy",
+    "download": "Download",
+    "copy_clipboard": "Copied to clipboard",
+    "copy_link": "Copied image link",
+    "download_failed": "Download failed",
+    "invalid": "Preview expired"
+  },
+  "left": {
+    "prompt": {
+      "title": "Prompt",
+      "guide": "Prompt guide & strategies",
+      "placeholder": "Describe your idea to generate an image",
+      "guide_title": "Prompt Guide & Best Practices",
+      "fill": "Please fill the prompt",
+      "desc": "Describe what you want to generate or edit in natural language. Include subject, style, composition and tone with clear constraints and details.",
+      "open_guide": "Open Prompt Guide"
+    },
+    "image_input": {
+      "title": "Input Images",
+      "tip": "Drag, select or paste one or more reference images to assist generation or editing. PNG/JPG recommended.",
+      "drag": "Drag, click or paste images",
+      "only_png_jpg": "PNG/JPG only"
+    },
+    "system_prompt": {
+      "title": "System Prompt",
+      "tip": "High-level instructions to constrain style, behavior and safety. Keep objective and concise.",
+      "placeholder": "Set style, lighting or details for better understanding"
+    },
+    "actions": {
+      "reset": "Reset",
+      "generate": "Generate"
+    },
+    "estimate": {
+      "tip": "Estimate based on current config and pricing. Actual deduction depends on result."
+    },
+    "model_type": {
+      "title": "Model Type",
+      "tip": "Choose model type: Pro for higher quality, Basic for economy.",
+      "basic": "Basic",
+      "pro": "Pro"
+    },
+    "candidate": {
+      "title": "Candidates",
+      "tip": "Number of returned candidates. More takes longer and costs more. Choose 1–4 appropriately."
+    },
+    "advanced": {
+      "title": "Advanced",
+      "tip": "Manage aspect ratio, temperature, media resolution, reasoning level, image size, top-p, output format and upscayl."
+    },
+    "aspect_ratio": {
+      "title": "Aspect Ratio",
+      "tip": "Auto: use the original ratio of input images. Or choose fixed ratios (1:1, 16:9 etc) for scenes.",
+      "auto": "Auto"
+    },
+    "temperature": {
+      "title": "Temperature",
+      "tip": "Controls randomness; low is stable/controllable, high is creative/divergent. Recommend ≥1.0 for richer details."
+    },
+    "image_size": {
+      "title": "Image Size",
+      "tip": "Choose base output resolution. Higher is clearer, longer and costlier."
+    },
+    "top_p": {
+      "title": "Top-P",
+      "tip": "Nucleus sampling threshold for diversity; higher is richer, lower is conservative. Adjust for quality vs diversity."
+    },
+    "output_format": {
+      "title": "Output Format",
+      "tip": "Choose final format: PNG (lossless, transparency) or JPG (smaller size)."
+    },
+    "upscayl": {
+      "title": "Upscayl",
+      "tip": "AI-based super-resolution and detail reconstruction; higher scale increases time and cost.",
+      "warn": "High scales significantly increase compute and waiting. Prefer lower scales first."
+    },
+    "reset": {
+      "confirm_title": "Confirm Reset",
+      "confirm_content": "Reset all settings?"
+    },
+    "guide": {
+      "generate_title": "Prompts for Generating Images",
+      "real_scene": {
+        "title": "Realistic Scenes",
+        "desc": "Use photographic terms: mention angle, lens, lighting and details to guide realistic outputs."
+      },
+      "stickers": {
+        "title": "Stylized Illustrations & Stickers",
+        "desc": "For stickers/icons/assets, specify style and require transparent background."
+      },
+      "text_accuracy": {
+        "title": "Accurate Text in Images",
+        "desc": "Clearly specify the text, font style (descriptive) and overall design."
+      },
+      "product_photography": {
+        "title": "Product Mockups & Commercial Photography",
+        "desc": "Great for e-commerce, advertising or branding with clean professional shots."
+      },
+      "minimal_style": {
+        "title": "Minimalism & Negative Space",
+        "desc": "Ideal for backgrounds in websites, slides or marketing where text overlays."
+      },
+      "sequential_art": {
+        "title": "Sequential Art (Comics/Storyboard)",
+        "desc": "Focus on character consistency and scene descriptions for visual storytelling."
+      },
+      "use_search": {
+        "title": "Use Search to Ground",
+        "desc": "Generate based on up-to-date or real-time info for news, weather and timely topics."
+      },
+      "edit_title": "Prompts for Editing Images",
+      "add_remove": {
+        "title": "Add & Remove Elements",
+        "desc": "Provide an image and describe changes; model matches style, lighting and perspective."
+      },
+      "inpaint": {
+        "title": "Inpaint (Semantic Mask)",
+        "desc": "Define a mask via conversation to edit specific regions while keeping others unchanged."
+      },
+      "style_transfer": {
+        "title": "Style Transfer",
+        "desc": "Provide an image to recreate its content in another artistic style."
+      },
+      "advanced_composition": {
+        "title": "Advanced Composition: Combine Images",
+        "desc": "Provide multiple images as context to create composite scenes (product mockups, collages)."
+      },
+      "high_fidelity": {
+        "title": "High-Fidelity Detail Retention",
+        "desc": "Describe key details (faces, logos) explicitly to preserve them during edits."
+      },
+      "bring_to_life": {
+        "title": "Bring Sketches to Life",
+        "desc": "Upload sketches and let the model refine them into finished images."
+      },
+      "character_consistency": {
+        "title": "Character Consistency: 360° Views",
+        "desc": "Iterate prompts for different angles; include previous outputs as references to keep consistency."
+      },
+      "best_title": "Best Practices",
+      "concretize": {
+        "title": "Concretize:",
+        "desc": "Be specific for more control. Prefer detailed descriptions over vague terms."
+      },
+      "context_intent": {
+        "title": "Provide Context & Intent:",
+        "desc": "Explain usage. Context influences outputs (e.g., brand logo for minimal skincare vs. generic logo)."
+      },
+      "iterate": {
+        "title": "Iterate & Refine:",
+        "desc": "Use conversational edits. e.g., 'warmer lighting' or 'keep all but make expression more serious'."
+      },
+      "stepwise": {
+        "title": "Use Stepwise Instructions:",
+        "desc": "Break complex scenes into steps: background → foreground → focal item."
+      },
+      "negative_prompt": {
+        "title": "Semantic Negative Prompts:",
+        "desc": "Describe desired absence positively (e.g., 'empty street with no signs of traffic')."
+      },
+      "control_camera": {
+        "title": "Control Camera:",
+        "desc": "Use photo/cinema language like wide-angle shot, macro shot, low-angle perspective."
+      }
+    }
+  },
+  "upload": {
+    "error": {
+      "title": "Upload Validation Failed",
+      "max_files": "At most 10 images",
+      "max_total": "Total size must not exceed 50MB"
+    }
+  },
+  "menu": {
+    "image_generate": "Image Generation",
+    "key_manage": "Key Management"
+  },
+  "keys": {
+    "config": {
+      "title": "Key Config Generation",
+      "name": "Config Name",
+      "placeholder_name": "e.g., Spring Festival Pack",
+      "permanent": "Permanent Points (RMB)",
+      "subscribe": "Subscribe Points (RMB)",
+      "subscribe_type": "Subscribe Type",
+      "period_unit": "Period Unit",
+      "period_count": "Period Count",
+      "save": "Save Config",
+      "list": "Config List",
+      "current": "Current",
+      "query_by_name": "Query by Name",
+      "sort_by_id": "By ID",
+      "sort_by_status": "By Status",
+      "none_selected": "None",
+      "refresh": "Refresh Configs",
+      "empty": "No configs",
+      "choose": "Choose",
+      "confirm_enable": "Enable this config?",
+      "confirm_disable": "Disable this config?",
+      "summary": "Config Summary",
+      "raw_json": "Raw JSON"
+    },
+    "order": {
+      "asc": "Asc",
+      "desc": "Desc"
+    },
+    "list": {
+      "title": "Key List",
+      "query_by_key": "Query by Key",
+      "sort_by_status": "By Status",
+      "sort_by_used_time": "By Used Time",
+      "enable_batch": "Enable Selected",
+      "disable_batch": "Disable Selected",
+      "refresh": "Refresh",
+      "columns": {
+        "id": "ID",
+        "key": "Key",
+        "status": "Status",
+        "create_time": "Created At",
+        "used_time": "Used At",
+        "used_ip": "Used IP",
+        "used_uid": "Used UID",
+        "action": "Action"
+      },
+      "status": {
+        "used": "Used",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "enable_selected_success": "Enabled selected keys",
+      "disable_selected_success": "Disabled selected keys"
+    },
+    "generate": "Generate Keys",
+    "columns": {
+      "id": "ID",
+      "name": "Name",
+      "permanent": "Permanent Points",
+      "subscribe": "Subscribe Points",
+      "subscribe_type": "Subscribe Type",
+      "period_unit": "Period Unit",
+      "period_count": "Period Count",
+      "status": "Status",
+      "action": "Action"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "view_config": "View Config",
+    "copy": {
+      "json": "Copy JSON"
+    },
+    "msg": {
+      "select_or_save_first": "Please select or save a config first",
+      "gen_count_range": "Generate count must be between 1 and 200",
+      "generate_success": "Keys generated successfully",
+      "generate_failed": "Generate failed",
+      "config_enabled": "Config enabled",
+      "config_disabled": "Config disabled",
+      "save_success": "Config saved",
+      "save_failed": "Save failed"
+    }
+  },
+  "footer": {
+    "opensource": "Copyright © 2025 Coralsum. Open-source under",
+    "mit": "MIT License"
+  }
+}

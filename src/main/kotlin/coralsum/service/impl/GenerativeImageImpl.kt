@@ -3,7 +3,12 @@ package coralsum.service.impl
 import cn.hutool.core.codec.Base64
 import cn.hutool.crypto.digest.HMac
 import cn.hutool.crypto.digest.HmacAlgorithm
+import com.aliyun.oss.HttpMethod
+import com.aliyun.oss.OSS
+import com.aliyun.oss.model.GeneratePresignedUrlRequest
+import com.aliyun.oss.model.ObjectMetadata
 import coralsum.cache.GenerateTaskCache
+import coralsum.cache.UploadedImageCache
 import coralsum.cache.UploadedImageRef
 import coralsum.common.enums.GenTaskStatue
 import coralsum.common.enums.ImageSize
@@ -11,14 +16,12 @@ import coralsum.common.enums.MediaResolution
 import coralsum.common.event.GenerativeImageCostEvent
 import coralsum.config.CloudflareConfig
 import coralsum.config.GoogleConfig
+import coralsum.config.OssConfig
 import coralsum.config.PreviewConfig
 import coralsum.entity.GenerateImageReqRecord
 import coralsum.entity.RetrievalImageReqRecord
 import coralsum.excption.BusinessException
-import coralsum.repository.GenerateImageReqRecordRepository
-import coralsum.repository.OpenUserRepository
-import coralsum.repository.OutletUserRepository
-import coralsum.repository.RetrievalImageReqRecordRepository
+import coralsum.repository.*
 import coralsum.service.*
 import coralsum.toolkit.NanoBanana
 import coralsum.toolkit.Upscayl
@@ -40,9 +43,6 @@ import io.micronaut.http.HttpRequest
 import io.micronaut.http.multipart.StreamingFileUpload
 import io.micronaut.json.JsonMapper
 import io.micronaut.json.tree.JsonNode
-import io.micronaut.objectstorage.aws.AwsS3Operations
-import io.micronaut.objectstorage.request.PresignRequest
-import io.micronaut.objectstorage.request.UploadRequest
 import io.micronaut.retry.annotation.Retryable
 import io.micronaut.security.utils.SecurityService
 import jakarta.annotation.PostConstruct
@@ -55,9 +55,11 @@ import okio.Path.Companion.toPath
 import org.apache.commons.lang3.concurrent.BasicThreadFactory
 import org.apache.commons.lang3.time.StopWatch
 import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
 import java.net.InetSocketAddress
 import java.net.ProxySelector
 import java.net.http.HttpClient
+import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ThreadPoolExecutor
@@ -71,13 +73,12 @@ import kotlin.time.toJavaDuration
 
 @Singleton
 class GenerativeImageImpl(
-    val store: AwsS3Operations,
     val googleConfig: GoogleConfig,
     val cloudflareConfig: CloudflareConfig,
     val securityService: SecurityService,
     val jsonMapper: JsonMapper,
     val generateImageReqRecordRepository: GenerateImageReqRecordRepository,
-    val generateImageReqRefRepository: coralsum.repository.GenerateImageReqRefRepository,
+    val generateImageReqRefRepository: GenerateImageReqRefRepository,
     val retrievalImageReqRecordRepository: RetrievalImageReqRecordRepository,
     val generateTaskCache: GenerateTaskCache,
     val applicationEventPublisher: ApplicationEventPublisher<GenerativeImageCostEvent>,
@@ -85,7 +86,9 @@ class GenerativeImageImpl(
     val openUserRepository: OpenUserRepository,
     val outletUserRepository: OutletUserRepository,
     val previewConfig: PreviewConfig,
-    val uploadedImageCache: coralsum.cache.UploadedImageCache,
+    val uploadedImageCache: UploadedImageCache,
+    val ossConfig: OssConfig,
+    val oss: OSS,
 ) : IGenerativeImage {
 
     private lateinit var nano: NanoBanana
@@ -93,6 +96,7 @@ class GenerativeImageImpl(
     private lateinit var upscayl: Upscayl
 
     private lateinit var gemini: ChatModel
+
 
     companion object {
         @JvmStatic
@@ -141,6 +145,7 @@ class GenerativeImageImpl(
             )
             .maxRetries(2)
             .build()
+
     }
 
     @PreDestroy
@@ -214,10 +219,15 @@ class GenerativeImageImpl(
 
                     sizes.add(bytes.size)
 
-                    val uploadRequest = UploadRequest.fromBytes(bytes, key)
-                    store.upload(uploadRequest) { builder ->
-                        builder.contentDisposition("attachment; filename=aigi.${genRequest.format.ext}")
+                    val metadata = ObjectMetadata()
+                    metadata.contentDisposition = "attachment; filename=aigi.${genRequest.format.ext}"
+                    metadata.contentType = when (genRequest.format.ext.lowercase()) {
+                        "png" -> "image/png"
+                        "jpg", "jpeg" -> "image/jpeg"
+                        "webp" -> "image/webp"
+                        else -> "application/octet-stream"
                     }
+                    oss.putObject(resolveBucket(), key, ByteArrayInputStream(bytes), metadata)
                     cloudflareConfig.host + "/api/generative-image?ref=${key}"
                 }
                 watch.stop()
@@ -499,9 +509,11 @@ class GenerativeImageImpl(
         retrievalImageReqRecordRepository.save(
             RetrievalImageReqRecord(imageRef = ref, ip = ip, isTokenVisit = isTokenVisit)
         )
-        val presignRequest = PresignRequest.builder(ref, PresignRequest.Operation.DOWNLOAD).build()
-        val response = store.presign(presignRequest)
-        return response.url.toString()
+        val expiration = Date(System.currentTimeMillis() + previewConfig.ttlSeconds * 1000)
+        val req = GeneratePresignedUrlRequest(resolveBucket(), ref, HttpMethod.GET)
+        req.expiration = expiration
+        val url = oss.generatePresignedUrl(req)
+        return url?.toString()
     }
 
     override suspend fun linkPage(ref: String): LinkPage? {
@@ -526,5 +538,11 @@ class GenerativeImageImpl(
             } else ""
         } ?: ""
         return LinkPage(src = src, time = time, user = user)
+    }
+
+    private fun resolveBucket(): String {
+        val bucket = ossConfig.bucket
+        if (bucket.isNullOrBlank()) throw BusinessException("OSS桶未配置")
+        return bucket
     }
 }

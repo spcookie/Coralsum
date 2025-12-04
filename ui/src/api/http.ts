@@ -9,6 +9,13 @@ http.interceptors.request.use((config) => {
         config.headers = config.headers || {}
         ;(config.headers as any).Authorization = `Bearer ${user.token}`
     }
+    // 附加 Accept-Language 头，来源于本地存储或浏览器首选
+    try {
+        const lang = localStorage.getItem('lang') || navigator.language
+        config.headers = config.headers || {}
+        ;(config.headers as any)['Accept-Language'] = (lang || 'en').replace('_', '-')
+    } catch {
+    }
     return config
 })
 

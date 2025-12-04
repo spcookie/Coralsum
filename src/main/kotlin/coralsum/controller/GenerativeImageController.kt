@@ -11,6 +11,7 @@ import coralsum.repository.OpenUserRepository
 import coralsum.repository.OutletUserRepository
 import coralsum.service.GenRequest
 import coralsum.service.impl.GenerativeImageImpl
+import io.micronaut.context.LocalizedMessageSource
 import io.micronaut.core.version.annotation.Version
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
@@ -43,6 +44,7 @@ class GenerativeImageController(
     val addressResolver: HttpClientAddressResolver,
     val openUserRepository: OpenUserRepository,
     val outletUserRepository: OutletUserRepository,
+    val lms: LocalizedMessageSource,
 ) {
 
     @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -176,9 +178,17 @@ class GenerativeImageController(
                 outletWeb?.nickName ?: ""
             } else ""
         } else ""
+        val title = lms.getMessage("image.preview.title").orElse("Image Preview")
         val mv = ModelAndView(
             "image-link",
-            mapOf<String, Any>("src" to dataUrl, "time" to time, "user" to user, "dark" to (darkMode == true))
+            mapOf<String, Any>(
+                "src" to dataUrl,
+                "time" to time,
+                "user" to user,
+                "dark" to (darkMode == true),
+                "title" to title,
+                "lang" to request.getLocale().orElse(java.util.Locale.ENGLISH).toLanguageTag()
+            )
         )
         return HttpResponse.ok(mv).headers { headers ->
             headers.add("Cache-Control", "no-store")

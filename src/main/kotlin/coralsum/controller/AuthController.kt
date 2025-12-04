@@ -6,6 +6,7 @@ import coralsum.common.request.RegisterRequest
 import coralsum.common.request.ResetPasswordRequest
 import coralsum.common.request.SendCodeRequest
 import coralsum.service.IAuthService
+import io.micronaut.context.LocalizedMessageSource
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
@@ -19,14 +20,17 @@ import io.swagger.v3.oas.annotations.tags.Tag
 @Tag(name = "认证")
 class AuthController(
     private val authService: IAuthService,
+    private val lms: LocalizedMessageSource,
 ) {
     @Post("/send-code")
     @Operation(summary = "发送验证码")
-    @Debounce(name = "auth.sendCode", windowMillis = 5000, byUid = false)
+    @Debounce(name = "auth.sendCode", windowMillis = 60000, byUid = false)
     suspend fun sendCode(@Body req: SendCodeRequest): Res<Map<String, Any>> {
         val purpose = (req.purpose ?: "REGISTER").uppercase()
         val ok = authService.sendEmailCode(req.email, purpose)
-        return if (ok) Res.success(mapOf("ok" to true)) else Res.fail("发送失败")
+        if (ok) return Res.success(mapOf("ok" to true))
+        val msg = lms.getMessage("auth.send_code.failed").orElse("Error")
+        return Res.fail(msg)
     }
 
     @Post("/register")
@@ -34,7 +38,9 @@ class AuthController(
     @Debounce(name = "auth.register", windowMillis = 2000, byUid = false)
     suspend fun register(@Body req: RegisterRequest): Res<Map<String, Any>> {
         val ok = authService.register(req.email, req.password, req.code)
-        return if (ok) Res.success(mapOf("ok" to true)) else Res.fail("注册失败或验证码无效")
+        if (ok) return Res.success(mapOf("ok" to true))
+        val msg = lms.getMessage("auth.register.failed").orElse("Error")
+        return Res.fail(msg)
     }
 
     @Post("/reset-password")
@@ -42,6 +48,8 @@ class AuthController(
     @Debounce(name = "auth.resetPassword", windowMillis = 2000, byUid = false)
     suspend fun resetPassword(@Body req: ResetPasswordRequest): Res<Map<String, Any>> {
         val ok = authService.resetPassword(req.email, req.newPassword, req.code)
-        return if (ok) Res.success(mapOf("ok" to true)) else Res.fail("重置失败或验证码无效")
+        if (ok) return Res.success(mapOf("ok" to true))
+        val msg = lms.getMessage("auth.reset_password.failed").orElse("Error")
+        return Res.fail(msg)
     }
 }

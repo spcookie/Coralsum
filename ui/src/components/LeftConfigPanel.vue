@@ -4,20 +4,18 @@
     <div class="space-y-2">
       <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1 justify-between">
         <div class="flex items-center gap-1">
-          <span>提示词</span>
+          <span>{{ t('left.prompt.title') }}</span>
           <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
             <template #trigger>
               <Icon class="text-neutral-400" icon="ph:info"/>
             </template>
-            <div class="text-xs text-white">
-              输入自然语言描述你想要生成或修改的内容。建议包含主体、风格、构图与色调，明确限制条件与细节，避免歧义。
-            </div>
+            <div class="text-xs text-white">{{ t('left.prompt.desc') }}</div>
           </n-tooltip>
         </div>
         <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
           <template #trigger>
             <button
-                aria-label="打开提示指南"
+                :aria-label="t('left.prompt.open_guide')"
                 class="inline-flex items-center justify-center cursor-pointer w-6 h-6 p-1 rounded-full transition-colors duration-200 hover:bg-green-100 dark:hover:bg-green-900/40"
                 @click="openPromptGuide"
             >
@@ -25,25 +23,23 @@
                     icon="ph:book-open-text"/>
             </button>
           </template>
-          <div class="text-xs text-white">提示指南与策略</div>
+          <div class="text-xs text-white">{{ t('left.prompt.guide') }}</div>
         </n-tooltip>
       </div>
       <n-input v-model:value="prompt" :autosize="{ minRows: 6, maxRows: 12 }" :disabled="generating"
-               placeholder="输入你的创意想法，让AI为你生成图片"
+               :placeholder="t('left.prompt.placeholder')"
                type="textarea"/>
     </div>
     <n-collapse :default-expanded-names="[]">
       <n-collapse-item name="img">
         <template #header>
           <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
-            <span>输入图片</span>
+            <span>{{ t('left.image_input.title') }}</span>
             <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
               <template #trigger>
                 <Icon class="text-neutral-400" icon="ph:info"/>
               </template>
-              <div class="text-xs text-white">可拖拽、选择或粘贴一到多张参考图，辅助生成或进行图像编辑。建议使用
-                PNG/JPG，体积适中。
-              </div>
+              <div class="text-xs text-white">{{ t('left.image_input.tip') }}</div>
             </n-tooltip>
           </div>
         </template>
@@ -58,8 +54,10 @@
             <div
                 class="flex flex-col items-center justify-center py-10 border border-dashed rounded-xl border-neutral-300 dark:border-neutral-700 text-neutral-500 bg-neutral-50/60 dark:bg-neutral-900/30">
               <Icon class="text-2xl" icon="mdi:cloud-upload"/>
-              <div class="text-[13px] sm:text-sm">拖拽、点击选择或粘贴图片</div>
-              <div class="text-[11px] sm:text-xs mt-1 text-neutral-500 dark:text-neutral-400">仅支持 PNG/JPG 格式</div>
+              <div class="text-[13px] sm:text-sm">{{ t('left.image_input.drag') }}</div>
+              <div class="text-[11px] sm:text-xs mt-1 text-neutral-500 dark:text-neutral-400">
+                {{ t('left.image_input.only_png_jpg') }}
+              </div>
             </div>
           </n-upload-dragger>
         </n-upload>
@@ -83,19 +81,19 @@
       <n-collapse-item name="sys">
         <template #header>
           <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
-            <span>系统提示词</span>
+            <span>{{ t('left.system_prompt.title') }}</span>
             <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
               <template #trigger>
                 <Icon class="text-neutral-400" icon="ph:info"/>
               </template>
               <div class="text-xs text-white">
-                面向模型的高级指令，用于约束整体风格、行为与安全策略。建议与提示词分离，保持客观、简洁。
+                {{ t('left.system_prompt.tip') }}
               </div>
             </n-tooltip>
           </div>
         </template>
         <n-input v-model:value="systemPrompt" :autosize="{ minRows: 4, maxRows: 10 }" :disabled="generating"
-                 placeholder="设置生成风格、光影或细节，让AI更精准理解你的创意"
+                 :placeholder="t('left.system_prompt.placeholder')"
                  type="textarea"/>
       </n-collapse-item>
     </n-collapse>
@@ -103,7 +101,7 @@
       <n-button :disabled="generating" class="w-full justify-center" tertiary type="warning" @click="onReset">
         <div class="flex items-center gap-2">
           <Icon icon="mdi:reload"/>
-          <span>重置</span>
+          <span>{{ t('left.actions.reset') }}</span>
         </div>
       </n-button>
       <div class="relative w-full">
@@ -111,7 +109,7 @@
                   @click="onGenerate">
           <div class="flex items-center gap-2">
             <Icon v-if="!generating" icon="ph:sparkle"/>
-            <span>生成</span>
+            <span>{{ t('left.actions.generate') }}</span>
           </div>
         </n-button>
         <n-tooltip class="tooltip-xs" placement="top" trigger="hover" :disabled="badgeHidden">
@@ -123,35 +121,35 @@
               </div>
             </transition>
           </template>
-          <div class="text-xs text-white">估算基于当前配置与价格，实际扣减以生成结果为准</div>
+          <div class="text-xs text-white">{{ t('left.estimate.tip') }}</div>
         </n-tooltip>
       </div>
     </div>
     <div class="space-y-2">
       <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
-        <span>模型类型</span>
+        <span>{{ t('left.model_type.title') }}</span>
         <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
           <template #trigger>
             <Icon class="text-neutral-400" icon="ph:info"/>
           </template>
-          <div class="text-xs text-white">选择生成图片的模型类型。高级 更高质量，基本 更经济。</div>
+          <div class="text-xs text-white">{{ t('left.model_type.tip') }}</div>
         </n-tooltip>
       </div>
       <div class="segmented radio-center">
         <n-radio-group v-model:value="settings.modelType" :disabled="generating">
-          <n-radio-button value="Basic">基本</n-radio-button>
-          <n-radio-button value="Pro">高级</n-radio-button>
+          <n-radio-button value="Basic">{{ t('left.model_type.basic') }}</n-radio-button>
+          <n-radio-button value="Pro">{{ t('left.model_type.pro') }}</n-radio-button>
         </n-radio-group>
       </div>
     </div>
     <div class="space-y-2">
       <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
-        <span>候选图片数量</span>
+        <span>{{ t('left.candidate.title') }}</span>
         <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
           <template #trigger>
             <Icon class="text-neutral-400" icon="ph:info"/>
           </template>
-          <div class="text-xs text-white">一次返回的候选结果数量。数量越多，耗时与消耗越高，建议按需选择 1–4。</div>
+          <div class="text-xs text-white">{{ t('left.candidate.tip') }}</div>
         </n-tooltip>
       </div>
       <div class="segmented radio-center">
@@ -167,34 +165,30 @@
       <n-collapse-item name="advanced">
         <template #header>
           <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
-            <span>高级配置</span>
+            <span>{{ t('left.advanced.title') }}</span>
             <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
               <template #trigger>
                 <Icon class="text-neutral-400" icon="ph:info"/>
               </template>
-              <div class="text-xs text-white">
-                展开以管理宽高比、温度、媒体分辨率、思考等级、图片分辨率、核采样、输出格式与超分辨率。
-              </div>
+              <div class="text-xs text-white">{{ t('left.advanced.tip') }}</div>
             </n-tooltip>
           </div>
         </template>
         <div class="space-y-6">
           <div class="space-y-2">
       <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
-        <span>图片宽高比</span>
+        <span>{{ t('left.aspect_ratio.title') }}</span>
         <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
           <template #trigger>
             <Icon class="text-neutral-400" icon="ph:info"/>
           </template>
-          <div class="text-xs text-white">自动：沿用输入图片的原始比例。也可选择固定比例（1:1、16:9
-            等）以适配社交/海报等场景。
-          </div>
+          <div class="text-xs text-white">{{ t('left.aspect_ratio.tip') }}</div>
         </n-tooltip>
       </div>
       <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
         <n-button :disabled="generating" :type="settings.aspectRatio==='auto'?'primary':'default'" class="w-full"
                   size="small"
-                  @click="settings.aspectRatio='auto'">自动
+                  @click="settings.aspectRatio='auto'">{{ t('left.aspect_ratio.auto') }}
         </n-button>
         <n-button :disabled="generating" :type="settings.aspectRatio==='1:1'?'primary':'default'" class="w-full"
                   size="small"
@@ -234,14 +228,12 @@
             <div>
               <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center justify-between">
                 <div class="flex items-center gap-1">
-                  <span>温度</span>
+                  <span>{{ t('left.temperature.title') }}</span>
                   <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
                     <template #trigger>
                       <Icon class="text-neutral-400" icon="ph:info"/>
                     </template>
-                    <div class="text-xs text-white">温度控制随机性；低温更稳定、可控，高温更有创意、发散。推荐
-                      ≥1.0，以获得更丰富的创意与细节。
-                    </div>
+                    <div class="text-xs text-white">{{ t('left.temperature.tip') }}</div>
                   </n-tooltip>
                 </div>
                 <div class="text-[11px] text-neutral-500 dark:text-neutral-300">{{
@@ -279,12 +271,12 @@
           <!--          </div>-->
           <div v-if="settings.modelType!=='Basic'" class="space-y-2">
             <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
-              <span>图片分辨率</span>
+              <span>{{ t('left.image_size.title') }}</span>
               <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
                 <template #trigger>
                   <Icon class="text-neutral-400" icon="ph:info"/>
                 </template>
-                <div class="text-xs text-white">选择目标输出的基础分辨率尺寸，数值越大越清晰，耗时与消耗越高。</div>
+                <div class="text-xs text-white">{{ t('left.image_size.tip') }}</div>
               </n-tooltip>
             </div>
             <div class="segmented radio-center">
@@ -299,14 +291,12 @@
             <div>
               <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center justify-between">
                 <div class="flex items-center gap-1">
-                  <span>核采样</span>
+                  <span>{{ t('left.top_p.title') }}</span>
                   <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
                     <template #trigger>
                       <Icon class="text-neutral-400" icon="ph:info"/>
                     </template>
-                    <div class="text-xs text-white">
-                      核采样阈值，控制输出多样性；值越大越丰富，越小越保守。可按需微调以平衡质量与多样性。
-                    </div>
+                    <div class="text-xs text-white">{{ t('left.top_p.tip') }}</div>
                   </n-tooltip>
                 </div>
                 <div class="text-[11px] text-neutral-500 dark:text-neutral-300">{{ settings.topP.toFixed(2) }}</div>
@@ -319,12 +309,12 @@
           </div>
           <div class="space-y-2">
             <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
-              <span>输出格式</span>
+              <span>{{ t('left.output_format.title') }}</span>
               <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
                 <template #trigger>
                   <Icon class="text-neutral-400" icon="ph:info"/>
                 </template>
-                <div class="text-xs text-white">选择最终图片编码格式：PNG（无损、支持透明）、JPG（体积更小）。</div>
+                <div class="text-xs text-white">{{ t('left.output_format.tip') }}</div>
               </n-tooltip>
             </div>
             <div class="segmented radio-center">
@@ -336,20 +326,18 @@
           </div>
           <div class="space-y-2">
             <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
-              <span>超分辨率</span>
+              <span>{{ t('left.upscayl.title') }}</span>
               <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
                 <template #trigger>
                   <Icon class="text-neutral-400" icon="ph:info"/>
                 </template>
-                <div class="text-xs text-white">使用 AI
-                  对图像进行超分与细节重建，使画面更清晰锐利；倍率越高耗时与消耗越大。
-                </div>
+                <div class="text-xs text-white">{{ t('left.upscayl.tip') }}</div>
               </n-tooltip>
               <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
                 <template #trigger>
                   <Icon class="text-amber-500" icon="ph:warning"/>
                 </template>
-                <div class="text-xs text-white">高倍率将显著增加计算开销与等待时长，建议按需选择并优先尝试较低倍率。</div>
+                <div class="text-xs text-white">{{ t('left.upscayl.warn') }}</div>
               </n-tooltip>
             </div>
             <div class="segmented radio-center">
@@ -364,101 +352,100 @@
         </div>
       </n-collapse-item>
     </n-collapse>
-    <n-modal v-model:show="confirmReset" content="是否重置所有配置？" negative-text="取消" positive-text="确认"
-             preset="dialog" title="确认重置" @positive-click="doReset"/>
+    <n-modal v-model:show="confirmReset" :content="t('left.reset.confirm_content')"
+             :negative-text="t('profile.modal.cancel')" :positive-text="t('profile.logout.ok')"
+             :title="t('left.reset.confirm_title')" preset="dialog" @positive-click="doReset"/>
     <n-modal v-model:show="promptGuideShow" :style="{ width: 'min(920px, 86vw)', margin: '20px auto' }"
              class="rounded-xl"
-             preset="card" title="提示指南与最佳实践">
+             :title="t('left.prompt.guide_title')" preset="card">
       <div class="max-h-[70vh] overflow-y-auto text-[13px] space-y-4">
-        <div class="text-lg font-semibold">用于生成图片的提示</div>
+        <div class="text-lg font-semibold">{{ t('left.guide.generate_title') }}</div>
         <ol class="list-decimal list-inside space-y-2">
           <li>
-            <div class="font-medium">逼真场景</div>
-            <div>对于逼真的图片，请使用摄影术语。提及拍摄角度、镜头类型、光线和细节，引导模型生成逼真的效果。</div>
+            <div class="font-medium">{{ t('left.guide.real_scene.title') }}</div>
+            <div>{{ t('left.guide.real_scene.desc') }}</div>
           </li>
           <li>
-            <div class="font-medium">风格化插画和贴纸</div>
-            <div>如需创建贴纸、图标或素材资源，请明确说明样式并要求使用透明背景。</div>
+            <div class="font-medium">{{ t('left.guide.stickers.title') }}</div>
+            <div>{{ t('left.guide.stickers.desc') }}</div>
           </li>
           <li>
-            <div class="font-medium">图片中的文字准确无误</div>
-            <div>清楚说明文字、字体样式（描述性）和整体设计。</div>
+            <div class="font-medium">{{ t('left.guide.text_accuracy.title') }}</div>
+            <div>{{ t('left.guide.text_accuracy.desc') }}</div>
           </li>
           <li>
-            <div class="font-medium">产品模型和商业摄影</div>
-            <div>非常适合为电子商务、广告或品牌宣传制作清晰专业的商品照片。</div>
+            <div class="font-medium">{{ t('left.guide.product_photography.title') }}</div>
+            <div>{{ t('left.guide.product_photography.desc') }}</div>
           </li>
           <li>
-            <div class="font-medium">极简风格和负空间设计</div>
-            <div>非常适合用于创建网站、演示或营销材料的背景，以便在其中叠加文字。</div>
+            <div class="font-medium">{{ t('left.guide.minimal_style.title') }}</div>
+            <div>{{ t('left.guide.minimal_style.desc') }}</div>
           </li>
           <li>
-            <div class="font-medium">连续艺术（漫画分格 / 故事板）</div>
-            <div>以角色一致性和场景描述为基础，为视觉故事讲述创建分格。为了确保文本准确性和故事讲述能力。</div>
+            <div class="font-medium">{{ t('left.guide.sequential_art.title') }}</div>
+            <div>{{ t('left.guide.sequential_art.desc') }}</div>
           </li>
           <li>
-            <div class="font-medium">使用搜索建立依据</div>
-            <div>使用搜索根据最新信息或实时信息生成图片。这对于新闻、天气和其他时效性主题非常有用。</div>
+            <div class="font-medium">{{ t('left.guide.use_search.title') }}</div>
+            <div>{{ t('left.guide.use_search.desc') }}</div>
           </li>
         </ol>
-        <div class="text-lg font-semibold">用于修改图片的提示</div>
+        <div class="text-lg font-semibold">{{ t('left.guide.edit_title') }}</div>
         <ol class="list-decimal list-inside space-y-2">
           <li>
-            <div class="font-medium">添加和移除元素</div>
-            <div>提供图片并描述您的更改。模型将与原始图片的风格、光照和透视效果保持一致。</div>
+            <div class="font-medium">{{ t('left.guide.add_remove.title') }}</div>
+            <div>{{ t('left.guide.add_remove.desc') }}</div>
           </li>
           <li>
-            <div class="font-medium">局部重绘（语义遮盖）</div>
-            <div>通过对话定义“蒙版”，以修改图片的特定部分，同时保持其余部分不变。</div>
+            <div class="font-medium">{{ t('left.guide.inpaint.title') }}</div>
+            <div>{{ t('left.guide.inpaint.desc') }}</div>
           </li>
           <li>
-            <div class="font-medium">风格迁移</div>
-            <div>提供一张图片，并让模型以不同的艺术风格重新创作其内容。</div>
+            <div class="font-medium">{{ t('left.guide.style_transfer.title') }}</div>
+            <div>{{ t('left.guide.style_transfer.desc') }}</div>
           </li>
           <li>
-            <div class="font-medium">高级合成：组合多张图片</div>
-            <div>提供多张图片作为上下文，以创建新的合成场景。这非常适合制作产品模型或创意拼贴画。</div>
+            <div class="font-medium">{{ t('left.guide.advanced_composition.title') }}</div>
+            <div>{{ t('left.guide.advanced_composition.desc') }}</div>
           </li>
           <li>
-            <div class="font-medium">高保真细节保留</div>
-            <div>为确保在编辑过程中保留关键细节（例如面部或徽标），请在编辑请求中详细描述这些细节。</div>
+            <div class="font-medium">{{ t('left.guide.high_fidelity.title') }}</div>
+            <div>{{ t('left.guide.high_fidelity.desc') }}</div>
           </li>
           <li>
-            <div class="font-medium">让事物焕发活力</div>
-            <div>上传草图或简笔画，然后让模型将其优化为成品图片。</div>
+            <div class="font-medium">{{ t('left.guide.bring_to_life.title') }}</div>
+            <div>{{ t('left.guide.bring_to_life.desc') }}</div>
           </li>
           <li>
-            <div class="font-medium">字符一致性：360 度全景</div>
-            <div>您可以迭代提示不同的角度，从而生成角色的 360
-              度视图。为获得最佳效果，请在后续提示中添加之前生成的图片，以保持一致性。对于复杂的姿势，请添加所需姿势的参考图片。
-            </div>
+            <div class="font-medium">{{ t('left.guide.character_consistency.title') }}</div>
+            <div>{{ t('left.guide.character_consistency.desc') }}</div>
           </li>
         </ol>
-        <div class="text-lg font-semibold">最佳做法</div>
+        <div class="text-lg font-semibold">{{ t('left.guide.best_title') }}</div>
         <ul class="list-disc list-inside space-y-2">
           <li>
-            <span class="font-medium">具体化：</span>
-            <span>您提供的信息越详细，对输出结果的掌控程度就越高。与其使用“奇幻盔甲”，不如具体描述：“华丽的精灵板甲，蚀刻着银叶图案，带有高领和猎鹰翅膀形状的肩甲。”</span>
+            <span class="font-medium">{{ t('left.guide.concretize.title') }}</span>
+            <span>{{ t('left.guide.concretize.desc') }}</span>
           </li>
           <li>
-            <span class="font-medium">提供上下文和意图：</span>
-            <span>说明图片的用途。模型对上下文的理解会影响最终输出。例如，“为高端极简护肤品牌设计徽标”的效果要好于“设计徽标”。</span>
+            <span class="font-medium">{{ t('left.guide.context_intent.title') }}</span>
+            <span>{{ t('left.guide.context_intent.desc') }}</span>
           </li>
           <li>
-            <span class="font-medium">迭代和优化：</span>
-            <span>不要指望第一次尝试就能生成完美的图片。利用模型的对话特性进行小幅更改。使用后续提示，例如“这很棒，但你能让光线更暖一些吗？”或“保持所有内容不变，但让角色的表情更严肃一些。”</span>
+            <span class="font-medium">{{ t('left.guide.iterate.title') }}</span>
+            <span>{{ t('left.guide.iterate.desc') }}</span>
           </li>
           <li>
-            <span class="font-medium">使用分步指令：</span>
-            <span>对于包含许多元素的复杂场景，请将提示拆分为多个步骤。“首先，创建一个宁静、薄雾弥漫的黎明森林的背景。然后，在前景中添加一个长满苔藓的古老石制祭坛。最后，将一把发光的剑放在祭坛顶部。”</span>
+            <span class="font-medium">{{ t('left.guide.stepwise.title') }}</span>
+            <span>{{ t('left.guide.stepwise.desc') }}</span>
           </li>
           <li>
-            <span class="font-medium">使用“语义负面提示”：</span>
-            <span>不要说“没有汽车”，而是通过说“一条没有交通迹象的空旷、荒凉的街道”来正面描述所需的场景。</span>
+            <span class="font-medium">{{ t('left.guide.negative_prompt.title') }}</span>
+            <span>{{ t('left.guide.negative_prompt.desc') }}</span>
           </li>
           <li>
-            <span class="font-medium">控制镜头：</span>
-            <span>使用摄影和电影语言来控制构图。例如 wide-angle shot、macro shot、low-angle perspective 等字词。</span>
+            <span class="font-medium">{{ t('left.guide.control_camera.title') }}</span>
+            <span>{{ t('left.guide.control_camera.desc') }}</span>
           </li>
         </ul>
       </div>
@@ -469,6 +456,7 @@
 
 <script lang="ts" setup>
 import {computed, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {Icon} from '@iconify/vue'
 import {useSettingsStore} from '@/stores/settings'
 import {useUserStore} from '@/stores/user'
@@ -500,6 +488,7 @@ const p = defineProps<{ generating?: boolean }>()
 const generating = computed(() => p.generating)
 const message = useMessage()
 const dialog = useDialog()
+const {t} = useI18n()
 
 const settings = useSettingsStore()
 const user = useUserStore()
@@ -532,14 +521,14 @@ function onUploadChange(list: any) {
     }
   }
   if (filtered.length > MAX_FILES) {
-    dialog.error({title: '上传校验失败', content: '最多上传10张图片'})
+    dialog.error({title: t('upload.error.title'), content: t('upload.error.max_files')})
     return
   }
   if (totalSize > MAX_TOTAL_SIZE) {
-    dialog.error({title: '上传校验失败', content: '图片总大小不能超过50MB'})
+    dialog.error({title: t('upload.error.title'), content: t('upload.error.max_total')})
     return
   }
-  if (filtered.length < fl.length) message.error('仅支持 PNG/JPG 格式')
+  if (filtered.length < fl.length) message.error(t('left.image_input.only_png_jpg'))
   uploadList.value = filtered
   files.value = filtered.map((f: any) => f?.file?.file || f?.file).filter(Boolean)
 }
@@ -554,17 +543,17 @@ function onGenerate() {
   if (now - lastClickAt.value < 400) return
   lastClickAt.value = now
   if (promptEmpty.value) {
-    message.error('请填写提示词')
+    message.error(t('left.prompt.fill'))
     return
   }
   if (!user.profileReady) {
-    message.error('请先登录')
+    message.error(t('messages.please_login'))
     user.requireLogin()
     return
   }
   const pts = Number(user.points || 0)
   if (pts <= 0) {
-    message.error('积分不足')
+    message.error(t('points.insufficient'))
     return
   }
   emit('generate', {prompt: prompt.value, systemPrompt: systemPrompt.value, files: files.value})
@@ -682,13 +671,13 @@ function handlePaste(e: ClipboardEvent) {
   if (pastedFiles.length) {
     const nextCount = uploadList.value.length + pastedFiles.length
     if (nextCount > MAX_FILES) {
-      dialog.error({title: '上传校验失败', content: '最多上传10张图片'})
+      dialog.error({title: t('upload.error.title'), content: t('upload.error.max_files')})
       return
     }
     const currentSize = files.value.reduce((s: number, f: File) => s + (f?.size || 0), 0)
     const addSize = pastedFiles.reduce((s: number, f: File) => s + (f?.size || 0), 0)
     if (currentSize + addSize > MAX_TOTAL_SIZE) {
-      dialog.error({title: '上传校验失败', content: '图片总大小不能超过50MB'})
+      dialog.error({title: t('upload.error.title'), content: t('upload.error.max_total')})
       return
     }
     for (const file of pastedFiles) {
@@ -696,7 +685,7 @@ function handlePaste(e: ClipboardEvent) {
       files.value.push(file)
     }
   } else {
-    message.error('仅支持 PNG/JPG 格式')
+    message.error(t('left.image_input.only_png_jpg'))
   }
 }
 
@@ -711,16 +700,16 @@ function beforeUpload(data: any) {
   const t = f?.type
   const okType = allowedTypes.has(t)
   if (!okType) {
-    message.error('仅支持 PNG/JPG 格式')
+    message.error(t('left.image_input.only_png_jpg'))
     return false
   }
   if (uploadList.value.length >= MAX_FILES) {
-    dialog.error({title: '上传校验失败', content: '最多上传10张图片'})
+    dialog.error({title: t('upload.error.title'), content: t('upload.error.max_files')})
     return false
   }
   const currentSize = files.value.reduce((s: number, file: File) => s + (file?.size || 0), 0)
   if (currentSize + (f?.size || 0) > MAX_TOTAL_SIZE) {
-    dialog.error({title: '上传校验失败', content: '图片总大小不能超过50MB'})
+    dialog.error({title: t('upload.error.title'), content: t('upload.error.max_total')})
     return false
   }
   return true
@@ -878,3 +867,4 @@ function onAdvancedExpandChange(names: Array<string | number>) {
   opacity: 1
 }
 </style>
+const { t } = useI18n()

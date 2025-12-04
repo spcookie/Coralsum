@@ -3,60 +3,64 @@
     <n-collapse :default-expanded-names="[]">
       <n-collapse-item name="cfg">
         <template #header>
-          <div class="text-[16px] leading-6 font-medium">生成密钥配置</div>
+          <div class="text-[16px] leading-6 font-medium">{{ t('keys.config.title') }}</div>
         </template>
         <n-form ref="formRef" :model="form" :rules="rules" require-mark-placement="right" show-require-mark>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <n-form-item label="配置名称" path="name">
-              <n-input v-model:value="form.name" maxlength="20" placeholder="如：新春活动礼包" show-count/>
+            <n-form-item :label="t('keys.config.name')" path="name">
+              <n-input v-model:value="form.name" :placeholder="t('keys.config.placeholder_name')" maxlength="20"
+                       show-count/>
             </n-form-item>
             <div class="col-span-1 md:col-span-2 flex items-start gap-3">
-              <n-form-item class="flex-1" label="永久积分(RMB)" path="permanentPoints">
+              <n-form-item :label="t('keys.config.permanent')" class="flex-1" path="permanentPoints">
                 <n-input-number v-model:value="form.permanentPoints" :precision="2" min="0"/>
               </n-form-item>
-              <n-form-item class="flex-1" label="订阅积分(RMB)" path="subscribePoints">
+              <n-form-item :label="t('keys.config.subscribe')" class="flex-1" path="subscribePoints">
                 <n-input-number v-model:value="form.subscribePoints" :precision="2" min="0"/>
               </n-form-item>
             </div>
-            <n-form-item class="max-w-[220px]" label="订阅类型">
+            <n-form-item :label="t('keys.config.subscribe_type')" class="max-w-[220px]">
               <n-select v-model:value="form.subscribeType" :options="subscribeOptions" class="w-[200px]"/>
             </n-form-item>
-            <n-form-item class="max-w-[220px]" label="周期单位">
+            <n-form-item :label="t('keys.config.period_unit')" class="max-w-[220px]">
               <n-select v-model:value="form.periodUnit" :options="periodUnitOptions" class="w-[200px]"/>
             </n-form-item>
-            <n-form-item label="周期数量" path="periodCount">
+            <n-form-item :label="t('keys.config.period_count')" path="periodCount">
               <n-input-number v-model:value="form.periodCount" :precision="0" min="0"/>
             </n-form-item>
           </div>
           <div class="flex gap-2 justify-end mt-2">
-            <n-button :disabled="saving || genLoading" :loading="saving" @click="saveConfig">保存配置</n-button>
+            <n-button :disabled="saving || genLoading" :loading="saving" @click="saveConfig">{{
+                t('keys.config.save')
+              }}
+            </n-button>
           </div>
         </n-form>
       </n-collapse-item>
     </n-collapse>
 
-    <n-card title="配置列表">
+    <n-card :title="t('keys.config.list')">
       <div class="flex items-center justify-between mb-2">
         <div class="flex items-center gap-2">
-          <div class="text-xs text-neutral-500">当前选择：{{ selectedConfigInfo }}</div>
-          <n-input v-model:value="cfgName" placeholder="按名称查询" style="width: 180px"/>
+          <div class="text-xs text-neutral-500">{{ t('keys.config.current') }}：{{ selectedConfigInfo }}</div>
+          <n-input v-model:value="cfgName" :placeholder="t('keys.config.query_by_name')" style="width: 180px"/>
           <n-select v-model:value="cfgSortBy" :options="cfgSortOptions" style="width: 140px"/>
           <n-select v-model:value="cfgOrder" :options="orderOptions" style="width: 120px"/>
-          <n-button @click="queryConfigs">查询</n-button>
+          <n-button @click="queryConfigs">{{ t('common.query') || '查询' }}</n-button>
         </div>
         <div class="flex items-center gap-2">
           <n-input-number v-model:value="genCount" :disabled="genLoading || saving" :precision="0" max="200" min="1"
                           style="width: 120px"/>
           <n-button :disabled="!selectedConfigId || genLoading || saving" :loading="genLoading" type="primary"
-                    @click="generateKeys">生成密钥
+                    @click="generateKeys">{{ t('keys.generate') }}
           </n-button>
-          <n-button @click="resetConfigs">重置</n-button>
-          <n-button @click="loadConfigs">刷新配置</n-button>
+          <n-button @click="resetConfigs">{{ t('left.actions.reset') }}</n-button>
+          <n-button @click="loadConfigs">{{ t('keys.config.refresh') }}</n-button>
         </div>
       </div>
       <n-data-table :columns="cfgColumns" :data="cfgRows" :row-key="r=>r.id">
         <template #empty>
-          <div class="py-8 text-center text-neutral-500">暂无配置</div>
+          <div class="py-8 text-center text-neutral-500">{{ t('keys.config.empty') }}</div>
         </template>
       </n-data-table>
       <div class="mt-2 flex justify-end">
@@ -65,19 +69,25 @@
       </div>
     </n-card>
 
-    <n-card title="密钥列表">
+    <n-card :title="t('keys.list.title')">
       <div class="flex gap-2 mb-2 items-center">
-        <n-input v-model:value="keyQuery" placeholder="按Key查询" style="width: 200px"/>
+        <n-input v-model:value="keyQuery" :placeholder="t('keys.list.query_by_key')" style="width: 200px"/>
         <n-select v-model:value="keySortBy" :options="keySortOptions" style="width: 140px"/>
         <n-select v-model:value="keyOrder" :options="orderOptions" style="width: 120px"/>
-        <n-button @click="queryKeys">查询</n-button>
-        <n-button :disabled="selectedIds.length===0" @click="batchToggle(true)">批量启用</n-button>
-        <n-button :disabled="selectedIds.length===0" @click="batchToggle(false)">批量禁用</n-button>
-        <n-button @click="loadKeys">刷新</n-button>
+        <n-button @click="queryKeys">{{ t('common.query') || '查询' }}</n-button>
+        <n-button :disabled="selectedIds.length===0" @click="batchToggle(true)">{{
+            t('keys.list.enable_batch')
+          }}
+        </n-button>
+        <n-button :disabled="selectedIds.length===0" @click="batchToggle(false)">{{
+            t('keys.list.disable_batch')
+          }}
+        </n-button>
+        <n-button @click="loadKeys">{{ t('keys.list.refresh') }}</n-button>
       </div>
       <n-data-table :columns="columns" :data="rows" :row-key="r=>r.id" @update:checked-row-keys="onCheck">
         <template #empty>
-          <div class="py-8 text-center text-neutral-500">暂无数据</div>
+          <div class="py-8 text-center text-neutral-500">{{ t('common.empty') || '暂无数据' }}</div>
         </template>
       </n-data-table>
       <div class="mt-2 flex justify-end">
@@ -109,6 +119,7 @@ import {
   NTag,
   useMessage
 } from 'naive-ui'
+import {useI18n} from 'vue-i18n'
 import {
   createPointsKeyConfig,
   generatePointsKeys,
@@ -119,6 +130,7 @@ import {
 } from '@/api'
 
 const message = useMessage()
+const {t} = useI18n()
 
 const form = reactive({
   name: '',
@@ -140,8 +152,8 @@ const rules: FormRules = {
     {
       validator: (_r, v: any) => {
         const s = String(v ?? '').trim()
-        if (s.length === 0) return new Error('配置名称不能为空')
-        if (s.length > 20) return new Error('配置名称长度不可超过20')
+        if (s.length === 0) return new Error(t('messages.check_inputs'))
+        if (s.length > 20) return new Error(t('messages.check_inputs'))
         return true
       },
       trigger: ['input', 'blur']
@@ -149,7 +161,7 @@ const rules: FormRules = {
   ],
   permanentPoints: [
     {
-      validator: (_r, v: any) => (v ?? 0) >= 0 || new Error('永久积分需≥0'),
+      validator: (_r, v: any) => (v ?? 0) >= 0 || new Error(t('messages.check_inputs')),
       trigger: ['change', 'blur']
     }
   ],
@@ -157,7 +169,7 @@ const rules: FormRules = {
     {
       validator: (_r, v: any) => {
         if (!form.subscribeType) return true
-        return (v ?? 0) >= 0 || new Error('订阅积分需≥0')
+        return (v ?? 0) >= 0 || new Error(t('messages.check_inputs'))
       },
       trigger: ['change', 'blur']
     }
@@ -167,7 +179,7 @@ const rules: FormRules = {
       validator: (_r, v: any) => {
         const val = Number(v ?? 0)
         if (!form.periodUnit) return true
-        return (Number.isFinite(val) && val > 0) || new Error('设置周期单位时，周期数量需>0')
+        return (Number.isFinite(val) && val > 0) || new Error(t('messages.check_inputs'))
       },
       trigger: ['change', 'blur']
     }
@@ -191,7 +203,7 @@ async function saveConfig() {
     saving.value = true
     const ok = await formRef.value?.validate().then(() => true).catch(() => false)
     if (!ok) {
-      message.warning('请修正表单错误');
+      message.warning(t('messages.check_inputs'));
       return
     }
     const payload: any = {...form}
@@ -199,9 +211,9 @@ async function saveConfig() {
     const saved = await createPointsKeyConfig(payload)
     selectedConfigId.value = saved.id
     await loadConfigs()
-    message.success('配置已保存')
+    message.success(t('keys.msg.save_success'))
   } catch (e: any) {
-    const msg = parseProblemMessage(e) || e?.message || '保存失败'
+    const msg = parseProblemMessage(e) || e?.message || t('keys.msg.save_failed')
     message.error(msg)
   } finally {
     saving.value = false
@@ -213,19 +225,19 @@ async function generateKeys() {
     genLoading.value = true
     const id = selectedConfigId.value
     if (!id) {
-      message.warning('请先选择配置或保存配置')
+      message.warning(t('keys.msg.select_or_save_first'))
       return
     }
     const c = Number(genCount.value)
     if (!Number.isFinite(c) || c < 1 || c > 200) {
-      message.warning('生成数量需在 1-200 之间')
+      message.warning(t('keys.msg.gen_count_range'))
       return
     }
     await generatePointsKeys(id, genCount.value)
-    message.success('密钥生成成功')
+    message.success(t('keys.msg.generate_success'))
     await loadKeys()
   } catch (e: any) {
-    const msg = parseProblemMessage(e) || e?.message || '生成失败'
+    const msg = parseProblemMessage(e) || e?.message || t('keys.msg.generate_failed')
     message.error(msg)
   } finally {
     genLoading.value = false
@@ -236,7 +248,6 @@ function parseProblemMessage(err: any): string | null {
   try {
     const data = err?.response?.data
     if (!data || typeof data !== 'object') return null
-    // Micronaut Problem JSON: violations[] or message/detail/title
     const violations = (data as any).violations
     if (Array.isArray(violations) && violations.length > 0) {
       const first = violations[0]
@@ -266,9 +277,9 @@ function formatDateTime(input: any): string {
 function copyText(text: string) {
   try {
     navigator?.clipboard?.writeText(text)
-    message.success('已复制')
+    message.success(t('messages.copied'))
   } catch {
-    message.warning('复制失败')
+    message.warning(t('messages.copy_failed'))
   }
 }
 
@@ -342,20 +353,20 @@ function renderConfigTip(row: any) {
   const pu = obj?.period_unit ?? obj?.periodUnit ?? '--'
   const pc = obj?.period_count ?? obj?.periodCount ?? '--'
   const disabled = obj?.disabled ?? '--'
-  const copyBtn = h(NButton, {size: 'tiny', onClick: () => copyText(pretty)}, {default: () => '复制JSON'})
+  const copyBtn = h(NButton, {size: 'tiny', onClick: () => copyText(pretty)}, {default: () => t('keys.copy.json')})
   return h('div', {class: 'space-y-2 w-[460px] max-w-[70vw]'}, [
-    h('div', {class: 'text-xs text-neutral-400'}, '配置摘要'),
+    h('div', {class: 'text-xs text-neutral-400'}, t('keys.config.summary')),
     h('div', {class: 'grid grid-cols-2 gap-x-3 gap-y-1 text-sm'}, [
-      h('div', {}, `名称：${name}`),
-      h('div', {}, `永久积分：${perm}`),
-      h('div', {}, `订阅积分：${subs}`),
-      h('div', {}, `订阅类型：${st}`),
-      h('div', {}, `周期单位：${pu}`),
-      h('div', {}, `周期数量：${pc}`),
-      h('div', {}, `禁用：${String(!!disabled)}`),
+      h('div', {}, `${t('keys.columns.name')}：${name}`),
+      h('div', {}, `${t('keys.columns.permanent')}：${perm}`),
+      h('div', {}, `${t('keys.columns.subscribe')}：${subs}`),
+      h('div', {}, `${t('keys.columns.subscribe_type')}：${st}`),
+      h('div', {}, `${t('keys.columns.period_unit')}：${pu}`),
+      h('div', {}, `${t('keys.columns.period_count')}：${pc}`),
+      h('div', {}, `${t('keys.columns.status')}：${String(!!disabled)}`),
     ]),
     h('div', {class: 'flex items-center justify-between'}, [
-      h('div', {class: 'text-xs text-neutral-400'}, '原始JSON'), copyBtn
+      h('div', {class: 'text-xs text-neutral-400'}, t('keys.config.raw_json')), copyBtn
     ]),
     h('pre', {class: 'text-xs bg-neutral-800 text-neutral-100 p-2 rounded overflow-auto max-h-[240px]'}, pretty),
   ])
@@ -365,33 +376,33 @@ const rows = ref<any[]>([])
 const selectedIds = ref<number[]>([])
 const columns = [
   {type: 'selection'},
-  {title: 'ID', key: 'id', width: 80},
-  {title: 'Key', key: 'keyCode'},
+  {title: t('keys.list.columns.id'), key: 'id', width: 80},
+  {title: t('keys.list.columns.key'), key: 'keyCode'},
   {
-    title: '状态',
+    title: t('keys.list.columns.status'),
     key: 'status',
     render(row: any) {
       const used = !!row.used
       const enabled = !!row.enabled
       const type = used ? 'error' : (enabled ? 'success' : 'warning')
-      const label = used ? '已使用' : (enabled ? '启用' : '禁用')
+      const label = used ? t('keys.list.status.used') : (enabled ? t('keys.list.status.enabled') : t('keys.list.status.disabled'))
       return h(NTag, {type, size: 'small'}, {default: () => label})
     }
   },
   {
-    title: '创建时间', key: 'createTime', render(row: any) {
+    title: t('keys.list.columns.create_time'), key: 'createTime', render(row: any) {
       return formatDateTime(row.createTime)
     }
   },
   {
-    title: '使用时间', key: 'usedTime', render(row: any) {
+    title: t('keys.list.columns.used_time'), key: 'usedTime', render(row: any) {
       return formatDateTime(row.usedTime)
     }
   },
-  {title: '使用IP', key: 'usedIp'},
-  {title: '使用UID', key: 'usedUid'},
+  {title: t('keys.list.columns.used_ip'), key: 'usedIp'},
+  {title: t('keys.list.columns.used_uid'), key: 'usedUid'},
   {
-    title: '操作',
+    title: t('keys.list.columns.action'),
     key: 'action',
     render(row: any) {
       const viewBtn = h(
@@ -399,7 +410,7 @@ const columns = [
           {trigger: 'click'},
           {
             default: () => renderConfigTip(row),
-            trigger: () => h(NButton, {size: 'small', tertiary: true}, {default: () => '查看配置'})
+            trigger: () => h(NButton, {size: 'small', tertiary: true}, {default: () => t('keys.view_config')})
           }
       )
       return h('div', {class: 'flex items-center gap-2'}, [viewBtn])
@@ -414,8 +425,8 @@ const keyQuery = ref('')
 const keyOrder = ref<'asc' | 'desc'>('desc')
 const keySortBy = ref<'status' | 'used'>('used')
 const keySortOptions = [
-  {label: '按状态', value: 'status'},
-  {label: '按使用时间', value: 'used'},
+  {label: t('keys.list.sort_by_status'), value: 'status'},
+  {label: t('keys.list.sort_by_used_time'), value: 'used'},
 ]
 
 function onCheck(keys: any[]) {
@@ -425,10 +436,10 @@ function onCheck(keys: any[]) {
 async function batchToggle(enabled: boolean) {
   try {
     await togglePointsKeys(selectedIds.value, enabled)
-    message.success(enabled ? '已启用选中密钥' : '已禁用选中密钥')
+    message.success(enabled ? t('keys.list.enable_selected_success') : t('keys.list.disable_selected_success'))
     await loadKeys()
   } catch (e: any) {
-    const msg = parseProblemMessage(e) || e?.message || '操作失败'
+    const msg = parseProblemMessage(e) || e?.message || t('common.action_failed')
     message.error(msg)
   }
 }
@@ -445,7 +456,7 @@ async function loadKeys() {
     rows.value = (res.items || []).map(mapKeyRow)
     keyTotal.value = Number(res.total || 0)
   } catch (e: any) {
-    const msg = parseProblemMessage(e) || e?.message || '加载失败'
+    const msg = parseProblemMessage(e) || e?.message || t('messages.service_error')
     message.error(msg)
   }
 }
@@ -475,39 +486,42 @@ const cfgName = ref('')
 const cfgSortBy = ref<'id' | 'status'>('id')
 const cfgOrder = ref<'asc' | 'desc'>('desc')
 const cfgSortOptions = [
-  {label: '按ID', value: 'id'},
-  {label: '按状态', value: 'status'},
+  {label: t('keys.config.sort_by_id'), value: 'id'},
+  {label: t('keys.config.sort_by_status'), value: 'status'},
 ]
 const orderOptions = [
-  {label: '升序', value: 'asc'},
-  {label: '降序', value: 'desc'},
+  {label: t('keys.order.asc'), value: 'asc'},
+  {label: t('keys.order.desc'), value: 'desc'},
 ]
 const cfgColumns = [
-  {title: 'ID', key: 'id', width: 80},
-  {title: '名称', key: 'name'},
-  {title: '永久积分', key: 'permanentPoints'},
-  {title: '订阅积分', key: 'subscribePoints'},
-  {title: '订阅类型', key: 'subscribeType'},
-  {title: '周期单位', key: 'periodUnit'},
-  {title: '周期数量', key: 'periodCount'},
+  {title: t('keys.columns.id'), key: 'id', width: 80},
+  {title: t('keys.columns.name'), key: 'name'},
+  {title: t('keys.columns.permanent'), key: 'permanentPoints'},
+  {title: t('keys.columns.subscribe'), key: 'subscribePoints'},
+  {title: t('keys.columns.subscribe_type'), key: 'subscribeType'},
+  {title: t('keys.columns.period_unit'), key: 'periodUnit'},
+  {title: t('keys.columns.period_count'), key: 'periodCount'},
   {
-    title: '状态',
+    title: t('keys.columns.status'),
     key: 'status',
     render(row: any) {
       const disabled = !!row.disabled
       const type = disabled ? 'error' : 'success'
-      const label = disabled ? '禁用' : '启用'
+      const label = disabled ? t('keys.status.disabled') : t('keys.status.enabled')
       return h(NTag, {type, size: 'small'}, {default: () => label})
     }
   },
   {
-    title: '操作',
+    title: t('keys.columns.action'),
     key: 'action',
     render(row: any) {
-      const chooseBtn = h(NButton, {size: 'small', onClick: () => selectConfig(row)}, {default: () => '选择'})
+      const chooseBtn = h(NButton, {
+        size: 'small',
+        onClick: () => selectConfig(row)
+      }, {default: () => t('keys.config.choose')})
       const disabled = !!row.disabled
-      const toggleText = disabled ? '启用' : '禁用'
-      const confirmText = disabled ? '确认启用该配置？' : '确认禁用该配置？'
+      const toggleText = disabled ? t('keys.status.enabled') : t('keys.status.disabled')
+      const confirmText = disabled ? t('keys.config.confirm_enable') : t('keys.config.confirm_disable')
       const toggleBtn = h(
           NPopconfirm,
           {onPositiveClick: () => toggleConfigStatus(row, !disabled)},
@@ -528,17 +542,17 @@ function selectConfig(row: any) {
 async function toggleConfigStatus(row: any, toDisabled: boolean) {
   try {
     await togglePointsKeyConfig(Number(row.id), toDisabled)
-    message.success(toDisabled ? '配置已禁用' : '配置已启用')
+    message.success(toDisabled ? t('keys.msg.config_disabled') : t('keys.msg.config_enabled'))
     await loadConfigs()
   } catch (e: any) {
-    const msg = parseProblemMessage(e) || e?.message || '操作失败'
+    const msg = parseProblemMessage(e) || e?.message || t('common.action_failed')
     message.error(msg)
   }
 }
 
 const selectedConfigInfo = computed(() => {
   const id = selectedConfigId.value
-  if (!id) return '未选择'
+  if (!id) return t('keys.config.none_selected')
   const row = cfgRows.value.find(r => Number(r.id) === id)
   if (!row) return String(id)
   return `${row.id} / ${row.name}`
@@ -556,7 +570,7 @@ async function loadConfigs() {
     cfgRows.value = (res.items || []).map(mapCfgRow)
     cfgTotal.value = Number(res.total || 0)
   } catch (e: any) {
-    const msg = parseProblemMessage(e) || e?.message || '加载配置失败'
+    const msg = parseProblemMessage(e) || e?.message || t('messages.service_error')
     message.error(msg)
   }
 }

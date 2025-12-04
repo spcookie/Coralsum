@@ -5,19 +5,19 @@
       <div
           class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
         <Icon class="text-[0.75rem]" icon="ph:code"/>
-        <span class="font-medium">输入</span>
+        <span class="font-medium">{{ t('metrics.input') }}</span>
         <span class="font-semibold tabular-nums">{{ formatTokens(result?.inputTokens ?? 0) }}</span>
       </div>
       <div
           class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800">
         <Icon class="text-[0.75rem]" icon="ph:sparkle"/>
-        <span class="font-medium">输出</span>
+        <span class="font-medium">{{ t('metrics.output') }}</span>
         <span class="font-semibold tabular-nums">{{ formatTokens(result?.outputTokens ?? 0) }}</span>
       </div>
       <div
           class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
         <Icon class="text-[0.75rem]" icon="ph:timer"/>
-        <span class="font-medium">耗时</span>
+        <span class="font-medium">{{ t('metrics.duration') }}</span>
         <span class="font-semibold tabular-nums">{{ result ? formatDuration(result.durationMs) : '-' }}</span>
       </div>
     </div>
@@ -28,7 +28,7 @@
     <div v-if="allImagesLoaded"
          class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[11px]">
       <Icon class="text-[0.85rem]" icon="ph:warning"/>
-      <span>图片预览链接有效时间为 30 分钟，且仅有 5 次有效预览次数，请注意保存图片！</span>
+      <span>{{ t('share.tip') }}</span>
     </div>
     <div class="relative">
       <div v-if="images.length > 0" class="flex flex-wrap justify-center gap-4">
@@ -59,7 +59,7 @@
                     <Icon class="text-[1rem]" icon="ph:share"/>
                   </n-button>
                 </template>
-                复制分享链接
+                {{ t('share.copy') }}
               </n-tooltip>
             </div>
 
@@ -76,7 +76,7 @@
                 <div class="absolute inset-0 grid place-items-center">
                   <div class="flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
                     <n-spin size="small"/>
-                    <span>AI正在创作中...</span>
+                    <span>{{ t('loading.creating') }}</span>
                   </div>
                 </div>
               </div>
@@ -94,7 +94,7 @@
             <div class="absolute inset-0 grid place-items-center">
               <div class="flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
                 <n-spin size="small"/>
-                <span>AI正在创作中...</span>
+                <span>{{ t('loading.creating') }}</span>
               </div>
             </div>
           </div>
@@ -113,6 +113,7 @@
 
 <script lang="ts" setup>
 import {computed, onUnmounted, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {Icon} from '@iconify/vue'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {NButton, NSpin, NTooltip, useMessage} from 'naive-ui'
@@ -120,6 +121,8 @@ import {getImageShareLink} from '@/api'
 
 import {useSettingsStore} from '@/stores/settings'
 import {savePreview} from '@/utils/indexedDb'
+
+const {t} = useI18n()
 
 export interface Result {
   inputTokens: number
@@ -166,7 +169,7 @@ function themedPlaceholder(width: number, height: number, label: string) {
 <rect width='100%' height='100%' fill='url(#g)' opacity='0.08'/>
 <g fill='${text}' font-family='system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif' text-anchor='middle'>
 <text x='${width / 2}' y='${height / 2 - 6}' font-size='${fs}'>${label}</text>
-<text x='${width / 2}' y='${height / 2 + fs / 2 + 16}' font-size='${sub}'>图片预览已失效</text>
+<text x='${width / 2}' y='${height / 2 + fs / 2 + 16}' font-size='${sub}'>${t('preview.invalid')}</text>
 </g>
 </svg>`
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg)
@@ -240,7 +243,7 @@ function setImgRef(el: HTMLImageElement | null, i: number) {
 function onShare(i: number) {
   const raw = props.result?.linkImages?.[i] || props.result?.images?.[i]
   if (!raw) {
-    message?.error('无可分享链接', {placement: 'top'})
+    message?.error(t('share.none'), {placement: 'top'})
     return
   }
   const cached = shareLinks.value[i]
@@ -253,13 +256,13 @@ function onShare(i: number) {
   })()
   const ok = copyTextSync(abs)
   if (ok) {
-    message?.success(cached ? '分享链接已复制，可直接发送' : '已复制原始链接', {placement: 'top'})
+    message?.success(cached ? t('share.copied_ready') : t('share.copied_raw'), {placement: 'top'})
     return
   }
   copyTextAsync(abs)
-      .then(() => message?.success(cached ? '分享链接已复制，可直接发送' : '已复制原始链接', {placement: 'top'}))
+      .then(() => message?.success(cached ? t('share.copied_ready') : t('share.copied_raw'), {placement: 'top'}))
       .catch((err: any) => {
-        const msg = err?.message || '复制失败，请手动复制链接'
+        const msg = err?.message || t('share.copy_failed')
         message?.error(msg, {placement: 'top'})
       })
 }
@@ -276,8 +279,8 @@ const showOverlay = computed(() => {
   const isLoading = !!props.loading
   return !hasImg && !hasText && !isLoading
 })
-const twText = '用文字驱动图像创作与编辑：生图、局部重绘、风格迁移与扩图一应俱全。Coralsum 保持角色一致与场景连贯，速度快、细节稳。'
-const twChars = computed(() => Array.from(twText))
+const twText = computed(() => t('overlay.text'))
+const twChars = computed(() => Array.from(twText.value))
 const typeIndex = ref(0)
 const visibleChars = computed(() => twChars.value.slice(0, typeIndex.value))
 let timer: any
@@ -305,6 +308,12 @@ watch(showOverlay, (v) => {
     schedule()
   }
 }, {immediate: true})
+watch(twText, () => {
+  if (showOverlay.value) {
+    typeIndex.value = 0
+    schedule()
+  }
+})
 onUnmounted(() => {
   if (timer) clearTimeout(timer)
 })
@@ -465,7 +474,7 @@ function copyTextAsync(text: string): Promise<void> {
       }
       const ok = document.execCommand('copy')
       document.body.removeChild(ta)
-      ok ? resolve() : reject(new Error('复制失败'))
+      ok ? resolve() : reject(new Error(t('share.copy_failed')))
     } catch (e) {
       reject(e as any)
     }

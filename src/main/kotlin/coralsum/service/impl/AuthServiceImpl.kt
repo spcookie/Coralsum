@@ -25,6 +25,14 @@ class AuthServiceImpl(
         private val secureRandom: SecureRandom = SecureRandom()
     }
     override suspend fun sendEmailCode(email: String, purpose: String): Boolean {
+        val latest = emailRepo.findFirstByEmailAndPurposeAndUsedFalseOrderByExpireTimeDesc(email, purpose)
+        if (latest != null) {
+            val sentAt = latest.expireTime.minusMinutes(10)
+            val withinCooldown = sentAt.isAfter(LocalDateTime.now().minusSeconds(60))
+            if (withinCooldown) {
+                return false
+            }
+        }
         val code = "%06d".format(secureRandom.nextInt(1_000_000))
         val rec = EmailVerificationCode(
             email = email,

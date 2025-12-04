@@ -19,6 +19,7 @@ export const useUserStore = defineStore('user', {
         points: 0,
         permanentPoints: 0,
         subscribePoints: 0,
+        subscribeExpireTime: null as number | null,
         tier: 'FREE' as UserTier,
         email: '',
         token: '',
@@ -48,6 +49,7 @@ export const useUserStore = defineStore('user', {
             points?: number;
             permanentPoints?: number;
             subscribePoints?: number;
+            subscribeExpireTime?: number | null;
             tier: UserTier;
             token?: string
         }) {
@@ -59,6 +61,7 @@ export const useUserStore = defineStore('user', {
             if (typeof payload.points === 'number') this.points = payload.points
             this.permanentPoints = payload.permanentPoints ?? this.permanentPoints
             this.subscribePoints = payload.subscribePoints ?? this.subscribePoints
+            this.subscribeExpireTime = typeof payload.subscribeExpireTime === 'number' ? payload.subscribeExpireTime : (payload.subscribeExpireTime ?? this.subscribeExpireTime)
             this.tier = payload.tier
             if (payload.token && payload.token.length > 0) {
                 this.token = payload.token

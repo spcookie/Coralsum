@@ -18,9 +18,9 @@
           </div>
           <div class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Model Crafted by Nano Banana Pro 🍌</div>
           <div class="mt-2 w-full px-4 text-center break-words text-xs text-neutral-500 dark:text-neutral-400">
-            Copyright © 2025 Coralsum. 项目开源，采用
-            <a class="underline" href="https://opensource.org/licenses/MIT" rel="noopener noreferrer" target="_blank">MIT
-              许可证</a>。
+            {{ t('footer.opensource') }}
+            <a class="underline" href="https://opensource.org/licenses/MIT" rel="noopener noreferrer"
+               target="_blank">{{ t('footer.mit') }}</a>
           </div>
         </div>
       </div>
@@ -30,6 +30,7 @@
 
 <script lang="ts" setup>
 import {onMounted, onUnmounted, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import LeftConfigPanel from '@/components/LeftConfigPanel.vue'
 import RightResultPanel from '@/components/RightResultPanel.vue'
 import {useSettingsStore} from '@/stores/settings'
@@ -46,6 +47,7 @@ import {useMessage} from 'naive-ui'
 import {addHistoryFromResult} from '@/utils/indexedDb'
 
 const settings = useSettingsStore()
+const {t} = useI18n()
 const user = useUserStore()
 const result = ref<any>()
 const loading = ref(false)

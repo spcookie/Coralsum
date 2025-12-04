@@ -1,0 +1,410 @@
+{
+  "common": {
+    "ok": "确定",
+    "cancel": "取消",
+    "error": "错误",
+    "query": "查询",
+    "empty": "暂无数据",
+    "action_failed": "操作失败"
+  },
+  "auth": {
+    "login": {
+      "title": "登录"
+    },
+    "register": "注册",
+    "forgot": "忘记密码",
+    "reset": "重置密码",
+    "register_title": "注册",
+    "forgot_title": "忘记密码"
+  },
+  "user": {
+    "profile": {
+      "language": "语言",
+      "language_updated": "语言偏好已更新"
+    }
+  },
+  "points": {
+    "balance": {
+      "title": "积分余额",
+      "label": "当前积分"
+    },
+    "subscribe": "订阅积分",
+    "permanent": "永久积分",
+    "expire": "订阅到期时间",
+    "insufficient": "积分不足"
+  },
+  "app": {
+    "title": "Coralsum 生图"
+  },
+  "profile": {
+    "modal": {
+      "title": "用户信息",
+      "email": "邮箱",
+      "password": "密码",
+      "name": "名称",
+      "save": "保存",
+      "cancel": "取消",
+      "send_code": "发送验证码",
+      "change_password": "修改密码",
+      "old_password": "原密码",
+      "new_password": "新密码",
+      "confirm_password": "确认密码",
+      "email_code": "邮箱验证码"
+    },
+    "logout": {
+      "title": "退出登录",
+      "confirm": "确定要退出登录吗？",
+      "ok": "确认退出",
+      "cancel": "取消"
+    },
+    "history": {
+      "title": "历史记录",
+      "refresh": "刷新",
+      "empty": "暂无历史记录",
+      "count": "共",
+      "warning": "历史记录保存在您的浏览器本地，不会上传到服务器。更换设备或清理浏览器数据可能会丢失历史。",
+      "expand_images": "展开图片",
+      "delete": "删除",
+      "confirm_delete": "确认删除该条历史记录？"
+    }
+  },
+  "metrics": {
+    "input": "输入",
+    "output": "输出",
+    "duration": "耗时",
+    "images": "图片"
+  },
+  "redeem": {
+    "title": "兑换积分密钥",
+    "placeholder": "输入密钥",
+    "cancel": "取消",
+    "ok": "兑换",
+    "loading": "兑换中...",
+    "success": "兑换成功，积分+{points}",
+    "failed": "兑换失败"
+  },
+  "messages": {
+    "email_required": "请输入邮箱",
+    "email_invalid": "邮箱格式不正确",
+    "password_required": "请输入密码",
+    "password_invalid": "密码需6-16位，且含字母与数字；可包含@._-!#$%^&*等符号",
+    "check_inputs": "请检查输入项",
+    "login_success": "登录成功",
+    "auth_expired": "登录已过期，请重新登录",
+    "auth_required": "未登录，请先登录",
+    "service_error": "服务异常，请稍后重试",
+    "login_failed": "登录失败",
+    "please_login": "请先登录",
+    "fill_all_fields": "请完整填写原密码、新密码、确认密码与邮箱验证码",
+    "new_pwd_len": "新密码长度需至少 6 位",
+    "new_pwd_mismatch": "两次输入的新密码不一致",
+    "no_changes": "未检测到可保存的更改",
+    "saved_user_info": "已保存用户信息",
+    "logout_success": "已退出登录",
+    "delete_success": "已删除该条记录",
+    "delete_failed": "删除失败",
+    "confirm_password_required": "请确认密码",
+    "code_required": "请输入验证码",
+    "code_rule": "验证码为6位数字",
+    "code_sent": "验证码已发送，请注意查收",
+    "send_failed": "发送失败",
+    "register_success": "注册成功，请登录",
+    "register_failed": "注册失败",
+    "reset_success": "重置成功，请登录",
+    "copied": "已复制",
+    "copy_failed": "复制失败"
+  },
+  "error": {
+    "unauthorized": "未授权",
+    "forbidden": "禁止访问",
+    "not_found": "资源未找到",
+    "internal": "服务器内部错误"
+  },
+  "share": {
+    "copy": "复制分享链接",
+    "tip": "图片预览链接有效时间为 30 分钟，且仅有 5 次有效预览次数，请注意保存图片！",
+    "none": "无可分享链接",
+    "copied_ready": "分享链接已复制，可直接发送",
+    "copied_raw": "已复制原始链接",
+    "copy_failed": "复制失败，请手动复制链接"
+  },
+  "overlay": {
+    "text": "用文字驱动图像创作与编辑：生图、局部重绘、风格迁移与扩图一应俱全。Coralsum 保持角色一致与场景连贯，速度快、细节稳。"
+  },
+  "loading": {
+    "creating": "AI正在创作中..."
+  },
+  "preview": {
+    "zoom": "缩放",
+    "zoom_out": "缩小",
+    "zoom_in": "放大",
+    "reset": "重置",
+    "rotate_left": "左旋",
+    "rotate_right": "右旋",
+    "copy": "复制",
+    "download": "下载",
+    "copy_clipboard": "已复制到剪贴板",
+    "copy_link": "已复制图片链接",
+    "download_failed": "下载失败",
+    "invalid": "图片预览已失效"
+  },
+  "left": {
+    "prompt": {
+      "title": "提示词",
+      "guide": "提示指南与策略",
+      "placeholder": "输入你的创意想法，让AI为你生成图片",
+      "guide_title": "提示指南与最佳实践",
+      "fill": "请填写提示词",
+      "desc": "用自然语言描述你想生成或修改的内容。建议包含主体、风格、构图与色调，并明确限制条件与细节，避免歧义。",
+      "open_guide": "打开提示指南"
+    },
+    "image_input": {
+      "title": "输入图片",
+      "tip": "可拖拽、选择或粘贴一到多张参考图，辅助生成或进行图像编辑。建议使用 PNG/JPG，体积适中。",
+      "drag": "拖拽、点击选择或粘贴图片",
+      "only_png_jpg": "仅支持 PNG/JPG 格式"
+    },
+    "system_prompt": {
+      "title": "系统提示词",
+      "tip": "面向模型的高级指令，用于约束整体风格、行为与安全策略。建议与提示词分离，保持客观、简洁。",
+      "placeholder": "设置生成风格、光影或细节，让AI更精准理解你的创意"
+    },
+    "actions": {
+      "reset": "重置",
+      "generate": "生成"
+    },
+    "estimate": {
+      "tip": "估算基于当前配置与价格，实际扣减以生成结果为准"
+    },
+    "model_type": {
+      "title": "模型类型",
+      "tip": "选择生成图片的模型类型。高级 更高质量，基本 更经济。",
+      "basic": "基本",
+      "pro": "高级"
+    },
+    "candidate": {
+      "title": "候选图片数量",
+      "tip": "一次返回的候选结果数量。数量越多，耗时与消耗越高，建议按需选择 1–4。"
+    },
+    "advanced": {
+      "title": "高级配置",
+      "tip": "展开以管理宽高比、温度、媒体分辨率、思考等级、图片分辨率、核采样、输出格式与超分辨率。"
+    },
+    "aspect_ratio": {
+      "title": "图片宽高比",
+      "tip": "自动：沿用输入图片的原始比例。也可选择固定比例（1:1、16:9 等）以适配社交/海报等场景。",
+      "auto": "自动"
+    },
+    "temperature": {
+      "title": "温度",
+      "tip": "温度控制随机性；低温更稳定、可控，高温更有创意、发散。推荐 ≥1.0，以获得更丰富的创意与细节。"
+    },
+    "image_size": {
+      "title": "图片分辨率",
+      "tip": "选择目标输出的基础分辨率尺寸，数值越大越清晰，耗时与消耗越高。"
+    },
+    "top_p": {
+      "title": "核采样",
+      "tip": "核采样阈值，控制输出多样性；值越大越丰富，越小越保守。可按需微调以平衡质量与多样性。"
+    },
+    "output_format": {
+      "title": "输出格式",
+      "tip": "选择最终图片编码格式：PNG（无损、支持透明）、JPG（体积更小）。"
+    },
+    "upscayl": {
+      "title": "超分辨率",
+      "tip": "使用 AI 对图像进行超分与细节重建，使画面更清晰锐利；倍率越高耗时与消耗越大。",
+      "warn": "高倍率将显著增加计算开销与等待时长，建议按需选择并优先尝试较低倍率。"
+    },
+    "reset": {
+      "confirm_title": "确认重置",
+      "confirm_content": "是否重置所有配置？"
+    },
+    "guide": {
+      "generate_title": "用于生成图片的提示",
+      "real_scene": {
+        "title": "逼真场景",
+        "desc": "使用摄影术语，说明角度、镜头、光线与细节，获得逼真效果。"
+      },
+      "stickers": {
+        "title": "风格化插画与贴纸",
+        "desc": "创建贴纸/图标/素材时，明确样式并要求透明背景。"
+      },
+      "text_accuracy": {
+        "title": "图片内文字准确",
+        "desc": "清楚说明文字、字体风格（描述性）与整体设计。"
+      },
+      "product_photography": {
+        "title": "产品模型与商业摄影",
+        "desc": "适用于电商、广告或品牌宣传，输出清晰专业商品照片。"
+      },
+      "minimal_style": {
+        "title": "极简风格与负空间",
+        "desc": "适合作为网站、演示或营销材料背景，便于叠加文字。"
+      },
+      "sequential_art": {
+        "title": "连续艺术（漫画/故事板）",
+        "desc": "以角色一致性与场景描述为基础，构建视觉叙事。"
+      },
+      "use_search": {
+        "title": "使用搜索建立依据",
+        "desc": "根据实时/最新信息生成图片，适用于新闻、天气等时效主题。"
+      },
+      "edit_title": "用于修改图片的提示",
+      "add_remove": {
+        "title": "添加与移除元素",
+        "desc": "提供图片并描述更改；模型匹配原图风格、光照与透视。"
+      },
+      "inpaint": {
+        "title": "局部重绘（语义遮盖）",
+        "desc": "通过对话定义蒙版，修改特定区域并保持其他部分不变。"
+      },
+      "style_transfer": {
+        "title": "风格迁移",
+        "desc": "提供图片，以不同艺术风格重新创作其中内容。"
+      },
+      "advanced_composition": {
+        "title": "高级合成：组合多图",
+        "desc": "提供多张图片作为上下文，创建新合成场景，适合模型与拼贴。"
+      },
+      "high_fidelity": {
+        "title": "高保真细节保留",
+        "desc": "在编辑请求中详细描述关键细节（如面部/徽标）以保留。"
+      },
+      "bring_to_life": {
+        "title": "让草图焕发活力",
+        "desc": "上传草图或简笔画，由模型优化为成品图片。"
+      },
+      "character_consistency": {
+        "title": "角色一致性：360° 视图",
+        "desc": "提示不同角度并加入之前生成的参考，以保持角色一致性。"
+      },
+      "best_title": "最佳做法",
+      "concretize": {
+        "title": "具体化：",
+        "desc": "越具体越可控。使用细致描述替代笼统词语以提升输出质量。"
+      },
+      "context_intent": {
+        "title": "提供上下文与意图：",
+        "desc": "说明用途，模型对上下文的理解影响最终输出。"
+      },
+      "iterate": {
+        "title": "迭代与优化：",
+        "desc": "通过对话进行小幅更改，如调整光线或表情以逐步优化。"
+      },
+      "stepwise": {
+        "title": "分步指令：",
+        "desc": "将复杂场景拆分为步骤：背景→前景→焦点元素。"
+      },
+      "negative_prompt": {
+        "title": "语义负面提示：",
+        "desc": "用正面描述目标场景来表达缺失（如“空旷无交通迹象的街道”）。"
+      },
+      "control_camera": {
+        "title": "控制镜头：",
+        "desc": "使用摄影/电影语言控制构图，如 wide-angle、macro、low-angle 等。"
+      }
+    }
+  },
+  "upload": {
+    "error": {
+      "title": "上传校验失败",
+      "max_files": "最多上传10张图片",
+      "max_total": "图片总大小不能超过50MB"
+    }
+  },
+  "menu": {
+    "image_generate": "图片生成",
+    "key_manage": "密钥管理"
+  },
+  "keys": {
+    "config": {
+      "title": "生成密钥配置",
+      "name": "配置名称",
+      "placeholder_name": "如：新春活动礼包",
+      "permanent": "永久积分(RMB)",
+      "subscribe": "订阅积分(RMB)",
+      "subscribe_type": "订阅类型",
+      "period_unit": "周期单位",
+      "period_count": "周期数量",
+      "save": "保存配置",
+      "list": "配置列表",
+      "current": "当前选择",
+      "query_by_name": "按名称查询",
+      "sort_by_id": "按ID",
+      "sort_by_status": "按状态",
+      "none_selected": "未选择",
+      "refresh": "刷新配置",
+      "empty": "暂无配置",
+      "choose": "选择",
+      "confirm_enable": "确认启用该配置？",
+      "confirm_disable": "确认禁用该配置？",
+      "summary": "配置摘要",
+      "raw_json": "原始JSON"
+    },
+    "order": {
+      "asc": "升序",
+      "desc": "降序"
+    },
+    "list": {
+      "title": "密钥列表",
+      "query_by_key": "按Key查询",
+      "sort_by_status": "按状态",
+      "sort_by_used_time": "按使用时间",
+      "enable_batch": "批量启用",
+      "disable_batch": "批量禁用",
+      "refresh": "刷新",
+      "columns": {
+        "id": "ID",
+        "key": "Key",
+        "status": "状态",
+        "create_time": "创建时间",
+        "used_time": "使用时间",
+        "used_ip": "使用IP",
+        "used_uid": "使用UID",
+        "action": "操作"
+      },
+      "status": {
+        "used": "已使用",
+        "enabled": "启用",
+        "disabled": "禁用"
+      },
+      "enable_selected_success": "已启用选中密钥",
+      "disable_selected_success": "已禁用选中密钥"
+    },
+    "generate": "生成密钥",
+    "columns": {
+      "id": "ID",
+      "name": "名称",
+      "permanent": "永久积分",
+      "subscribe": "订阅积分",
+      "subscribe_type": "订阅类型",
+      "period_unit": "周期单位",
+      "period_count": "周期数量",
+      "status": "状态",
+      "action": "操作"
+    },
+    "status": {
+      "enabled": "启用",
+      "disabled": "禁用"
+    },
+    "view_config": "查看配置",
+    "copy": {
+      "json": "复制JSON"
+    },
+    "msg": {
+      "select_or_save_first": "请先选择配置或保存配置",
+      "gen_count_range": "生成数量需在 1-200 之间",
+      "generate_success": "密钥生成成功",
+      "generate_failed": "生成失败",
+      "config_enabled": "配置已启用",
+      "config_disabled": "配置已禁用",
+      "save_success": "配置已保存",
+      "save_failed": "保存失败"
+    }
+  },
+  "footer": {
+    "opensource": "Copyright © 2025 Coralsum. 项目开源，采用",
+    "mit": "MIT 许可证"
+  }
+}

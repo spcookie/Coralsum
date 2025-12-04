@@ -29,27 +29,27 @@ function placeholderImage(index) {
     return `https://placehold.co/${w}x${h}?text=IMG${index + 1}`
 }
 
-Mock.mock(/\/api\/auth\/send-code$/, 'post', (opts) => {
-    const {email} = JSON.parse(opts.body || '{}')
-    const code = genEmailCode()
-    mem.emailCodes.set(email, {code, expiresAt: Date.now() + 10 * 60 * 1000})
-    return {code: 'SUCCESS', message: '', data: {ok: true, code}}
-})
+// Mock.mock(/\/api\/auth\/send-code$/, 'post', (opts) => {
+//     const {email} = JSON.parse(opts.body || '{}')
+//     const code = genEmailCode()
+//     mem.emailCodes.set(email, {code, expiresAt: Date.now() + 10 * 60 * 1000})
+//     return {code: 'SUCCESS', message: '', data: {ok: true, code}}
+// })
 
-Mock.mock(/\/api\/auth\/register$/, 'post', (opts) => {
-    const {email, password, code} = JSON.parse(opts.body || '{}')
-    const rec = mem.emailCodes.get(email)
-    if (!email || !password || !code || !rec || rec.expiresAt < Date.now() || rec.code !== code) {
-        return {status: 400, message: '注册信息无效或验证码错误'}
-    }
-    mem.passwords.set(email, password)
-    let info = mem.usersByEmail.get(email)
-    if (!info) {
-        info = {email, name: email.split('@')[0], points: genPoints(), tier: genTier(), token: genToken()}
-        mem.usersByEmail.set(email, info)
-    }
-    return {code: 'SUCCESS', message: '', data: {ok: true}}
-})
+// Mock.mock(/\/api\/auth\/register$/, 'post', (opts) => {
+//     const {email, password, code} = JSON.parse(opts.body || '{}')
+//     const rec = mem.emailCodes.get(email)
+//     if (!email || !password || !code || !rec || rec.expiresAt < Date.now() || rec.code !== code) {
+//         return {status: 400, message: '注册信息无效或验证码错误'}
+//     }
+//     mem.passwords.set(email, password)
+//     let info = mem.usersByEmail.get(email)
+//     if (!info) {
+//         info = {email, name: email.split('@')[0], points: genPoints(), tier: genTier(), token: genToken()}
+//         mem.usersByEmail.set(email, info)
+//     }
+//     return {code: 'SUCCESS', message: '', data: {ok: true}}
+// })
 
 // Mock.mock(/\/api\/auth\/login$/, 'post', (opts) => {
 //   const { username, password } = JSON.parse(opts.body || '{}')
@@ -102,19 +102,19 @@ Mock.mock(/\/api\/auth\/register$/, 'post', (opts) => {
 //     return {code: 'SUCCESS', message: '', data: info}
 // })
 
-Mock.mock(/\/api\/user\/change-password$/, 'post', (opts) => {
-    const {email, oldPassword, newPassword, code} = JSON.parse(opts.body || '{}')
-    const rec = mem.emailCodes.get(email)
-    const stored = mem.passwords.get(email)
-    if (!email || !oldPassword || !newPassword || !code || !rec || rec.expiresAt < Date.now() || rec.code !== code) {
-        return {status: 400, message: '信息不完整或验证码无效'}
-    }
-    if (stored && stored !== oldPassword) {
-        return {status: 403, message: '原密码错误'}
-    }
-    mem.passwords.set(email, newPassword)
-    return {code: 'SUCCESS', message: '', data: {ok: true}}
-})
+// Mock.mock(/\/api\/user\/change-password$/, 'post', (opts) => {
+//     const {email, oldPassword, newPassword, code} = JSON.parse(opts.body || '{}')
+//     const rec = mem.emailCodes.get(email)
+//     const stored = mem.passwords.get(email)
+//     if (!email || !oldPassword || !newPassword || !code || !rec || rec.expiresAt < Date.now() || rec.code !== code) {
+//         return {status: 400, message: '信息不完整或验证码无效'}
+//     }
+//     if (stored && stored !== oldPassword) {
+//         return {status: 403, message: '原密码错误'}
+//     }
+//     mem.passwords.set(email, newPassword)
+//     return {code: 'SUCCESS', message: '', data: {ok: true}}
+// })
 
 // Mock.mock(/\/api\/generate$/, 'post', (opts) => {
 //   const req = JSON.parse(opts.body || '{}')

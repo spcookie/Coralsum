@@ -3,6 +3,7 @@ import {createPinia} from 'pinia'
 import {persistPlugin} from '@/stores/persist'
 import {createRouter, createWebHashHistory} from 'vue-router'
 import App from './App.vue'
+import {createI18nInstance} from './i18n'
 import routes from './router'
 import './index.css'
 import '@fontsource/geist-mono/500.css'
@@ -107,7 +108,13 @@ const router = createRouter({
     routes
 })
 
-const app = createApp(App)
-app.use(pinia)
-app.use(router)
-app.mount('#app')
+async function bootstrap() {
+    const i18n = await createI18nInstance()
+    const app = createApp(App)
+    app.use(pinia)
+    app.use(router)
+    app.use(i18n)
+    app.mount('#app')
+}
+
+bootstrap()

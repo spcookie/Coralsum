@@ -50,6 +50,7 @@ export async function getProfile() {
         tier: data.tier,
         permanentPoints: Number(data.permanent_points || 0),
         subscribePoints: Number(data.subscribe_points || 0),
+        subscribeExpireTime: typeof data.subscribe_expire_time === 'number' ? Number(data.subscribe_expire_time) : null,
         points: Number(data.permanent_points || 0) + Number(data.subscribe_points || 0),
     }
 }
@@ -70,6 +71,7 @@ export async function updateProfileName(name: string) {
         tier: data.tier,
         permanentPoints: Number(data.permanent_points || 0),
         subscribePoints: Number(data.subscribe_points || 0),
+        subscribeExpireTime: typeof data.subscribe_expire_time === 'number' ? Number(data.subscribe_expire_time) : null,
         points: Number(data.permanent_points || 0) + Number(data.subscribe_points || 0),
     }
 }

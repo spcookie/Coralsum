@@ -96,6 +96,7 @@
 
 <script lang="ts" setup>
 import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {Icon} from '@iconify/vue'
 import {NButton, NModal, NSpin, useMessage} from 'naive-ui'
 import {getPreview, savePreview} from '@/utils/indexedDb'
@@ -104,6 +105,7 @@ const props = defineProps<{ modelValue: boolean; src: string }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
 
 const message = useMessage()
+const {t} = useI18n()
 const canvasRef = ref<HTMLElement | null>(null)
 const imgRef = ref<HTMLImageElement | null>(null)
 const imgLoading = ref(true)
@@ -446,4 +448,3 @@ async function resolveSrc() {
   color: rgba(255, 255, 255, 0.85);
 }
 </style>
-const { t } = useI18n()

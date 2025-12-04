@@ -140,7 +140,7 @@
     </n-form>
   </n-modal>
   <n-modal v-model:show="showRedeemMobile" :style="{ width: '420px', maxWidth: '92vw', margin: '0 auto' }" preset="card"
-           title="兑换积分密钥">
+           :title="t('redeem.title')">
     <div class="space-y-3">
       <n-input v-model:value="redeemKeyMobile" :placeholder="t('redeem.placeholder')"/>
       <div class="flex gap-2 justify-end">
@@ -215,27 +215,31 @@
             <div class="p-3 flex items-center gap-2">
               <div class="flex-1 flex flex-wrap items-center gap-1.5 text-[10px] sm:text-[11px]">
                 <div
-                    class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shrink-0 whitespace-nowrap">
                   <Icon class="text-[0.75rem]" icon="ph:code"/>
-                  <span class="font-medium">{{ t('metrics.input') }}</span>
+                  <span class="font-medium hidden sm:inline">{{ t('metrics.input') }}</span>
+                  <span class="font-medium sm:hidden">{{ t('metrics_short.input') }}</span>
                   <span class="font-semibold tabular-nums">{{ formatTokens(r.inputTokens) }}</span>
                 </div>
                 <div
-                    class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800">
+                    class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800 shrink-0 whitespace-nowrap">
                   <Icon class="text-[0.75rem]" icon="ph:sparkle"/>
-                  <span class="font-medium">{{ t('metrics.output') }}</span>
+                  <span class="font-medium hidden sm:inline">{{ t('metrics.output') }}</span>
+                  <span class="font-medium sm:hidden">{{ t('metrics_short.output') }}</span>
                   <span class="font-semibold tabular-nums">{{ formatTokens(r.outputTokens) }}</span>
                 </div>
                 <div
-                    class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
+                    class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 shrink-0 whitespace-nowrap">
                   <Icon class="text-[0.75rem]" icon="ph:timer"/>
-                  <span class="font-medium">{{ t('metrics.duration') }}</span>
+                  <span class="font-medium hidden sm:inline">{{ t('metrics.duration') }}</span>
+                  <span class="font-medium sm:hidden">{{ t('metrics_short.duration') }}</span>
                   <span class="font-semibold tabular-nums">{{ formatDuration(r.durationMs) }}</span>
                 </div>
                 <div
-                    class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
+                    class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 shrink-0 whitespace-nowrap">
                   <Icon class="text-[0.75rem]" icon="ph:image"/>
-                  <span class="font-medium">{{ t('metrics.images') }}</span>
+                  <span class="font-medium hidden sm:inline">{{ t('metrics.images') }}</span>
+                  <span class="font-medium sm:hidden">{{ t('metrics_short.images') }}</span>
                   <span class="font-semibold tabular-nums">{{ r.imageCount }}</span>
                 </div>
                 <div class="ml-auto text-[11px] text-neutral-500">{{ formatTime(r.createdAt) }}</div>
@@ -266,7 +270,8 @@
                 <div class="mt-2 flex flex-wrap justify-center gap-2">
                   <div v-for="(img,i) in r.urls" :key="i"
                        class="rounded bg-neutral-100 dark:bg-neutral-800 w-full sm:w-[200px] md:w-[280px] lg:w-[360px] cursor-zoom-in">
-                    <img :src="img || placeholder(i)" class="w-full h-auto object-contain" @click="openPreview(img)"/>
+                    <img :src="img || placeholder(i)" class="w-full h-auto object-contain"
+                         @click="openPreview(img || placeholder(i))"/>
                   </div>
                 </div>
               </div>
@@ -814,7 +819,7 @@ function formatDuration(ms: number) {
 
 function formatTokens(n: number) {
   const abs = Math.abs(n)
-  if (abs < 1000) return `${n} tokens`
+  if (abs < 1000) return `${n}`
   let val = n
   let suf = ''
   if (abs >= 1000000000) {
@@ -829,7 +834,7 @@ function formatTokens(n: number) {
   }
   const digits = val >= 100 ? 0 : val >= 10 ? 1 : 2
   const str = Number(val.toFixed(digits)).toString()
-  return `${str}${suf} tokens`
+  return `${str}${suf}`
 }
 
 function placeholder(index: number) {

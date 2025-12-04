@@ -353,7 +353,7 @@
       </n-collapse-item>
     </n-collapse>
     <n-modal v-model:show="confirmReset" :content="t('left.reset.confirm_content')"
-             :negative-text="t('profile.modal.cancel')" :positive-text="t('profile.logout.ok')"
+             :negative-text="t('profile.modal.cancel')" :positive-text="t('common.ok')"
              :title="t('left.reset.confirm_title')" preset="dialog" @positive-click="doReset"/>
     <n-modal v-model:show="promptGuideShow" :style="{ width: 'min(920px, 86vw)', margin: '20px auto' }"
              class="rounded-xl"

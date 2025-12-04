@@ -65,6 +65,15 @@ micronaut:
       disk:
         max-size: 500Mb
         persistent: true
+    uploaded-image-urls:
+      expire-after-access: 5m
+      heap:
+        max-size: 50Mb
+      offheap:
+        max-size: 10Mb
+      disk:
+        max-size: 500Mb
+        persistent: true
   security:
     authentication: bearer
     reject-not-found: false

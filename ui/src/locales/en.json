@@ -34,7 +34,7 @@
     "expire": "Subscription Expiry"
   },
   "app": {
-    "title": "Coralsum Image"
+    "title": "Coralsum"
   },
   "profile": {
     "modal": {
@@ -73,6 +73,12 @@
     "output": "Output",
     "duration": "Duration",
     "images": "Images"
+  },
+  "metrics_short": {
+    "input": "In",
+    "output": "Out",
+    "duration": "Time",
+    "images": "Imgs"
   },
   "redeem": {
     "title": "Redeem Points Key",

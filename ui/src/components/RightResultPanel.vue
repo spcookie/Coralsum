@@ -3,21 +3,24 @@
     <div v-if="!loading && !showOverlay && (images.length === 0 || allImagesLoaded)"
          class="flex flex-wrap items-center gap-1 sm:gap-1.5 text-[10px] sm:text-[11px]">
       <div
-          class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+          class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shrink-0 whitespace-nowrap">
         <Icon class="text-[0.75rem]" icon="ph:code"/>
-        <span class="font-medium">{{ t('metrics.input') }}</span>
+        <span class="font-medium hidden sm:inline">{{ t('metrics.input') }}</span>
+        <span class="font-medium sm:hidden">{{ t('metrics_short.input') }}</span>
         <span class="font-semibold tabular-nums">{{ formatTokens(result?.inputTokens ?? 0) }}</span>
       </div>
       <div
-          class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800">
+          class="flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800 shrink-0 whitespace-nowrap">
         <Icon class="text-[0.75rem]" icon="ph:sparkle"/>
-        <span class="font-medium">{{ t('metrics.output') }}</span>
+        <span class="font-medium hidden sm:inline">{{ t('metrics.output') }}</span>
+        <span class="font-medium sm:hidden">{{ t('metrics_short.output') }}</span>
         <span class="font-semibold tabular-nums">{{ formatTokens(result?.outputTokens ?? 0) }}</span>
       </div>
       <div
-          class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
+          class="flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 shrink-0 whitespace-nowrap">
         <Icon class="text-[0.75rem]" icon="ph:timer"/>
-        <span class="font-medium">{{ t('metrics.duration') }}</span>
+        <span class="font-medium hidden sm:inline">{{ t('metrics.duration') }}</span>
+        <span class="font-medium sm:hidden">{{ t('metrics_short.duration') }}</span>
         <span class="font-semibold tabular-nums">{{ result ? formatDuration(result.durationMs) : '-' }}</span>
       </div>
     </div>
@@ -332,7 +335,7 @@ function formatDuration(ms: number) {
 
 function formatTokens(n: number) {
   const abs = Math.abs(n)
-  if (abs < 1000) return `${n} tokens`
+  if (abs < 1000) return `${n}`
   let val = n
   let suf = ''
   if (abs >= 1000000000) {
@@ -347,7 +350,7 @@ function formatTokens(n: number) {
   }
   const digits = val >= 100 ? 0 : val >= 10 ? 1 : 2
   const str = Number(val.toFixed(digits)).toString()
-  return `${str}${suf} tokens`
+  return `${str}${suf}`
 }
 
 const skeletonAspectStyle = computed(() => {

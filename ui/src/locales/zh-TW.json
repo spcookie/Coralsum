@@ -34,7 +34,7 @@
     "insufficient": "積分不足"
   },
   "app": {
-    "title": "Coralsum 生圖"
+    "title": "Coralsum"
   },
   "profile": {
     "modal": {
@@ -73,6 +73,12 @@
     "output": "輸出",
     "duration": "耗時",
     "images": "圖片"
+  },
+  "metrics_short": {
+    "input": "入",
+    "output": "出",
+    "duration": "耗時",
+    "images": "圖"
   },
   "redeem": {
     "title": "兌換積分密鑰",

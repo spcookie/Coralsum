@@ -4,36 +4,107 @@
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1" name="viewport"/>
     <title th:text="${brand} + ' 验证码'">验证码</title>
+    <meta content="light dark" name="color-scheme"/>
+    <meta content="light dark" name="supported-color-schemes"/>
     <style>
         /* 尽量简化样式，提升邮件客户端兼容性 */
+        .title {
+            font-size: 18px;
+            font-weight: 600;
+            line-height: 1.6;
+        }
+
+        .sub {
+            margin-top: 4px;
+            font-size: 13px;
+        }
+
+        .text {
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .muted {
+            font-size: 12px;
+        }
+
+        .footer {
+            font-size: 12px;
+        }
+
+        .card {
+            border-radius: 12px;
+        }
+
+        .code {
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            letter-spacing: 6px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        /* Dark scheme override for clients支持暗色方案 */
         @media (prefers-color-scheme: dark) {
             body {
                 background-color: #0b1020 !important;
                 color: #e5e7eb !important;
             }
+
+            .card {
+                background-color: #111827 !important;
+                border: 1px solid #1f2937 !important;
+            }
+
+            .text {
+                color: #e5e7eb !important;
+            }
+
+            .title {
+                color: #e5e7eb !important;
+            }
+
+            .sub {
+                color: #9ca3af !important;
+            }
+
+            .muted {
+                color: #9ca3af !important;
+            }
+
+            .footer {
+                color: #6b7280 !important;
+            }
+
+            .code {
+                background-color: #0f172a !important;
+                border: 1px solid #1f2937 !important;
+                color: #e5e7eb !important;
+            }
         }
     </style>
 </head>
-<body style="margin:0;padding:0;background:#0b1020;color:#e5e7eb;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, 'Noto Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;">
-<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;margin:0 auto;"
-       width="100%">
+<body style="margin:0;padding:0;background:#ffffff;color:#111827;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, 'Noto Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;">
+<table align="center" bgcolor="#ffffff" border="0" cellpadding="0" cellspacing="0" role="presentation"
+       style="max-width:600px;margin:0 auto;" width="100%">
     <tr>
         <td style="padding:24px;">
-            <table cellpadding="0" cellspacing="0" role="presentation" style="background:#111827;border-radius:12px;"
+            <table bgcolor="#ffffff" cellpadding="0" cellspacing="0" class="card" role="presentation" style="background:#ffffff;"
                    width="100%">
                 <tr>
                     <td style="padding:24px 24px 8px 24px;">
-                        <div style="font-size:18px;font-weight:600;line-height:1.6;">
+                        <div class="title" style="color:#111827;">
                             <span th:text="${brand}">Coralsum</span>
                         </div>
-                        <div style="margin-top:4px;font-size:13px;color:#9ca3af;">
+                        <div class="sub" style="color:#6b7280;">
                             <span th:text="(${purpose} == 'REGISTER') ? '注册' : '重置密码'"></span> 验证码
                         </div>
                     </td>
                 </tr>
                 <tr>
                     <td style="padding:8px 24px 0 24px;">
-                        <div style="font-size:14px;line-height:1.8;color:#e5e7eb;">
+                        <div class="text" style="color:#111827;">
                             您正在进行
                             <strong th:text="(${purpose} == 'REGISTER') ? '注册' : '重置密码'">注册</strong>
                             操作，请使用以下验证码完成验证：
@@ -42,8 +113,9 @@
                 </tr>
                 <tr>
                     <td style="padding:12px 24px 0 24px;">
-                        <div style="background:#0f172a;border:1px solid #1f2937;border-radius:10px;padding:16px;text-align:center;">
-                            <div style="font-size:28px;letter-spacing:6px;font-weight:700;color:#e5e7eb;">
+                        <div bgcolor="#f3f4f6" class="code"
+                             style="background:#f3f4f6;border:1px solid #e5e7eb;color:#111827;">
+                            <div>
                                 <span th:text="${code}">123456</span>
                             </div>
                         </div>
@@ -51,19 +123,19 @@
                 </tr>
                 <tr>
                     <td style="padding:10px 24px 0 24px;">
-                        <div style="font-size:12px;color:#9ca3af;">验证码有效期 10 分钟，请勿泄露给他人。</div>
+                        <div class="muted" style="color:#6b7280;">验证码有效期 10 分钟，请勿泄露给他人。</div>
                     </td>
                 </tr>
                 <tr>
                     <td style="padding:18px 24px 0 24px;">
-                        <div style="font-size:12px;color:#9ca3af;">
+                        <div class="muted" style="color:#6b7280;">
                             如果这不是您的操作，请忽略本邮件或联系支持。
                         </div>
                     </td>
                 </tr>
                 <tr>
                     <td style="padding:18px 24px 24px 24px;">
-                        <div style="font-size:12px;color:#6b7280;">
+                        <div class="footer" style="color:#6b7280;">
                             — <span th:text="${brand}">Coralsum</span>
                         </div>
                     </td>

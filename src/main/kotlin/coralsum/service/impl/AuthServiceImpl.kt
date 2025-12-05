@@ -2,6 +2,7 @@ package coralsum.service.impl
 
 import cn.hutool.core.util.IdUtil
 import coralsum.common.enums.UserSource
+import coralsum.common.event.UserRegisteredEvent
 import coralsum.entity.EmailVerificationCode
 import coralsum.entity.OpenUser
 import coralsum.entity.OutletUser
@@ -10,6 +11,7 @@ import coralsum.repository.OpenUserRepository
 import coralsum.repository.OutletUserRepository
 import coralsum.service.IAuthService
 import coralsum.service.IEmailService
+import io.micronaut.context.event.ApplicationEventPublisher
 import jakarta.inject.Singleton
 import java.security.SecureRandom
 import java.time.LocalDateTime
@@ -20,6 +22,7 @@ class AuthServiceImpl(
     private val emailService: IEmailService,
     private val openUserRepository: OpenUserRepository,
     private val outletUserRepository: OutletUserRepository,
+    private val eventPublisher: ApplicationEventPublisher<UserRegisteredEvent>,
 ) : IAuthService {
     companion object {
         private val secureRandom: SecureRandom = SecureRandom()
@@ -58,6 +61,12 @@ class AuthServiceImpl(
                 userSource = UserSource.WEB,
                 sourceCode = email,
                 secret = password,
+            )
+        )
+        eventPublisher.publishEvent(
+            UserRegisteredEvent(
+                openUserId = savedOpen.id!!,
+                uid = savedOpen.uid!!,
             )
         )
         return true

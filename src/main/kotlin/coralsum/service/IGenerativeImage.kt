@@ -4,6 +4,7 @@ import coralsum.common.enums.*
 import io.micronaut.http.HttpRequest
 import io.micronaut.serde.annotation.Serdeable
 import io.swagger.v3.oas.annotations.media.Schema
+import java.io.Serializable
 
 interface IGenerativeImage {
 
@@ -90,7 +91,7 @@ data class GenResult(
     @field:Schema(description = "图片链接列表") val images: List<String?>,
     @field:Schema(description = "分享页面链接列表") val linkImages: List<String?> = emptyList(),
     @field:Schema(description = "可选文本") val text: String? = null,
-)
+) : Serializable
 
 @Serdeable
 data class LinkPage(

@@ -63,7 +63,7 @@
       "empty": "No history yet",
       "count": "Total",
       "warning": "History is stored locally in your browser and not uploaded. Switching devices or clearing browser data may lose history.",
-      "expand_images": "Expand Images",
+      "expand_images": "Expand",
       "delete": "Delete",
       "confirm_delete": "Confirm delete this record?"
     }

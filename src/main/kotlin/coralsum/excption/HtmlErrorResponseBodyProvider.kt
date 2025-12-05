@@ -25,7 +25,8 @@ class HtmlErrorResponseBodyProvider(
         val status = response.status.code
         val reason = response.status.reason
         val now = ZonedDateTime.now().format(formatter)
-        val desc = lms.getMessage("error.page.description").orElse("Error occurred.")
+        val desc = lms.getMessage("error.page.description.$status")
+            .orElse(lms.getMessage("error.page.description").orElse("Error occurred."))
         val backHome = lms.getMessage("error.page.back_home").orElse("Back to Home")
         val backPrev = lms.getMessage("error.page.back_prev").orElse("Back")
         val timeLabel = lms.getMessage("error.page.time_label").orElse("Time")
@@ -81,4 +82,3 @@ class HtmlErrorResponseBodyProvider(
         """.trimIndent()
     }
 }
-

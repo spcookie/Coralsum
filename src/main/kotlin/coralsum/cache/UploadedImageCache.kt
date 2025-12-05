@@ -5,11 +5,12 @@ import io.micronaut.cache.annotation.CachePut
 import io.micronaut.cache.annotation.Cacheable
 import io.micronaut.serde.annotation.Serdeable
 import jakarta.inject.Singleton
+import java.io.Serializable
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 @Serdeable
-data class UploadedImageRef(val uri: String, val mimeType: String)
+data class UploadedImageRef(val uri: String, val mimeType: String) : Serializable
 
 @Singleton
 class UploadedImageCache {

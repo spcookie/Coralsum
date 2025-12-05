@@ -25,41 +25,25 @@ http.interceptors.response.use(
         if (status < 200 || status >= 300) {
             return Promise.reject(res)
         }
-        if (data && typeof data === 'object') {
-            const maybeStatus = (data as any).status
-            if (typeof maybeStatus === 'number' && maybeStatus >= 400) {
-                const message = (data as any).message
-                const user = useUserStore()
-                const hadAuthHeader = !!((res as any)?.config?.headers)?.Authorization
-                const hadToken = !!user?.token
-                const authExpired = hadAuthHeader || hadToken
-                if (maybeStatus === 401 || maybeStatus === 403) {
-                    if (authExpired) {
-                        ;(res as any).__authExpired = true
-                    }
-                    user.token = ''
-                    user.requireLogin()
-                }
-                return Promise.reject({status: maybeStatus, message, __authExpired: authExpired})
-            }
-        }
+        // 统一响应：Res<T>，code 为枚举名称（如 SUCCESS、FAIL 等）
         if (data && typeof data === 'object' && 'code' in (data as any)) {
             const code = (data as any).code as string
             const message = (data as any).message as string
             const payload = (data as any).data
             if (code !== 'SUCCESS') {
-                const user = useUserStore()
-                const hadAuthHeader = !!((res as any)?.config?.headers)?.Authorization
-                const hadToken = !!user?.token
-                const authExpired = hadAuthHeader || hadToken
                 if (code === 'UNAUTHORIZED' || code === 'FORBIDDEN') {
+                    const user = useUserStore()
+                    const hadAuthHeader = !!((res as any)?.config?.headers)?.Authorization
+                    const hadToken = !!user?.token
+                    const authExpired = hadAuthHeader || hadToken
                     if (authExpired) {
                         ;(res as any).__authExpired = true
                     }
                     user.token = ''
                     user.requireLogin()
+                    return Promise.reject({code, message, data: payload, __authExpired: true})
                 }
-                return Promise.reject({code, message, data: payload, __authExpired: authExpired})
+                return Promise.reject({code, message, data: payload})
             }
             ;(res as any).data = payload
         }

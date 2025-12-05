@@ -1,6 +1,5 @@
 package coralsum.service.impl
 
-import cn.hutool.core.codec.Base64
 import cn.hutool.crypto.digest.HMac
 import cn.hutool.crypto.digest.HmacAlgorithm
 import com.aliyun.oss.HttpMethod
@@ -445,7 +444,7 @@ class GenerativeImageImpl(
     private fun sign(ref: String, uid: String, exp: Long): String {
         val hmac = HMac(HmacAlgorithm.HmacSHA256, previewConfig.secret.toByteArray())
         val data = "$ref|$uid|$exp"
-        return Base64.encode(hmac.digest(data))
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(hmac.digest(data))
     }
 
     private fun verifyToken(ref: String, token: String?): String? {
@@ -523,7 +522,10 @@ class GenerativeImageImpl(
         if (record.userCode != uid) return null
         val exp = System.currentTimeMillis() + previewConfig.ttlSeconds * 1000
         val token = sign(ref, uid, exp)
-        val src = "/api/generative-image/share?ref=$ref&pt=$uid:$exp:$token"
+        val ptRaw = "$uid:$exp:$token"
+        val pt = java.net.URLEncoder.encode(ptRaw, java.nio.charset.StandardCharsets.UTF_8)
+        val refEncoded = java.net.URLEncoder.encode(ref, java.nio.charset.StandardCharsets.UTF_8)
+        val src = "/api/generative-image/share?ref=$refEncoded&pt=$pt"
         val time = record.createTime?.let {
             java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(it)
         } ?: ""

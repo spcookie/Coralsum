@@ -63,7 +63,7 @@
       "empty": "暂无历史记录",
       "count": "共",
       "warning": "历史记录保存在您的浏览器本地，不会上传到服务器。更换设备或清理浏览器数据可能会丢失历史。",
-      "expand_images": "展开图片",
+      "expand_images": "展开",
       "delete": "删除",
       "confirm_delete": "确认删除该条历史记录？"
     }

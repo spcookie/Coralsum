@@ -4,6 +4,7 @@ import coralsum.common.enums.ImageSize
 import coralsum.common.enums.MembershipTier
 import coralsum.common.enums.SubscribeType
 import coralsum.common.event.GenerativeImageCostEvent
+import coralsum.common.event.UserRegisteredEvent
 import coralsum.config.PricingConfig
 import coralsum.entity.OpenUser
 import coralsum.entity.UserPoints
@@ -285,6 +286,20 @@ class UserPointsServiceImpl(
 
             } catch (e: Exception) {
                 log.error("Failed to update user points", e)
+            }
+        }
+    }
+
+    @EventListener
+    fun onUserRegistered(event: UserRegisteredEvent) {
+        runBlocking {
+            try {
+                val points = getOrCreateByOpenUserId(event.openUserId)
+                points.tier = MembershipTier.FREE
+                points.permanentPoints = points.permanentPoints.add(BigDecimal(50)).max(BigDecimal.ZERO)
+                userPointsRepository.update(points)
+            } catch (e: Exception) {
+                log.error("Failed to grant initial points", e)
             }
         }
     }

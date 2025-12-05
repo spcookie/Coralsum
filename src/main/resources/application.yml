@@ -46,34 +46,12 @@ micronaut:
         paths: classpath:public
         mapping: /**
   caches:
-    storage-path: ${user.dir}/caches
     generate-task-result:
       expire-after-access: 5m
-      heap:
-        max-size: 50Mb
-      offheap:
-        max-size: 10Mb
-      disk:
-        max-size: 500Mb
-        persistent: true
     generate-task-statue:
       expire-after-access: 5m
-      heap:
-        max-size: 50Mb
-      offheap:
-        max-size: 10Mb
-      disk:
-        max-size: 500Mb
-        persistent: true
     uploaded-image-urls:
       expire-after-access: 5m
-      heap:
-        max-size: 50Mb
-      offheap:
-        max-size: 10Mb
-      disk:
-        max-size: 500Mb
-        persistent: true
   security:
     authentication: bearer
     reject-not-found: false
@@ -128,6 +106,30 @@ micronaut:
   email:
     from:
       email: no-reply@spcookie.top
+#ehcache:
+#  storage-path: ${user.dir}/caches
+#  caches:
+#    generate-task-result:
+#      heap:
+#        max-size: 8Mb
+#      offheap:
+#        max-size: 10Mb
+#      disk:
+#        max-size: 100Mb
+#    generate-task-statue:
+#      heap:
+#        max-size: 8Mb
+#      offheap:
+#        max-size: 10Mb
+#      disk:
+#        max-size: 100Mb
+#    uploaded-image-urls:
+#      heap:
+#        max-size: 8Mb
+#      offheap:
+#        max-size: 10Mb
+#      disk:
+#        max-size: 100Mb
 datasources:
   default:
     url: jdbc:h2:file:${store.base}/store/data;DB_CLOSE_ON_EXIT=FALSE

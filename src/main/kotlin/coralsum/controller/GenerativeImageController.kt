@@ -143,8 +143,12 @@ class GenerativeImageController(
         request: HttpRequest<*>,
     ): HttpResponse<ModelAndView<Map<String, Any>>> {
         val ip = addressResolver.resolve(request)
+        val tokenNorm = token.replace(' ', '+')
         val url =
-            service.preview(ref, ip, token) ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "资源不存在或无权访问")
+            service.preview(ref, ip, tokenNorm) ?: throw HttpStatusException(
+                HttpStatus.NOT_FOUND,
+                "资源不存在或无权访问"
+            )
         val bytes = try {
             withContext(Dispatchers.IO) {
                 URL(url).openStream().use { it.readBytes() }
@@ -160,7 +164,7 @@ class GenerativeImageController(
         }
         val base64 = Base64.getEncoder().encodeToString(bytes)
         val dataUrl = "data:${mime};base64,${base64}"
-        val parts = token.split(":")
+        val parts = tokenNorm.split(":")
         val uid = parts.getOrNull(0) ?: ""
         val exp = parts.getOrNull(1)?.toLongOrNull()
         val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")

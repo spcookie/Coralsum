@@ -34,8 +34,10 @@ export async function sendEmailCode(email: string, purpose?: 'REGISTER' | 'RESET
     return data
 }
 
-export async function login(email: string, password: string) {
-    const {data} = await http.post('/auth/login', {username: email, password})
+export async function login(email: string, password: string, turnstileToken?: string) {
+    const headers: any = {}
+    if (turnstileToken) headers['CF-Turnstile-Response'] = turnstileToken
+    const {data} = await http.post('/auth/login', {username: email, password}, {headers})
     return data
 }
 
@@ -221,13 +223,17 @@ export async function getExternalBlob(url: string): Promise<Blob> {
     return data as Blob
 }
 
-export async function register(email: string, password: string, code: string) {
-    const {data} = await http.post('/auth/register', {email, password, code})
+export async function register(email: string, password: string, code: string, turnstileToken?: string) {
+    const headers: any = {}
+    if (turnstileToken) headers['CF-Turnstile-Response'] = turnstileToken
+    const {data} = await http.post('/auth/register', {email, password, code}, {headers})
     return data
 }
 
-export async function resetPassword(email: string, newPassword: string, code: string) {
-    const {data} = await http.post('/auth/reset-password', {email, new_password: newPassword, code})
+export async function resetPassword(email: string, newPassword: string, code: string, turnstileToken?: string) {
+    const headers: any = {}
+    if (turnstileToken) headers['CF-Turnstile-Response'] = turnstileToken
+    const {data} = await http.post('/auth/reset-password', {email, new_password: newPassword, code}, {headers})
     return data
 }
 

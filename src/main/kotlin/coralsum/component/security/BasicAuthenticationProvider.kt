@@ -1,6 +1,7 @@
 package coralsum.component.security
 
 import coralsum.common.enums.UserSource
+import coralsum.service.ITurnstileService
 import coralsum.infrastructure.repository.OutletUserRepository
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.AuthenticationFailureReason
@@ -16,6 +17,7 @@ import reactor.core.publisher.Mono
 @Singleton
 class BasicAuthenticationProvider(
     val outletUserRepository: OutletUserRepository,
+    val turnstileService: ITurnstileService,
 ) : HttpRequestReactiveAuthenticationProvider<Any> {
     override fun authenticate(
         requestContext: HttpRequest<Any>?,
@@ -23,6 +25,14 @@ class BasicAuthenticationProvider(
     ): Publisher<AuthenticationResponse> {
         return Mono.deferContextual { ctx ->
             mono(ReactorContext(ctx)) {
+                val tokenHeader = requestContext?.headers?.get("CF-Turnstile-Response")
+                    ?: requestContext?.headers?.get("X-Turnstile-Token")
+                val remoteIp = requestContext?.headers?.get("CF-Connecting-IP")
+                    ?: requestContext?.headers?.get("X-Forwarded-For")
+                val tokenOk = turnstileService.validate(tokenHeader, remoteIp)
+                if (!tokenOk) {
+                    return@mono AuthenticationResponse.failure(AuthenticationFailureReason.CREDENTIALS_DO_NOT_MATCH)
+                }
                 val user = if (authenticationRequest.secret.isBlank() || authenticationRequest.identity.isBlank()) {
                     null
                 } else {

@@ -33,9 +33,13 @@
               </n-button>
             </div>
           </n-form-item>
+          <div v-show="!usingSessionToken">
+            <div ref="turnstileResetRef"></div>
+          </div>
           <div class="flex gap-2 justify-end">
             <n-button @click="goLogin">{{ t('auth.login.title') }}</n-button>
-            <n-button :disabled="!valid" :loading="resetLoading" type="primary" @click="doReset">{{
+            <n-button :disabled="!valid || (turnstileEnabled && !turnstileResetToken)" :loading="resetLoading"
+                      type="primary" @click="doReset">{{
                 t('auth.reset')
               }}
             </n-button>
@@ -47,7 +51,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, onUnmounted, reactive, ref} from 'vue'
+import {computed, onUnmounted, reactive, ref, onMounted} from 'vue'
 import {useI18n} from 'vue-i18n'
 import {useRouter} from 'vue-router'
 import type {FormInst, FormRules} from 'naive-ui'
@@ -55,11 +59,30 @@ import {NButton, NCard, NForm, NFormItem, NInput, useMessage} from 'naive-ui'
 import {Icon} from '@iconify/vue'
 import {resetPassword, sendEmailCode} from '@/api'
 import {useUserStore} from '@/stores/user'
+import {
+  turnstileManager,
+  isTurnstileRecentlyVerified,
+  markTurnstileVerified,
+  getSessionTokenIfValid,
+  markSessionTokenUsed
+} from '@/utils/turnstile'
+import {useSettingsStore} from '@/stores/settings'
 
 const router = useRouter()
 const {t} = useI18n()
+const i18nObjForLang = useI18n()
+
+function mapLang(v: string) {
+  const base = v.toLowerCase()
+  if (base.startsWith('zh-tw')) return 'zh-TW'
+  if (base.startsWith('zh')) return 'zh'
+  const allow = ['en', 'ja', 'ko', 'es', 'fr', 'de', 'ru', 'pt', 'it', 'nl', 'tr', 'pl', 'sv', 'cs', 'hu', 'uk', 'vi', 'id']
+  const code = base.split('-')[0]
+  return allow.includes(code) ? code : 'auto'
+}
 const message = useMessage()
 const user = useUserStore()
+const settings = useSettingsStore()
 const formRef = ref<FormInst | null>(null)
 const form = reactive({email: '', newPassword: '', confirm: '', code: ''})
 const resetLoading = ref(false)
@@ -110,6 +133,10 @@ const rules: FormRules = {
   ]
 }
 const valid = computed(() => emailRegex.test(form.email.trim()) && pwdRegex.test(form.newPassword.trim()) && form.confirm.trim() === form.newPassword.trim() && codeRegex.test(form.code.trim()))
+const turnstileResetRef = ref<HTMLElement | null>(null)
+const turnstileResetToken = ref('')
+const turnstileEnabled = computed(() => !!(import.meta as any).env.VITE_TURNSTILE_SITEKEY)
+const usingSessionToken = ref(false)
 
 async function sendCode() {
   const email = form.email.trim()
@@ -146,7 +173,8 @@ async function doReset() {
       return
     }
     resetLoading.value = true
-    await resetPassword(form.email.trim(), form.newPassword.trim(), form.code.trim())
+    await resetPassword(form.email.trim(), form.newPassword.trim(), form.code.trim(), turnstileEnabled.value ? turnstileResetToken.value : undefined)
+    markSessionTokenUsed()
     message.success(t('messages.reset_success') || '重置成功，请登录')
     user.requireLogin()
     router.push('/')
@@ -164,6 +192,40 @@ function goLogin() {
 
 onUnmounted(() => {
   if (sendCodeTimer) clearInterval(sendCodeTimer)
+})
+
+onMounted(() => {
+  const tryRender = () => {
+    const ts = (window as any).turnstile
+    if (ts && turnstileResetRef.value) {
+      const cached = getSessionTokenIfValid()
+      usingSessionToken.value = !!cached
+      if (cached) {
+        turnstileResetToken.value = cached;
+        return
+      }
+      turnstileManager.createWidget(turnstileResetRef.value as any, {
+        sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
+        theme: settings.darkMode ? 'dark' : 'light',
+        language: mapLang(String((i18nObjForLang as any).locale.value || 'auto')),
+        size: isTurnstileRecentlyVerified() ? 'invisible' : 'normal',
+        onSuccess: (token) => {
+          turnstileResetToken.value = token;
+          markTurnstileVerified(token)
+        },
+        onError: () => {
+          turnstileResetToken.value = ''
+        }
+      })
+    } else {
+      setTimeout(tryRender, 200)
+    }
+  }
+  tryRender()
+})
+
+onUnmounted(() => {
+  turnstileManager.removeWidget(turnstileResetRef.value as any)
 })
 
 </script>

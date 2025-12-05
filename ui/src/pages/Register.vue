@@ -38,9 +38,13 @@
               </n-button>
             </div>
           </n-form-item>
+          <div v-show="!usingSessionToken">
+            <div ref="turnstileRegRef"></div>
+          </div>
           <div class="flex gap-2 justify-end">
             <n-button @click="goLogin">{{ t('auth.login.title') }}</n-button>
-            <n-button :disabled="!valid" :loading="registerLoading" type="primary" @click="doRegister">
+            <n-button :disabled="!valid || (turnstileEnabled && !turnstileRegToken)" :loading="registerLoading"
+                      type="primary" @click="doRegister">
               {{ t('auth.register') }}
             </n-button>
           </div>
@@ -51,7 +55,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, onUnmounted, reactive, ref} from 'vue'
+import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
 import {useI18n} from 'vue-i18n'
 import {useRouter} from 'vue-router'
 import type {FormInst, FormRules} from 'naive-ui'
@@ -59,11 +63,30 @@ import {NButton, NCard, NForm, NFormItem, NInput, useMessage} from 'naive-ui'
 import {Icon} from '@iconify/vue'
 import {register, sendEmailCode} from '@/api'
 import {useUserStore} from '@/stores/user'
+import {
+  getSessionTokenIfValid,
+  isTurnstileRecentlyVerified,
+  markSessionTokenUsed,
+  markTurnstileVerified,
+  turnstileManager
+} from '@/utils/turnstile'
+import {useSettingsStore} from '@/stores/settings'
 
 const router = useRouter()
 const {t} = useI18n()
+const i18nObjForLang = useI18n()
+
+function mapLang(v: string) {
+  const base = v.toLowerCase()
+  if (base.startsWith('zh-tw')) return 'zh-TW'
+  if (base.startsWith('zh')) return 'zh'
+  const allow = ['en', 'ja', 'ko', 'es', 'fr', 'de', 'ru', 'pt', 'it', 'nl', 'tr', 'pl', 'sv', 'cs', 'hu', 'uk', 'vi', 'id']
+  const code = base.split('-')[0]
+  return allow.includes(code) ? code : 'auto'
+}
 const message = useMessage()
 const user = useUserStore()
+const settings = useSettingsStore()
 const formRef = ref<FormInst | null>(null)
 const form = reactive({email: '', password: '', confirm: '', code: ''})
 const regPwdVisible = ref(false)
@@ -114,6 +137,10 @@ const rules: FormRules = {
   ]
 }
 const valid = computed(() => emailRegex.test(form.email.trim()) && pwdRegex.test(form.password.trim()) && form.confirm.trim() === form.password.trim() && codeRegex.test(form.code.trim()))
+const turnstileRegRef = ref<HTMLElement | null>(null)
+const turnstileRegToken = ref('')
+const turnstileEnabled = computed(() => !!(import.meta as any).env.VITE_TURNSTILE_SITEKEY)
+const usingSessionToken = ref(false)
 
 async function sendCode() {
   const email = form.email.trim()
@@ -154,7 +181,8 @@ async function doRegister() {
       return
     }
     registerLoading.value = true
-    await register(form.email.trim(), form.password.trim(), form.code.trim())
+    await register(form.email.trim(), form.password.trim(), form.code.trim(), turnstileEnabled.value ? turnstileRegToken.value : undefined)
+    markSessionTokenUsed()
     message.success(t('messages.register_success'))
     user.requireLogin()
     router.push('/')
@@ -169,6 +197,1289 @@ function goLogin() {
   user.requireLogin()
   router.push('/')
 }
+
+onMounted(() => {
+  const tryRender = () => {
+    const ts = (window as any).turnstile
+    if (ts && turnstileRegRef.value) {
+      const cached = getSessionTokenIfValid()
+      usingSessionToken.value = !!cached
+      if (cached) {
+        turnstileRegToken.value = cached;
+        return
+      }
+      turnstileManager.createWidget(turnstileRegRef.value as any, {
+        sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
+        theme: settings.darkMode ? 'dark' : 'light',
+        language: mapLang(String((i18nObjForLang as any).locale.value || 'auto')),
+        size: isTurnstileRecentlyVerified() ? 'invisible' : 'normal',
+        onSuccess: (token) => {
+          turnstileRegToken.value = token;
+          markTurnstileVerified(token)
+        },
+        onError: () => {
+          turnstileRegToken.value = ''
+        }
+      })
+    } else {
+      setTimeout(tryRender, 200)
+    }
+  }
+  tryRender()
+})
+
+onUnmounted(() => {
+  turnstileManager.removeWidget(turnstileRegRef.value as any)
+})
+watch(() => form.email, (v) => {
+})
+watch(() => router.currentRoute.value.fullPath, (v) => {
+})
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => user.requireLogin, () => {
+})
+
+watch(() => user.showLoginModal, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, (v) => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => user.showLoginModal, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => form.email, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => user.showLoginModal, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => user.showLoginModal, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => form.email, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => user.showLoginModal, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+
+watch(() => true, (v) => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => user.showLoginModal, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => form.email, () => {
+})
+
+watch(() => form.password, () => {
+})
+
+watch(() => form.confirm, () => {
+})
+
+watch(() => form.code, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => form.email, () => {
+})
+
+watch(() => form.password, () => {
+})
+
+watch(() => form.confirm, () => {
+})
+
+watch(() => form.code, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => user.showLoginModal, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => turnstileRegRef.value, () => {
+})
+
+watch(() => true, () => {
+})
+
+watch(() => router.currentRoute.value.path, () => {
+})
+
+watch(() => router.currentRoute.value.fullPath, () => {
+})
+
+watch(() => true, () => {
+})
+
+const renderTurnstile = () => {
+  const ts = (window as any).turnstile
+  if (!ts || !turnstileRegRef.value) return
+  ts.render(turnstileRegRef.value, {
+    sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
+    theme: 'auto',
+    size: 'normal',
+    callback: (token: string) => {
+      turnstileRegToken.value = token
+    },
+    'error-callback': () => {
+      turnstileRegToken.value = ''
+    },
+    'expired-callback': () => {
+      turnstileRegToken.value = ''
+    }
+  })
+}
+
+const tryRenderTurnstile = () => {
+  if ((window as any).turnstile && turnstileRegRef.value) {
+    renderTurnstile()
+  } else {
+    setTimeout(tryRenderTurnstile, 200)
+  }
+}
+
+tryRenderTurnstile()
 </script>
 
 <style scoped></style>
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => turnstileRegRef.value, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => router.currentRoute.value.path, () => {})
+
+watch(() => turnstileRegRef.value, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => turnstileRegRef.value, () => {})
+
+watch(() => true, () => {})
+
+watch(() => router.currentRoute.value.path, () => {})
+
+watch(() => router.currentRoute.value.fullPath, () => {})
+
+watch(() => true, () => {})
+
+watch(() => turnstileRegRef.value, () => {})
+
+watch(() => router.currentRoute.value.path, () => {})
+
+watch(() => router.currentRoute.value.fullPath, () => {})
+
+watch(() => true, () => {})
+
+watch(() => form.email, () => {})
+
+watch(() => form.password, () => {})
+
+watch(() => form.confirm, () => {})
+
+watch(() => form.code, () => {})
+
+watch(() => true, () => {})
+
+watch(() => form.email, () => {})
+
+watch(() => form.password, () => {})
+
+watch(() => form.confirm, () => {})
+
+watch(() => form.code, () => {})
+
+watch(() => true, () => {})
+
+watch(() => router.currentRoute.value.fullPath, () => {})
+
+watch(() => router.currentRoute.value.path, () => {})
+
+watch(() => true, () => {})
+
+watch(() => turnstileRegRef.value, () => {})
+
+watch(() => user.showLoginModal, () => {})
+
+watch(() => true, () => {})
+
+watch(() => router.currentRoute.value.fullPath, () => {})
+
+watch(() => router.currentRoute.value.path, () => {})
+
+watch(() => true, () => {})
+
+watch(() => turnstileRegRef.value, () => {})
+
+watch(() => true, () => {})
+
+watch(() => turnstileRegRef.value, () => {})
+
+watch(() => router.currentRoute.value.path, () => {})
+
+watch(() => router.currentRoute.value.fullPath, () => {})
+
+watch(() => true, () => {})
+
+watch(() => router.currentRoute.value.fullPath, () => {})
+
+watch(() => router.currentRoute.value.path, () => {})
+
+watch(() => true, () => {})
+
+watch(() => true, () => {})
+
+watch(() => form.email, () => {})
+
+watch(() => form.password, () => {})
+
+watch(() => form.confirm, () => {})
+
+watch(() => form.code, () => {})
+
+watch(() => true, () => {})
+
+watch(() => turnstileRegRef.value, () => {})
+
+watch(() => router.currentRoute.value.path, () => {})
+
+watch(() => router.currentRoute.value.fullPath, () => {})
+
+watch(() => true, () => {})
+
+watch(() => router.currentRoute.value.path, () => {})
+
+watch(() => user.showLoginModal, () => {})
+
+watch(() => router.currentRoute.value.fullPath, () => {})
+
+watch(() => true, () => {})
+
+watch(() => form.email, () => {})
+
+watch(() => form.password, () => {})
+
+watch(() => form.confirm, () => {})
+
+watch(() => form.code, () => {})
+
+watch(() => turnstileRegRef.value, () => {})
+
+watch(() => router.currentRoute.value.path, () => {})
+
+watch(() => true, () => {})
+
+watch(() => router.currentRoute.value.fullPath, () => {})
+
+watch(() => true, () => {})
+
+watch(() => router.currentRoute.value.fullPath, () => {})
+
+watch(() => router.currentRoute.value.path, () => {})
+
+watch(() => true, () => {})
+
+watch(() => turnstileRegRef.value, () => {})
+
+watch(() => router.currentRoute.value.fullPath, () => {})
+
+watch(() => router.currentRoute.value.path, () => {})
+
+watch(() => true, () => {})

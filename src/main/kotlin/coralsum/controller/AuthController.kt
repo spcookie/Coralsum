@@ -7,6 +7,7 @@ import coralsum.common.request.SendCodeRequest
 import coralsum.component.aop.Debounce
 import coralsum.service.IAuthService
 import io.micronaut.context.LocalizedMessageSource
+import io.micronaut.http.HttpRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
@@ -21,6 +22,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 class AuthController(
     private val authService: IAuthService,
     private val lms: LocalizedMessageSource,
+    private val turnstileService: coralsum.service.ITurnstileService,
 ) {
     @Post("/send-code")
     @Operation(summary = "发送验证码")
@@ -36,7 +38,14 @@ class AuthController(
     @Post("/register")
     @Operation(summary = "邮箱注册")
     @Debounce(name = "auth.register", windowMillis = 2000, byUid = false)
-    suspend fun register(@Body req: RegisterRequest): Res<Map<String, Any>> {
+    suspend fun register(@Body req: RegisterRequest, request: HttpRequest<Any>): Res<Map<String, Any>> {
+        val token = request.headers.get("CF-Turnstile-Response") ?: request.headers.get("X-Turnstile-Token")
+        val remoteIp = request.headers.get("CF-Connecting-IP") ?: request.headers.get("X-Forwarded-For")
+        val passed = turnstileService.validate(token, remoteIp)
+        if (!passed) {
+            val msg = lms.getMessage("auth.turnstile.invalid").orElse("Invalid verification")
+            return Res.fail(msg)
+        }
         val ok = authService.register(req.email, req.password, req.code)
         if (ok) return Res.success(mapOf("ok" to true))
         val msg = lms.getMessage("auth.register.failed").orElse("Error")
@@ -46,7 +55,14 @@ class AuthController(
     @Post("/reset-password")
     @Operation(summary = "重置密码")
     @Debounce(name = "auth.resetPassword", windowMillis = 2000, byUid = false)
-    suspend fun resetPassword(@Body req: ResetPasswordRequest): Res<Map<String, Any>> {
+    suspend fun resetPassword(@Body req: ResetPasswordRequest, request: HttpRequest<Any>): Res<Map<String, Any>> {
+        val token = request.headers.get("CF-Turnstile-Response") ?: request.headers.get("X-Turnstile-Token")
+        val remoteIp = request.headers.get("CF-Connecting-IP") ?: request.headers.get("X-Forwarded-For")
+        val passed = turnstileService.validate(token, remoteIp)
+        if (!passed) {
+            val msg = lms.getMessage("auth.turnstile.invalid").orElse("Invalid verification")
+            return Res.fail(msg)
+        }
         val ok = authService.resetPassword(req.email, req.newPassword, req.code)
         if (ok) return Res.success(mapOf("ok" to true))
         val msg = lms.getMessage("auth.reset_password.failed").orElse("Error")

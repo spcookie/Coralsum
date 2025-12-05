@@ -84,29 +84,12 @@
           v-if="nameParts.tag" class="font-medium text-neutral-400 dark:text-neutral-500">#{{
           nameParts.tag
         }}</span></span>
-      <n-tooltip v-if="user.profileReady" placement="bottom" trigger="click">
-        <template #trigger>
-          <div class="flex items-center gap-1">
-            <Icon class="text-yellow-500" icon="material-symbols:bolt-rounded"/>
-            <span class="inline-block underline underline-offset-2 decoration-[1px] decoration-solid">
-              <n-number-animation :active="true" :duration="800" :from="prevPoints" :precision="0" :to="user.points"/>
-            </span>
-          </div>
-        </template>
-        <div class="text-xs text-white space-y-1">
-          <div>{{ t('points.subscribe') }}：{{ user.subscribePoints }}</div>
-          <div>{{ t('points.permanent') }}：{{ user.permanentPoints }}</div>
-          <div v-if="user.tier==='PRO' && typeof user.subscribeExpireTime === 'number'">
-            {{ t('points.expire') }}：{{
-              formatDate(user.subscribeExpireTime as number, {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-              })
-            }}
-          </div>
-        </div>
-      </n-tooltip>
+      <div v-if="user.profileReady" class="flex items-center gap-1">
+        <Icon class="text-yellow-500" icon="material-symbols:bolt-rounded"/>
+        <span class="inline-block underline underline-offset-2 decoration-[1px] decoration-solid">
+          <n-number-animation :active="true" :duration="800" :from="prevPoints" :precision="0" :to="user.points"/>
+        </span>
+      </div>
       <n-tag v-if="user.profileReady" :color="tierTagStyle" class="inline-flex items-center justify-center leading-none"
              size="small">
         {{ user.tier }}
@@ -185,6 +168,10 @@
             </template>
           </n-input>
         </n-form-item>
+        <div v-show="!usingSessionToken">
+          <div id="turnstile-login" ref="turnstileLoginRef"></div>
+          <div v-if="turnstileError" class="text-xs text-red-600">{{ turnstileError }}</div>
+        </div>
         <div class="flex gap-2 justify-between items-center">
           <div class="flex gap-2">
             <n-button quaternary @click="goRegister">{{ t('auth.register') }}</n-button>
@@ -316,7 +303,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
+import {computed, nextTick, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
 import {useI18n} from 'vue-i18n'
 import {useRouter} from 'vue-router'
 import {Icon} from '@iconify/vue'
@@ -355,9 +342,11 @@ import {
 } from '@/api'
 import {countHistory, deleteHistory, listHistory} from '@/utils/indexedDb'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
+import {getSessionTokenIfValid, markSessionTokenUsed, markTurnstileVerified, turnstileManager} from '@/utils/turnstile'
 
 const settings = useSettingsStore()
 const {t} = useI18n()
+const i18nObjForLang = useI18n()
 const {formatDate} = useI18nFormat()
 const router = useRouter()
 const user = useUserStore()
@@ -386,7 +375,25 @@ const rules: FormRules = {
     }
   ],
 }
+const turnstileLoginRef = ref<HTMLElement | null>(null)
+const turnstileLoginToken = ref('')
+const turnstileError = ref('')
+const turnstileEnabled = computed(() => !!(import.meta as any).env.VITE_TURNSTILE_SITEKEY)
 const loginValid = computed(() => emailRegex.test(loginForm.email.trim()) && pwdRegex.test(loginForm.password.trim()))
+const turnstileLoginWidgetId = ref<string | null>(null)
+const usingSessionToken = ref(false)
+const tsTheme = computed(() => settings.darkMode ? 'dark' : 'light')
+
+function mapLang(v: string) {
+  const base = v.toLowerCase()
+  if (base.startsWith('zh-tw')) return 'zh-TW'
+  if (base.startsWith('zh')) return 'zh'
+  const allow = ['en', 'ja', 'ko', 'es', 'fr', 'de', 'ru', 'pt', 'it', 'nl', 'tr', 'pl', 'sv', 'cs', 'hu', 'uk', 'vi', 'id']
+  const code = base.split('-')[0]
+  return allow.includes(code) ? code : 'auto'
+}
+
+const tsLang = computed(() => mapLang(String((i18nObjForLang as any).locale.value || 'auto')))
 const displayName = computed(() => user.name || user.email || t('messages.auth_required'))
 const nameParts = computed(() => {
   const base = String(displayName.value || '')
@@ -517,8 +524,46 @@ async function login() {
       message.error(t('messages.check_inputs'));
       return
     }
+    if (!turnstileLoginToken.value) {
+      const cached = getSessionTokenIfValid()
+      if (cached) {
+        turnstileLoginToken.value = cached
+      }
+    }
+    if (turnstileEnabled.value && !turnstileLoginToken.value) {
+      try {
+        const ts: any = (window as any).turnstile
+        if (!turnstileLoginWidgetId.value) {
+          await nextTick()
+          const id = await turnstileManager.createWidget(turnstileLoginRef.value as any, {
+            sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
+            theme: tsTheme.value,
+            language: tsLang.value,
+            size: 'invisible',
+            onSuccess: (token) => {
+              turnstileLoginToken.value = token;
+              turnstileError.value = '';
+              markTurnstileVerified(token)
+            },
+            onError: (err) => {
+              turnstileLoginToken.value = '';
+              turnstileError.value = typeof err === 'string' ? err : '渲染失败'
+            }
+          })
+          turnstileLoginWidgetId.value = id
+        }
+        if (ts && turnstileLoginWidgetId.value) ts.execute(turnstileLoginWidgetId.value)
+        const ok = await waitToken(turnstileLoginToken, 5000)
+        if (!ok) {
+          message.error('请先完成验证')
+          return
+        }
+      } catch {
+      }
+    }
     loginLoading.value = true
-    const tokenRes = await apiLogin(loginForm.email.trim(), loginForm.password.trim())
+    const tokenRes = await apiLogin(loginForm.email.trim(), loginForm.password.trim(), turnstileLoginToken.value)
+    markSessionTokenUsed()
     user.token = tokenRes.access_token
     let profile: any
     try {
@@ -532,6 +577,7 @@ async function login() {
     loginForm.email = ''
     loginForm.password = ''
     message.success(t('messages.login_success'))
+    turnstileLoginToken.value = ''
     // 历史记录模块已移除
   } catch (e: any) {
     const status = e?.status
@@ -548,6 +594,7 @@ async function login() {
     loginLoading.value = false
   }
 }
+
 
 function goRegister() {
   user.showLoginModal = false
@@ -696,6 +743,44 @@ watch(() => user.showProfileModal, (v) => {
   if (v) profileForm.name = nameParts.value.base
 })
 
+watch(() => user.showLoginModal, (v) => {
+  if (v) {
+    const cached = getSessionTokenIfValid()
+    usingSessionToken.value = !!cached
+    if (cached) {
+      turnstileLoginToken.value = cached
+      turnstileError.value = ''
+      turnstileLoginWidgetId.value = null
+      return
+    }
+    nextTick(() => {
+      turnstileManager.createWidget(turnstileLoginRef.value as any, {
+        sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
+        theme: tsTheme.value,
+        language: tsLang.value,
+        size: 'normal',
+        onSuccess: (token) => {
+          turnstileLoginToken.value = token;
+          turnstileError.value = '';
+          markTurnstileVerified(token)
+        },
+        onError: (err) => {
+          turnstileLoginToken.value = '';
+          turnstileError.value = typeof err === 'string' ? err : '渲染失败'
+        }
+      }).then((id) => {
+        turnstileLoginWidgetId.value = id
+      })
+    })
+  } else {
+    turnstileManager.removeWidget(turnstileLoginRef.value as any)
+    turnstileLoginToken.value = ''
+    turnstileError.value = ''
+    turnstileLoginWidgetId.value = null
+    usingSessionToken.value = false
+  }
+})
+
 function openHistory() {
   if (!user.profileReady) {
     message.error('请先登录')
@@ -789,6 +874,7 @@ function doLogout() {
 
 onUnmounted(() => {
   if (sendCodeTimer) clearInterval(sendCodeTimer)
+  turnstileManager.removeWidget(turnstileLoginRef.value as any)
 })
 
 async function removeRecord(r: any) {
@@ -857,6 +943,18 @@ function formatTokens(n: number) {
 function placeholder(index: number) {
   const w = 512, h = 320
   return `https://placehold.co/${w}x${h}?text=IMG${index + 1}`
+}
+
+async function waitToken(tokenRef: any, timeoutMs: number) {
+  const start = Date.now()
+  return await new Promise<boolean>((resolve) => {
+    const tick = () => {
+      if (tokenRef.value) return resolve(true)
+      if (Date.now() - start >= timeoutMs) return resolve(false)
+      setTimeout(tick, 120)
+    }
+    tick()
+  })
 }
 </script>
 

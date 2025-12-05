@@ -2,7 +2,7 @@ package coralsum.config
 
 import com.aliyun.oss.OSS
 import com.aliyun.oss.OSSClientBuilder
-import coralsum.excption.BusinessException
+import coralsum.component.excption.BusinessException
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Singleton
 

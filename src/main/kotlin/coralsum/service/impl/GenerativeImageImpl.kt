@@ -6,24 +6,25 @@ import com.aliyun.oss.HttpMethod
 import com.aliyun.oss.OSS
 import com.aliyun.oss.model.GeneratePresignedUrlRequest
 import com.aliyun.oss.model.ObjectMetadata
-import coralsum.cache.GenerateTaskCache
-import coralsum.cache.UploadedImageCache
-import coralsum.cache.UploadedImageRef
 import coralsum.common.enums.GenTaskStatue
 import coralsum.common.enums.ImageSize
 import coralsum.common.enums.MediaResolution
 import coralsum.common.event.GenerativeImageCostEvent
+import coralsum.component.excption.BusinessException
+import coralsum.component.models.NanoBanana
+import coralsum.component.models.Upscayl
 import coralsum.config.CloudflareConfig
 import coralsum.config.GoogleConfig
 import coralsum.config.OssConfig
 import coralsum.config.PreviewConfig
-import coralsum.entity.GenerateImageReqRecord
-import coralsum.entity.RetrievalImageReqRecord
-import coralsum.excption.BusinessException
-import coralsum.repository.*
+import coralsum.infrastructure.cache.GenerateTaskCache
+import coralsum.infrastructure.cache.UploadedImageCache
+import coralsum.infrastructure.cache.UploadedImageRef
+import coralsum.infrastructure.entity.GenerateImageReqRecord
+import coralsum.infrastructure.entity.GenerateImageReqRef
+import coralsum.infrastructure.entity.RetrievalImageReqRecord
+import coralsum.infrastructure.repository.*
 import coralsum.service.*
-import coralsum.toolkit.NanoBanana
-import coralsum.toolkit.Upscayl
 import coralsum.toolkit.logger
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
@@ -247,7 +248,7 @@ class GenerativeImageImpl(
                 val recordId = saved.id!!
                 for ((i, ref) in refs.withIndex()) {
                     generateImageReqRefRepository.save(
-                        coralsum.entity.GenerateImageReqRef(
+                        GenerateImageReqRef(
                             recordId = recordId,
                             imageRef = ref,
                             imageSize = sizes.getOrNull(i)

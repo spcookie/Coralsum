@@ -1,9 +1,9 @@
 package coralsum.controller
 
-import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.enums.UserSource
 import coralsum.common.request.ChangePasswordRequest
+import coralsum.component.aop.Debounce
 import coralsum.service.IAuthService
 import coralsum.service.IUserService
 import io.micronaut.http.annotation.*

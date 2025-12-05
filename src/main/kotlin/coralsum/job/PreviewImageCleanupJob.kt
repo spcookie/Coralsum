@@ -2,8 +2,8 @@ package coralsum.job
 
 import com.aliyun.oss.OSS
 import coralsum.config.OssConfig
-import coralsum.repository.GenerateImageReqRecordRepository
-import coralsum.repository.GenerateImageReqRefRepository
+import coralsum.infrastructure.repository.GenerateImageReqRecordRepository
+import coralsum.infrastructure.repository.GenerateImageReqRefRepository
 import coralsum.toolkit.logger
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking

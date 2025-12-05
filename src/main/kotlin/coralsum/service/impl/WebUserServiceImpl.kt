@@ -3,11 +3,12 @@ package coralsum.service.impl
 import coralsum.common.enums.MembershipTier
 import coralsum.common.enums.UserSource
 import coralsum.common.response.ProfileResponse
-import coralsum.entity.NickNameBitmap
-import coralsum.repository.NickNameBitmapRepository
-import coralsum.repository.OpenUserRepository
-import coralsum.repository.OutletUserRepository
-import coralsum.repository.UserPointsRepository
+import coralsum.component.i18n.LocaleUtils
+import coralsum.infrastructure.entity.NickNameBitmap
+import coralsum.infrastructure.repository.NickNameBitmapRepository
+import coralsum.infrastructure.repository.OpenUserRepository
+import coralsum.infrastructure.repository.OutletUserRepository
+import coralsum.infrastructure.repository.UserPointsRepository
 import coralsum.service.IUserPointsService
 import coralsum.service.IWebUserService
 import io.micronaut.transaction.annotation.Transactional
@@ -187,7 +188,7 @@ class WebUserServiceImpl(
     override suspend fun updateLanguage(uid: String, language: String): Boolean {
         // 更新用户语言偏好（简单校验与保存）
         val openUser = openUserRepository.findByUid(uid) ?: return false
-        val normalized = coralsum.i18n.LocaleUtils.parseLocale(language).toLanguageTag()
+        val normalized = LocaleUtils.parseLocale(language).toLanguageTag()
         val updated = openUser.copy(language = normalized)
         return try {
             openUserRepository.update(updated)

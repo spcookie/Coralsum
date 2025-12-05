@@ -1,7 +1,7 @@
 package coralsum.service
 
 import coralsum.common.enums.SubscribeType
-import coralsum.entity.UserPoints
+import coralsum.infrastructure.entity.UserPoints
 
 interface IUserPointsService {
     suspend fun getOrCreateByOpenUserId(openUserId: Long): UserPoints

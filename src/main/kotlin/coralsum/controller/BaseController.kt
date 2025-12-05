@@ -1,7 +1,7 @@
 package coralsum.controller
 
 import coralsum.common.dto.Res
-import coralsum.excption.BusinessException
+import coralsum.component.excption.BusinessException
 import coralsum.toolkit.logger
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.annotation.Controller

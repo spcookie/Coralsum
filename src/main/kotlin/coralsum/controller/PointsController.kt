@@ -1,10 +1,12 @@
 package coralsum.controller
 
-import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.request.RedeemPointsReq
+import coralsum.common.request.RedeemPointsResp
 import coralsum.common.response.EstimateParamsResponse
+import coralsum.component.aop.Debounce
 import coralsum.config.PricingConfig
+import coralsum.convert.PricingConvert
 import coralsum.service.IPointsKeyService
 import io.micronaut.core.version.annotation.Version
 import io.micronaut.http.HttpRequest
@@ -25,10 +27,15 @@ import jakarta.validation.Valid
 class PointsController(
     private val pointsKeyService: IPointsKeyService,
     private val pricingConfig: PricingConfig,
+    private val pricingConvert: PricingConvert,
 ) {
     @Post("/redeem")
     @Debounce(name = "points.redeem", windowMillis = 2000, byUid = true)
-    suspend fun redeem(authentication: Authentication, request: HttpRequest<*>, @Body @Valid req: RedeemPointsReq): Res<Any> {
+    suspend fun redeem(
+        authentication: Authentication,
+        request: HttpRequest<*>,
+        @Body @Valid req: RedeemPointsReq,
+    ): Res<RedeemPointsResp> {
         val uid = authentication.name
         val ip = request.remoteAddress?.address?.hostAddress
         val resp = pointsKeyService.redeem(uid, ip, req.key)
@@ -39,38 +46,7 @@ class PointsController(
     @Get("/estimate-params")
     @Operation(summary = "获取估算参数", description = "返回前端用于估算扣减的价格参数")
     suspend fun estimateParams(): Res<EstimateParamsResponse> {
-        val p = pricingConfig
-        val resp = EstimateParamsResponse(
-            usdToCny = p.usdToCny,
-            coefficient = p.coefficient,
-            pointsPerRmb = p.pointsPerRmb,
-            flashLiteTokensPerChar = p.flashLite.tokensPerChar,
-            flashLiteInputUsdPerMTokens = p.flashLite.inputUsdPerMTokens,
-            flashLiteOutputUsdPerMTokens = p.flashLite.outputUsdPerMTokens,
-            imagePreviewTokensPerMb = p.imagePreview.tokensPerMb,
-            proInputUsdPerMTokens = p.pro.inputUsdPerMTokens,
-            proOutputUsdPerMTokens = p.pro.outputUsdPerMTokens,
-            proPricePerImage1k2kUsd = p.pro.pricePerImage1k2kUsd,
-            proPricePerImage4kUsd = p.pro.pricePerImage4kUsd,
-            basicInputUsdPerMTokens = p.basic.inputUsdPerMTokens,
-            basicOutputUsdPerMTokens = p.basic.outputUsdPerMTokens,
-            basicOutputPricePerImage1kUsd = p.basic.outputPricePerImage1kUsd,
-            ossBusyRmbPerGb = p.oss.busyRmbPerGb,
-            ossIdleRmbPerGb = p.oss.idleRmbPerGb,
-            ossBusyStartHour = p.oss.busyStartHour,
-            ossBusyEndHour = p.oss.busyEndHour,
-            trafficNatRmbPerGb = p.traffic.natRmbPerGb,
-            trafficProxyRmbPerGb = p.traffic.proxyRmbPerGb,
-            trafficVisitMultiplier = p.traffic.visitMultiplier,
-            upscaylEnabled = p.upscayl.enabled,
-            upscaylChargeByScale = p.upscayl.chargeByScale,
-            estimatePngBytes1K = p.estimate.pngBytes1K,
-            estimatePngBytes2K = p.estimate.pngBytes2K,
-            estimatePngBytes4K = p.estimate.pngBytes4K,
-            estimateJpgBytes1K = p.estimate.jpgBytes1K,
-            estimateJpgBytes2K = p.estimate.jpgBytes2K,
-            estimateJpgBytes4K = p.estimate.jpgBytes4K,
-        )
+        val resp = pricingConvert.toResponse(pricingConfig)
         return Res.success(resp)
     }
 }

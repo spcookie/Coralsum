@@ -84,12 +84,29 @@
           v-if="nameParts.tag" class="font-medium text-neutral-400 dark:text-neutral-500">#{{
           nameParts.tag
         }}</span></span>
-      <div v-if="user.profileReady" class="flex items-center gap-1">
-        <Icon class="text-yellow-500" icon="material-symbols:bolt-rounded"/>
-        <span class="inline-block underline underline-offset-2 decoration-[1px] decoration-solid">
-          <n-number-animation :active="true" :duration="800" :from="prevPoints" :precision="0" :to="user.points"/>
-        </span>
-      </div>
+      <n-tooltip v-if="user.profileReady" placement="bottom" trigger="click">
+        <template #trigger>
+          <div class="flex items-center gap-1">
+            <Icon class="text-yellow-500" icon="material-symbols:bolt-rounded"/>
+            <span class="inline-block underline underline-offset-2 decoration-[1px] decoration-solid">
+              <n-number-animation :active="true" :duration="800" :from="prevPoints" :precision="0" :to="user.points"/>
+            </span>
+          </div>
+        </template>
+        <div class="text-xs text-white space-y-1">
+          <div>{{ t('points.subscribe') }}：{{ user.subscribePoints }}</div>
+          <div>{{ t('points.permanent') }}：{{ user.permanentPoints }}</div>
+          <div v-if="user.tier==='PRO' && typeof user.subscribeExpireTime === 'number'">
+            {{ t('points.expire') }}：{{
+              formatDate(user.subscribeExpireTime as number, {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+              })
+            }}
+          </div>
+        </div>
+      </n-tooltip>
       <n-tag v-if="user.profileReady" :color="tierTagStyle" class="inline-flex items-center justify-center leading-none"
              size="small">
         {{ user.tier }}

@@ -2,8 +2,8 @@ package coralsum.service
 
 import coralsum.common.dto.PageResp
 import coralsum.common.request.*
-import coralsum.entity.PointsKey
-import coralsum.entity.PointsKeyConfig
+import coralsum.infrastructure.entity.PointsKey
+import coralsum.infrastructure.entity.PointsKeyConfig
 
 interface IPointsKeyService {
     suspend fun createConfig(req: CreatePointsKeyConfigReq, operator: String?): PointsKeyConfig

@@ -1,10 +1,10 @@
 package coralsum.controller
 
-import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.request.UpdateLanguageRequest
 import coralsum.common.request.UpdateProfileRequest
 import coralsum.common.response.ProfileResponse
+import coralsum.component.aop.Debounce
 import coralsum.service.IWebUserService
 import io.micronaut.context.LocalizedMessageSource
 import io.micronaut.http.annotation.Body

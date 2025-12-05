@@ -1,15 +1,14 @@
 package coralsum.controller
 
-import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.enums.*
 import coralsum.common.response.GenResultResponse
 import coralsum.common.response.GenTaskResultResponse
 import coralsum.common.response.IntentAssessmentResponse
+import coralsum.component.aop.Debounce
 import coralsum.convert.GenerativeConvert
-import coralsum.repository.OpenUserRepository
-import coralsum.repository.OutletUserRepository
-import coralsum.service.GenRequest
+import coralsum.infrastructure.repository.OpenUserRepository
+import coralsum.infrastructure.repository.OutletUserRepository
 import coralsum.service.impl.GenerativeImageImpl
 import io.micronaut.context.LocalizedMessageSource
 import io.micronaut.core.version.annotation.Version
@@ -72,25 +71,23 @@ class GenerativeImageController(
         @Parameter(description = "媒体分辨率") @Part mediaResolution: MediaResolution?,
         request: HttpRequest<*>,
     ): Res<GenResultResponse> {
-        val result = service.generate(
-            buildGenRequest(
-                text,
-                sid,
-                modelType,
-                candidateCount,
-                aspectRatio,
-                system,
-                temperature,
-                maxOutputTokens,
-                topP,
-                format,
-                upscaylModel,
-                upscaylScale,
-                imageSize,
-                mediaResolution
-            ),
-            request
+        val genReq = convert.toRequest(
+            text,
+            sid,
+            modelType,
+            candidateCount,
+            aspectRatio,
+            system,
+            temperature,
+            maxOutputTokens,
+            topP,
+            format,
+            upscaylModel,
+            upscaylScale,
+            imageSize,
+            mediaResolution
         )
+        val result = service.generate(genReq, request)
         return Res.success(convert.toResponse(result))
     }
 
@@ -206,12 +203,7 @@ class GenerativeImageController(
     @Debounce(name = "gi.assessIntent", windowMillis = 1500, byUid = true)
     suspend fun assessIntent(@Body @NotEmpty text: String): Res<IntentAssessmentResponse> {
         val assessment = service.assessIntent(text)
-        return Res.success(
-            IntentAssessmentResponse(
-                generateIntent = assessment.generateIntent,
-                guideMessage = assessment.guideMessage
-            )
-        )
+        return Res.success(convert.toResponse(assessment))
     }
 
     @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -236,25 +228,23 @@ class GenerativeImageController(
         @Parameter(description = "媒体分辨率") @Part mediaResolution: MediaResolution?,
         request: HttpRequest<*>,
     ): Res<Unit> {
-        service.submitGenerateTask(
-            buildGenRequest(
-                text,
-                sid,
-                modelType,
-                candidateCount,
-                aspectRatio,
-                system,
-                temperature,
-                maxOutputTokens,
-                topP,
-                format,
-                upscaylModel,
-                upscaylScale,
-                imageSize,
-                mediaResolution
-            ),
-            request
+        val genReq = convert.toRequest(
+            text,
+            sid,
+            modelType,
+            candidateCount,
+            aspectRatio,
+            system,
+            temperature,
+            maxOutputTokens,
+            topP,
+            format,
+            upscaylModel,
+            upscaylScale,
+            imageSize,
+            mediaResolution
         )
+        service.submitGenerateTask(genReq, request)
         return Res.success()
     }
 
@@ -271,37 +261,6 @@ class GenerativeImageController(
         return Res.success(sessionId)
     }
 
-    private fun buildGenRequest(
-        text: String,
-        sid: String?,
-        modelType: ModelType?,
-        candidateCount: Int?,
-        aspectRatio: AspectRatio?,
-        system: String?,
-        temperature: Float?,
-        maxOutputTokens: Int?,
-        topP: Float?,
-        format: ImageFormat?,
-        upscaylModel: UpscaylModel?,
-        upscaylScale: UpscaylScale?,
-        imageSize: ImageSize?,
-        mediaResolution: MediaResolution?,
-    ): GenRequest = GenRequest(
-        text = text,
-        imageSessionId = sid,
-        modelType = modelType ?: ModelType.BASIC,
-        candidateCount = candidateCount ?: 1,
-        aspectRatio = aspectRatio ?: AspectRatio.R1_1,
-        system = system,
-        temperature = temperature ?: 0.5f,
-        maxOutputTokens = maxOutputTokens ?: 32768,
-        topP = topP ?: 1f,
-        format = format ?: ImageFormat.PNG,
-        upscaylModel = upscaylModel ?: UpscaylModel.HIGH_FIDELITY_4X,
-        upscaylScale = upscaylScale ?: UpscaylScale.X1,
-        imageSize = imageSize ?: ImageSize.X1,
-        mediaResolution = mediaResolution ?: MediaResolution.AUTO
-    )
 
     @Secured(SecurityRule.IS_AUTHENTICATED)
     @Version("v1")

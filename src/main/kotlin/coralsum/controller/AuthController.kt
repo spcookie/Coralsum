@@ -1,10 +1,10 @@
 package coralsum.controller
 
-import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.request.RegisterRequest
 import coralsum.common.request.ResetPasswordRequest
 import coralsum.common.request.SendCodeRequest
+import coralsum.component.aop.Debounce
 import coralsum.service.IAuthService
 import io.micronaut.context.LocalizedMessageSource
 import io.micronaut.http.annotation.Body

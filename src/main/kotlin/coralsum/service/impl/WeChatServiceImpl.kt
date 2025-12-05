@@ -6,10 +6,10 @@ import coralsum.common.enums.UserSource
 import coralsum.common.response.GenResultResponse
 import coralsum.common.response.IntentAssessmentResponse
 import coralsum.config.WeChatConfig
-import coralsum.entity.GenerateImageConf
-import coralsum.entity.OpenUser
-import coralsum.repository.GenerateImageConfRepository
-import coralsum.repository.OutletUserRepository
+import coralsum.infrastructure.entity.GenerateImageConf
+import coralsum.infrastructure.entity.OpenUser
+import coralsum.infrastructure.repository.GenerateImageConfRepository
+import coralsum.infrastructure.repository.OutletUserRepository
 import coralsum.service.IWeChatService
 import coralsum.toolkit.logger
 import io.micronaut.core.type.Argument

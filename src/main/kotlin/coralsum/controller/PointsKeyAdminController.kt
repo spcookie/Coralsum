@@ -1,11 +1,11 @@
 package coralsum.controller
 
-import coralsum.aop.Debounce
 import coralsum.common.dto.Res
 import coralsum.common.request.CreatePointsKeyConfigReq
 import coralsum.common.request.GeneratePointsKeysReq
 import coralsum.common.request.ToggleConfigReq
 import coralsum.common.request.ToggleKeysReq
+import coralsum.component.aop.Debounce
 import coralsum.service.IPointsKeyService
 import io.micronaut.http.annotation.*
 import io.micronaut.security.annotation.Secured

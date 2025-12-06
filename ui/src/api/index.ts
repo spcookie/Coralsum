@@ -1,4 +1,4 @@
-import http from './http'
+import http, {uploadHttp} from './http'
 import {useUserStore} from '@/stores/user'
 import {markSessionTokenUsed} from '@/utils/turnstile'
 
@@ -179,7 +179,7 @@ export async function uploadImage(file: File, sid?: string): Promise<string> {
     const headers: any = {'X-API-Version': 'v1'}
     const user = useUserStore()
     if (user?.token) headers.Authorization = `Bearer ${user.token}`
-    const {data} = await http.post('/generative-image/upload', fd, {headers})
+    const {data} = await uploadHttp.post('/generative-image/upload', fd, {headers})
     const sessionId = (data?.data ?? data?.sid ?? data) as any
     return String(sessionId || '')
 }

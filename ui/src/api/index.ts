@@ -1,5 +1,6 @@
 import http from './http'
 import {useUserStore} from '@/stores/user'
+import {markSessionTokenUsed} from '@/utils/turnstile'
 
 export interface GenerateRequest {
     prompt: string
@@ -34,10 +35,8 @@ export async function sendEmailCode(email: string, purpose?: 'REGISTER' | 'RESET
     return data
 }
 
-export async function login(email: string, password: string, turnstileToken?: string) {
-    const headers: any = {}
-    if (turnstileToken) headers['CF-Turnstile-Response'] = turnstileToken
-    const {data} = await http.post('/auth/login', {username: email, password}, {headers})
+export async function login(email: string, password: string) {
+    const {data} = await http.post('/auth/login', {username: email, password})
     return data
 }
 
@@ -78,21 +77,29 @@ export async function updateProfileName(name: string) {
     }
 }
 
-export async function changePassword(email: string, oldPassword: string, newPassword: string, code: string) {
+export async function changePassword(email: string, oldPassword: string, newPassword: string, code: string, turnstileToken?: string) {
+    const headers: any = {}
+    if (turnstileToken) {
+        headers['CF-Turnstile-Response'] = turnstileToken
+        try {
+            markSessionTokenUsed()
+        } catch {
+        }
+    }
     const {data} = await http.post('/user/change-password', {
         email,
         old_password: oldPassword,
         new_password: newPassword,
         code
-    })
+    }, {headers})
     return data
 }
 
 export async function generate(req: GenerateRequest): Promise<GenerateResponse> {
     const fd = new FormData()
+    let sid: string | undefined
     if (Array.isArray(req.inputImages) && req.inputImages.length > 0) {
         const files = req.inputImages.filter(Boolean)
-        let sid: string | undefined
         for (const f of files) {
             sid = await uploadImage(f, sid)
         }
@@ -134,12 +141,15 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
     const user = useUserStore()
     const headers: any = {'X-API-Version': 'v1'}
     if (user?.token) headers.Authorization = `Bearer ${user.token}`
-    await http.post('/generative-image/submit-task', fd, {headers})
+    const submitResp = await http.post('/generative-image/submit-task', fd, {headers})
+    const submitSid = (submitResp?.data?.data ?? submitResp?.data?.sid ?? submitResp?.data) as any
+    if (submitSid) sid = String(submitSid || '')
     const intervalMs = 1500
     const maxAttempts = Math.ceil((1000 * 60 * 5) / intervalMs)
     for (let i = 0; i < maxAttempts; i++) {
         await new Promise((r) => setTimeout(r, intervalMs))
-        const {data} = await http.get('/generative-image/get-task-result', {headers})
+        const params: any = sid ? {sid} : {}
+        const {data} = await http.get('/generative-image/get-task-result', {headers, params})
         const status = (data as any)?.status as string
         if (status === 'COMPLETED') {
             const result = (data as any)?.result || {}
@@ -225,14 +235,26 @@ export async function getExternalBlob(url: string): Promise<Blob> {
 
 export async function register(email: string, password: string, code: string, turnstileToken?: string) {
     const headers: any = {}
-    if (turnstileToken) headers['CF-Turnstile-Response'] = turnstileToken
+    if (turnstileToken) {
+        headers['CF-Turnstile-Response'] = turnstileToken
+        try {
+            markSessionTokenUsed()
+        } catch {
+        }
+    }
     const {data} = await http.post('/auth/register', {email, password, code}, {headers})
     return data
 }
 
 export async function resetPassword(email: string, newPassword: string, code: string, turnstileToken?: string) {
     const headers: any = {}
-    if (turnstileToken) headers['CF-Turnstile-Response'] = turnstileToken
+    if (turnstileToken) {
+        headers['CF-Turnstile-Response'] = turnstileToken
+        try {
+            markSessionTokenUsed()
+        } catch {
+        }
+    }
     const {data} = await http.post('/auth/reset-password', {email, new_password: newPassword, code}, {headers})
     return data
 }
@@ -302,12 +324,13 @@ export async function togglePointsKeyConfig(id: number, disabled: boolean) {
     return data
 }
 
-export async function getGenerateTaskResult(): Promise<{
+export async function getGenerateTaskResult(sid?: string): Promise<{
     status: 'COMPLETED' | 'PROCESSING' | 'NONE' | 'FAILED' | 'FAIL';
     result?: GenerateResponse
 }> {
     const headers: any = {'X-API-Version': 'v1'}
-    const {data} = await http.get('/generative-image/get-task-result', {headers})
+    const params: any = sid ? {sid} : {}
+    const {data} = await http.get('/generative-image/get-task-result', {headers, params})
     const status = (data as any)?.status as 'COMPLETED' | 'PROCESSING' | 'NONE' | 'FAILED' | 'FAIL'
     const r = (data as any)?.result
     return {

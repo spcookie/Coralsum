@@ -129,12 +129,16 @@
                   </n-button>
                 </div>
               </n-form-item>
+              <div v-if="turnstileEnabled" ref="turnstilePwdRef"></div>
+              <div v-if="pwdError" class="text-xs text-red-600">{{ pwdError }}</div>
             </div>
           </n-collapse-item>
         </n-collapse>
         <div class="flex gap-2 justify-end">
           <n-button @click="user.showProfileModal=false">{{ t('profile.modal.cancel') }}</n-button>
-          <n-button type="primary" @click="saveProfile">{{ t('profile.modal.save') }}</n-button>
+          <n-button :disabled="pwdVerifying" :loading="pwdVerifying" type="primary" @click="saveProfile">
+            {{ t('profile.modal.save') }}
+          </n-button>
         </div>
       </div>
     </n-form>
@@ -168,10 +172,7 @@
             </template>
           </n-input>
         </n-form-item>
-        <div v-show="!usingSessionToken">
-          <div id="turnstile-login" ref="turnstileLoginRef"></div>
-          <div v-if="turnstileError" class="text-xs text-red-600">{{ turnstileError }}</div>
-        </div>
+
         <div class="flex gap-2 justify-between items-center">
           <div class="flex gap-2">
             <n-button quaternary @click="goRegister">{{ t('auth.register') }}</n-button>
@@ -340,9 +341,9 @@ import {
   sendEmailCode,
   updateProfileName
 } from '@/api'
+import {markSessionTokenUsed, markTurnstileVerified, turnstileManager} from '@/utils/turnstile'
 import {countHistory, deleteHistory, listHistory} from '@/utils/indexedDb'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
-import {getSessionTokenIfValid, markSessionTokenUsed, markTurnstileVerified, turnstileManager} from '@/utils/turnstile'
 
 const settings = useSettingsStore()
 const {t} = useI18n()
@@ -375,19 +376,12 @@ const rules: FormRules = {
     }
   ],
 }
-const turnstileLoginRef = ref<HTMLElement | null>(null)
-const turnstileLoginToken = ref('')
-const turnstileError = ref('')
-const turnstileEnabled = computed(() => !!(import.meta as any).env.VITE_TURNSTILE_SITEKEY)
 const loginValid = computed(() => emailRegex.test(loginForm.email.trim()) && pwdRegex.test(loginForm.password.trim()))
-const turnstileLoginWidgetId = ref<string | null>(null)
-const usingSessionToken = ref(false)
-const tsTheme = computed(() => settings.darkMode ? 'dark' : 'light')
 
 function mapLang(v: string) {
   const base = v.toLowerCase()
-  if (base.startsWith('zh-tw')) return 'zh-TW'
-  if (base.startsWith('zh')) return 'zh'
+  if (base.startsWith('zh-tw') || base.startsWith('zh-hant')) return 'zh-TW'
+  if (base.startsWith('zh-cn') || base.startsWith('zh-hans') || base === 'zh') return 'zh-CN'
   const allow = ['en', 'ja', 'ko', 'es', 'fr', 'de', 'ru', 'pt', 'it', 'nl', 'tr', 'pl', 'sv', 'cs', 'hu', 'uk', 'vi', 'id']
   const code = base.split('-')[0]
   return allow.includes(code) ? code : 'auto'
@@ -431,6 +425,12 @@ const confirmPwd = ref('')
 const emailCode = ref('')
 const profileFormRef = ref<FormInst | null>(null)
 const profileForm = reactive({name: nameParts.value.base, oldPwd: '', newPwd: '', confirmPwd: '', emailCode: ''})
+const turnstileEnabled = computed(() => !!(import.meta as any).env.VITE_TURNSTILE_SITEKEY)
+const turnstilePwdRef = ref<HTMLElement | null>(null)
+const turnstilePwdToken = ref('')
+const turnstilePwdWidgetId = ref<string | null>(null)
+const pwdVerifying = ref(false)
+const pwdError = ref('')
 const profileRules: FormRules = {
   newPwd: [
     {required: true, message: () => t('messages.password_required'), trigger: ['input', 'blur']},
@@ -520,50 +520,14 @@ async function sendCode() {
 async function login() {
   try {
     if (loginLoading.value) return
+    loginLoading.value = true
     if (!loginValid.value) {
       message.error(t('messages.check_inputs'));
+      loginLoading.value = false
       return
     }
-    if (!turnstileLoginToken.value) {
-      const cached = getSessionTokenIfValid()
-      if (cached) {
-        turnstileLoginToken.value = cached
-      }
-    }
-    if (turnstileEnabled.value && !turnstileLoginToken.value) {
-      try {
-        const ts: any = (window as any).turnstile
-        if (!turnstileLoginWidgetId.value) {
-          await nextTick()
-          const id = await turnstileManager.createWidget(turnstileLoginRef.value as any, {
-            sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
-            theme: tsTheme.value,
-            language: tsLang.value,
-            size: 'invisible',
-            onSuccess: (token) => {
-              turnstileLoginToken.value = token;
-              turnstileError.value = '';
-              markTurnstileVerified(token)
-            },
-            onError: (err) => {
-              turnstileLoginToken.value = '';
-              turnstileError.value = typeof err === 'string' ? err : '渲染失败'
-            }
-          })
-          turnstileLoginWidgetId.value = id
-        }
-        if (ts && turnstileLoginWidgetId.value) ts.execute(turnstileLoginWidgetId.value)
-        const ok = await waitToken(turnstileLoginToken, 5000)
-        if (!ok) {
-          message.error('请先完成验证')
-          return
-        }
-      } catch {
-      }
-    }
-    loginLoading.value = true
-    const tokenRes = await apiLogin(loginForm.email.trim(), loginForm.password.trim(), turnstileLoginToken.value)
-    markSessionTokenUsed()
+
+    const tokenRes = await apiLogin(loginForm.email.trim(), loginForm.password.trim())
     user.token = tokenRes.access_token
     let profile: any
     try {
@@ -577,7 +541,7 @@ async function login() {
     loginForm.email = ''
     loginForm.password = ''
     message.success(t('messages.login_success'))
-    turnstileLoginToken.value = ''
+
     // 历史记录模块已移除
   } catch (e: any) {
     const status = e?.status
@@ -620,16 +584,51 @@ async function saveProfile() {
   try {
     if (hasPwdInput) {
       await profileFormRef.value?.validate()
+      if (turnstileEnabled.value) {
+        pwdError.value = ''
+        pwdVerifying.value = true
+        const ts: any = (window as any).turnstile
+        if (!turnstilePwdWidgetId.value) {
+          await nextTick()
+          const id = await turnstileManager.createWidget(turnstilePwdRef.value as any, {
+            sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
+            theme: settings.darkMode ? 'dark' : 'light',
+            language: mapLang(String((i18nObjForLang as any).locale.value || 'auto')),
+            size: 'invisible',
+            onSuccess: (token) => {
+              turnstilePwdToken.value = token
+              markTurnstileVerified(token)
+              pwdError.value = ''
+            },
+            onError: (err) => {
+              turnstilePwdToken.value = ''
+              pwdError.value = typeof err === 'string' ? err : '渲染失败'
+            }
+          })
+          turnstilePwdWidgetId.value = id
+        }
+        if (ts && turnstilePwdWidgetId.value) ts.execute(turnstilePwdWidgetId.value)
+        const ok = await waitToken(turnstilePwdToken, 5000)
+        if (!ok) {
+          pwdError.value = '请先完成验证'
+          pwdVerifying.value = false
+          return
+        }
+        pwdVerifying.value = false
+      }
       await changePassword(
           user.email,
           String(profileForm.oldPwd || '').trim(),
           String(profileForm.newPwd || '').trim(),
-          String(profileForm.emailCode || '').trim()
+          String(profileForm.emailCode || '').trim(),
+          turnstileEnabled.value ? turnstilePwdToken.value : undefined
       )
+      if (turnstileEnabled.value) markSessionTokenUsed()
       profileForm.oldPwd = ''
       profileForm.newPwd = ''
       profileForm.confirmPwd = ''
       profileForm.emailCode = ''
+      turnstilePwdToken.value = ''
     }
 
     if (doName) {
@@ -744,41 +743,6 @@ watch(() => user.showProfileModal, (v) => {
 })
 
 watch(() => user.showLoginModal, (v) => {
-  if (v) {
-    const cached = getSessionTokenIfValid()
-    usingSessionToken.value = !!cached
-    if (cached) {
-      turnstileLoginToken.value = cached
-      turnstileError.value = ''
-      turnstileLoginWidgetId.value = null
-      return
-    }
-    nextTick(() => {
-      turnstileManager.createWidget(turnstileLoginRef.value as any, {
-        sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
-        theme: tsTheme.value,
-        language: tsLang.value,
-        size: 'normal',
-        onSuccess: (token) => {
-          turnstileLoginToken.value = token;
-          turnstileError.value = '';
-          markTurnstileVerified(token)
-        },
-        onError: (err) => {
-          turnstileLoginToken.value = '';
-          turnstileError.value = typeof err === 'string' ? err : '渲染失败'
-        }
-      }).then((id) => {
-        turnstileLoginWidgetId.value = id
-      })
-    })
-  } else {
-    turnstileManager.removeWidget(turnstileLoginRef.value as any)
-    turnstileLoginToken.value = ''
-    turnstileError.value = ''
-    turnstileLoginWidgetId.value = null
-    usingSessionToken.value = false
-  }
 })
 
 function openHistory() {
@@ -874,7 +838,6 @@ function doLogout() {
 
 onUnmounted(() => {
   if (sendCodeTimer) clearInterval(sendCodeTimer)
-  turnstileManager.removeWidget(turnstileLoginRef.value as any)
 })
 
 async function removeRecord(r: any) {

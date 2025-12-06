@@ -28,9 +28,9 @@
       </div>
       <n-input v-model:value="prompt" :autosize="{ minRows: 6, maxRows: 12 }" :disabled="generating"
                :placeholder="t('left.prompt.placeholder')"
-               type="textarea"/>
+               :maxlength="1000" show-count type="textarea"/>
     </div>
-    <n-collapse :default-expanded-names="[]">
+    <n-collapse :expanded-names="basicExpandedNames" @update:expanded-names="onBasicExpandChange">
       <n-collapse-item name="img">
         <template #header>
           <div class="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1">
@@ -94,7 +94,7 @@
         </template>
         <n-input v-model:value="systemPrompt" :autosize="{ minRows: 4, maxRows: 10 }" :disabled="generating"
                  :placeholder="t('left.system_prompt.placeholder')"
-                 type="textarea"/>
+                 :maxlength="1000" show-count type="textarea"/>
       </n-collapse-item>
     </n-collapse>
     <div class="grid grid-cols-2 gap-3">
@@ -455,7 +455,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, ref, watch} from 'vue'
+import {computed, onMounted, ref, watch} from 'vue'
 import {useI18n} from 'vue-i18n'
 import {Icon} from '@iconify/vue'
 import {useSettingsStore} from '@/stores/settings'
@@ -497,6 +497,19 @@ const promptEmpty = computed(() => prompt.value.trim().length === 0)
 const systemPrompt = ref('')
 const files = ref<File[]>([])
 const uploadList = ref<any[]>([])
+const SYSTEM_PROMPT_KEY = 'coralsum.systemPrompt'
+const basicExpandedNames = ref<Array<string | number>>([])
+
+onMounted(() => {
+  try {
+    const v = localStorage.getItem(SYSTEM_PROMPT_KEY) || ''
+    if (v && v.length > 0) systemPrompt.value = v
+    if ((systemPrompt.value || '').trim().length > 0 && !basicExpandedNames.value.includes('sys')) {
+      basicExpandedNames.value.push('sys')
+    }
+  } catch {
+  }
+})
 const confirmReset = ref(false)
 const promptGuideShow = ref(false)
 const selectedIndex = ref<number | null>(null)
@@ -546,6 +559,10 @@ function onGenerate() {
     message.error(t('left.prompt.fill'))
     return
   }
+  if (prompt.value.length > 1000) {
+    message.error('最多 1000 字')
+    return
+  }
   if (!user.profileReady) {
     message.error(t('messages.please_login'))
     user.requireLogin()
@@ -576,6 +593,28 @@ watch(() => user.profileReady, (ready) => {
 watch(() => user.token, (t) => {
   if (t && t.length > 0) loadPricing()
 })
+
+watch(systemPrompt, (v) => {
+  const s = (v || '').trim()
+  try {
+    if (s.length > 0) {
+      localStorage.setItem(SYSTEM_PROMPT_KEY, s)
+      if (!basicExpandedNames.value.includes('sys')) {
+        basicExpandedNames.value = [...basicExpandedNames.value, 'sys']
+      }
+    } else {
+      localStorage.removeItem(SYSTEM_PROMPT_KEY)
+      if (basicExpandedNames.value.includes('sys')) {
+        basicExpandedNames.value = basicExpandedNames.value.filter((n) => n !== 'sys')
+      }
+    }
+  } catch {
+  }
+})
+
+function onBasicExpandChange(names: Array<string | number>) {
+  basicExpandedNames.value = Array.isArray(names) ? names : []
+}
 
 const estimatedPoints = computed(() => {
   const p = pricing.value

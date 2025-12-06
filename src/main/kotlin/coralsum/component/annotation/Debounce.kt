@@ -1,4 +1,4 @@
-package coralsum.component.aop
+package coralsum.component.annotation
 
 import io.micronaut.aop.Around
 

@@ -10,33 +10,33 @@ import jakarta.inject.Singleton
 @Singleton
 class GenerateTaskCache {
 
-    @CachePut(cacheNames = ["generate-task-result"], parameters = ["uid"], condition = "#{genResult != null}")
-    fun cacheGenerateTaskResult(uid: String, genResult: GenResult): GenResult {
+    @CachePut(cacheNames = ["generate-task-result"], parameters = ["uid", "sid"], condition = "#{genResult != null}")
+    fun cacheGenerateTaskResult(uid: String, sid: String, genResult: GenResult): GenResult {
         return genResult
     }
 
-    @Cacheable(cacheNames = ["generate-task-result"], parameters = ["uid"])
-    fun getGenerateTaskResult(uid: String): GenResult? = null
+    @Cacheable(cacheNames = ["generate-task-result"], parameters = ["uid", "sid"])
+    fun getGenerateTaskResult(uid: String, sid: String): GenResult? = null
 
-    @CachePut(cacheNames = ["generate-task-statue"], parameters = ["uid"], condition = "#{statue != null}")
-    fun cacheGenerateTaskStatue(uid: String, statue: GenTaskStatue): GenTaskStatue {
+    @CachePut(cacheNames = ["generate-task-statue"], parameters = ["uid", "sid"], condition = "#{statue != null}")
+    fun cacheGenerateTaskStatue(uid: String, sid: String, statue: GenTaskStatue): GenTaskStatue {
         return statue
     }
 
-    @Cacheable(cacheNames = ["generate-task-statue"], parameters = ["uid"])
-    fun getGenerateTaskStatue(uid: String): GenTaskStatue? = null
+    @Cacheable(cacheNames = ["generate-task-statue"], parameters = ["uid", "sid"])
+    fun getGenerateTaskStatue(uid: String, sid: String): GenTaskStatue? = null
 
-    @CacheInvalidate(cacheNames = ["generate-task-statue"], parameters = ["uid"])
-    fun clearStatue(uid: String) {
+    @CacheInvalidate(cacheNames = ["generate-task-statue"], parameters = ["uid", "sid"])
+    fun clearStatue(uid: String, sid: String) {
     }
 
-    @CacheInvalidate(cacheNames = ["generate-task-result"], parameters = ["uid"])
-    fun clearResult(uid: String) {
+    @CacheInvalidate(cacheNames = ["generate-task-result"], parameters = ["uid", "sid"])
+    fun clearResult(uid: String, sid: String) {
     }
 
-    suspend fun clearAll(uid: String) {
-        clearResult(uid)
-        clearStatue(uid)
+    suspend fun clearAll(uid: String, sid: String) {
+        clearResult(uid, sid)
+        clearStatue(uid, sid)
     }
 
 }

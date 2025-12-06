@@ -1,5 +1,6 @@
 package coralsum.component.aop
 
+import coralsum.component.annotation.Debounce
 import io.micronaut.aop.InterceptorBean
 import io.micronaut.aop.MethodInterceptor
 import io.micronaut.aop.MethodInvocationContext

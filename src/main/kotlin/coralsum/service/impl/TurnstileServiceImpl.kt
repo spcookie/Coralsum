@@ -8,6 +8,7 @@ import io.micronaut.http.MediaType
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import jakarta.inject.Singleton
+import kotlinx.coroutines.reactive.awaitSingle
 import org.slf4j.LoggerFactory
 
 @Singleton
@@ -17,7 +18,7 @@ class TurnstileServiceImpl(
 ) : ITurnstileService {
     private val log = LoggerFactory.getLogger(TurnstileServiceImpl::class.java)
 
-    override fun validate(token: String?, remoteIp: String?): Boolean {
+    override suspend fun validate(token: String?, remoteIp: String?): Boolean {
         val secret = cfg.secret ?: ""
         if (secret.isBlank()) return true
         if (token.isNullOrBlank()) return false
@@ -29,7 +30,7 @@ class TurnstileServiceImpl(
         val req = HttpRequest.POST("/turnstile/v0/siteverify", body)
             .contentType(MediaType.APPLICATION_JSON_TYPE)
         return try {
-            val resp = client.toBlocking().retrieve(req, TurnstileVerifyResponse::class.java)
+            val resp = client.retrieve(req, TurnstileVerifyResponse::class.java).awaitSingle()
             resp.success
         } catch (e: Exception) {
             log.warn("Turnstile verify failed", e)

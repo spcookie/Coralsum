@@ -51,7 +51,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, onUnmounted, reactive, ref, onMounted} from 'vue'
+import {computed, onMounted, onUnmounted, reactive, ref} from 'vue'
 import {useI18n} from 'vue-i18n'
 import {useRouter} from 'vue-router'
 import type {FormInst, FormRules} from 'naive-ui'
@@ -60,11 +60,11 @@ import {Icon} from '@iconify/vue'
 import {resetPassword, sendEmailCode} from '@/api'
 import {useUserStore} from '@/stores/user'
 import {
-  turnstileManager,
-  isTurnstileRecentlyVerified,
-  markTurnstileVerified,
   getSessionTokenIfValid,
-  markSessionTokenUsed
+  isTurnstileRecentlyVerified,
+  markSessionTokenUsed,
+  markTurnstileVerified,
+  turnstileManager
 } from '@/utils/turnstile'
 import {useSettingsStore} from '@/stores/settings'
 
@@ -74,8 +74,8 @@ const i18nObjForLang = useI18n()
 
 function mapLang(v: string) {
   const base = v.toLowerCase()
-  if (base.startsWith('zh-tw')) return 'zh-TW'
-  if (base.startsWith('zh')) return 'zh'
+  if (base.startsWith('zh-tw') || base.startsWith('zh-hant')) return 'zh-TW'
+  if (base.startsWith('zh-cn') || base.startsWith('zh-hans') || base === 'zh') return 'zh-CN'
   const allow = ['en', 'ja', 'ko', 'es', 'fr', 'de', 'ru', 'pt', 'it', 'nl', 'tr', 'pl', 'sv', 'cs', 'hu', 'uk', 'vi', 'id']
   const code = base.split('-')[0]
   return allow.includes(code) ? code : 'auto'
@@ -137,6 +137,7 @@ const turnstileResetRef = ref<HTMLElement | null>(null)
 const turnstileResetToken = ref('')
 const turnstileEnabled = computed(() => !!(import.meta as any).env.VITE_TURNSTILE_SITEKEY)
 const usingSessionToken = ref(false)
+const turnstileResetWidgetId = ref<string | null>(null)
 
 async function sendCode() {
   const email = form.email.trim()
@@ -195,33 +196,34 @@ onUnmounted(() => {
 })
 
 onMounted(() => {
-  const tryRender = () => {
-    const ts = (window as any).turnstile
-    if (ts && turnstileResetRef.value) {
-      const cached = getSessionTokenIfValid()
-      usingSessionToken.value = !!cached
-      if (cached) {
-        turnstileResetToken.value = cached;
-        return
-      }
-      turnstileManager.createWidget(turnstileResetRef.value as any, {
-        sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
-        theme: settings.darkMode ? 'dark' : 'light',
-        language: mapLang(String((i18nObjForLang as any).locale.value || 'auto')),
-        size: isTurnstileRecentlyVerified() ? 'invisible' : 'normal',
-        onSuccess: (token) => {
-          turnstileResetToken.value = token;
-          markTurnstileVerified(token)
-        },
-        onError: () => {
-          turnstileResetToken.value = ''
-        }
-      })
-    } else {
-      setTimeout(tryRender, 200)
-    }
+  const cached = getSessionTokenIfValid()
+  usingSessionToken.value = !!cached
+  if (cached) {
+    turnstileResetToken.value = cached
+    return
   }
-  tryRender()
+  if (turnstileResetRef.value) {
+    const invisible = isTurnstileRecentlyVerified()
+    turnstileManager.createWidget(turnstileResetRef.value as any, {
+      sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
+      theme: settings.darkMode ? 'dark' : 'light',
+      language: mapLang(String((i18nObjForLang as any).locale.value || 'auto')),
+      size: invisible ? 'invisible' : 'normal',
+      onSuccess: (token) => {
+        turnstileResetToken.value = token
+        markTurnstileVerified(token)
+      },
+      onError: () => {
+        turnstileResetToken.value = ''
+      }
+    }).then((id) => {
+      turnstileResetWidgetId.value = id
+      if (invisible && id) {
+        const ts: any = (window as any).turnstile
+        ts && ts.execute(id)
+      }
+    })
+  }
 })
 
 onUnmounted(() => {

@@ -10,6 +10,7 @@ type WidgetConfig = {
 
 class TurnstileManager {
     private widgets = new Map<string, string>()
+    private loadingScript?: Promise<void>
 
     createWidget(container: string | HTMLElement, config: WidgetConfig): Promise<string> {
         return new Promise((resolve) => {
@@ -50,10 +51,41 @@ class TurnstileManager {
                 this.widgets.set(this.key(container), id)
                 resolve(id)
             }
-            const ready = (window as any).turnstile?.ready
-            if (ready) ready(tryRender)
-            else tryRender()
+            this.ensureScript()
+                .then(() => {
+                    tryRender()
+                })
+                .catch(() => {
+                    config.onError && config.onError('load-failed', '')
+                    resolve('')
+                })
         })
+    }
+
+    private ensureScript(): Promise<void> {
+        if (this.loadingScript) return this.loadingScript
+        this.loadingScript = new Promise((resolve, reject) => {
+            const w = window as any
+            if (w.turnstile) {
+                resolve()
+                return
+            }
+            const existing = document.querySelector('script[data-turnstile-loader]') as HTMLScriptElement | null
+            if (existing) {
+                existing.addEventListener('load', () => resolve(), {once: true})
+                existing.addEventListener('error', (e) => reject(e), {once: true})
+                return
+            }
+            const s = document.createElement('script')
+            s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
+            s.async = false
+            s.defer = false
+            s.setAttribute('data-turnstile-loader', 'true')
+            s.onload = () => resolve()
+            s.onerror = (e) => reject(e)
+            document.head.appendChild(s)
+        })
+        return this.loadingScript
     }
 
     removeWidget(container: string | HTMLElement) {

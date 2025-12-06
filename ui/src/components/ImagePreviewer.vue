@@ -223,7 +223,7 @@ function fitToContainer() {
   const ih = img.naturalHeight || 1
   const sw = rect.width / iw
   const sh = rect.height / ih
-  scale.value = clampScale(Math.min(sw, sh))
+  scale.value = clampScale(Math.min(1, Math.min(sw, sh)))
   tx.value = 0
   ty.value = 0
 }
@@ -247,6 +247,7 @@ function onImgLoad() {
     }
   } catch {
   }
+  fitToContainer()
 }
 
 async function dataUrlToBlob(url: string) {
@@ -380,9 +381,11 @@ onMounted(() => {
     resolveSrc()
     bindEsc()
   }
+  window.addEventListener('resize', onResize)
 })
 onUnmounted(() => {
   unbindEsc()
+  window.removeEventListener('resize', onResize)
 })
 
 async function resolveSrc() {
@@ -396,6 +399,10 @@ async function resolveSrc() {
   } catch {
     realSrc.value = props.src
   }
+}
+
+function onResize() {
+  if (props.modelValue) fitToContainer()
 }
 </script>
 

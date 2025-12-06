@@ -1,7 +1,8 @@
 <template>
   <div class="flex flex-col md:flex-row md:h-[calc(100vh-56px)]">
     <LeftConfigPanel :generating="btnLoading" @generate="doGenerate"/>
-    <div class="relative z-0 isolate flex-1 flex flex-col md:h-full glass bg-white/40 dark:bg-black/30">
+    <div ref="resultPanelRoot"
+         class="relative z-0 isolate flex-1 flex flex-col md:h-full glass bg-white/40 dark:bg-black/30">
       <div class="flex-1 overflow-y-auto">
         <RightResultPanel :loading="loading" :result="result" @save-history="onSaveHistory"/>
       </div>
@@ -55,6 +56,8 @@ const btnLoading = ref(false)
 const message = useMessage()
 const polling = ref(false)
 const currentBlobUrls = ref<string[]>([])
+const resultPanelRoot = ref<HTMLElement | null>(null)
+ 
 
 function ratioWH(baseW = 512) {
   const ar = settings.aspectRatio
@@ -235,6 +238,8 @@ async function doGenerate(payload: { prompt: string; systemPrompt?: string; file
       return
     }
     loading.value = true
+
+
     const r = await generate({
       prompt: payload.prompt,
       systemPrompt: payload.systemPrompt,
@@ -285,6 +290,7 @@ async function doGenerate(payload: { prompt: string; systemPrompt?: string; file
     btnLoading.value = false
   }
 }
+
 
 // 历史记录模块已移除
 
@@ -406,6 +412,7 @@ watch(() => user.profileReady, (ready) => {
   if (ready) syncGenerateStatus()
 })
 
+
 </script>
 
 <style scoped>
@@ -434,4 +441,6 @@ watch(() => user.profileReady, (ready) => {
   animation: heart-bounce 1.6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
   will-change: transform;
 }
+
+
 </style>

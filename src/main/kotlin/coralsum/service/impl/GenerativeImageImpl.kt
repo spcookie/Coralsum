@@ -340,28 +340,32 @@ class GenerativeImageImpl(
     override suspend fun submitGenerateTask(
         genRequest: GenRequest,
         request: HttpRequest<*>,
-    ) {
+    ): String? {
+        var finalSid: String? = genRequest.imageSessionId
         withContext(Dispatchers.IO) {
             val uid = securityService.authentication.get().name
-            generateTaskCache.cacheGenerateTaskStatue(uid, GenTaskStatue.PROCESSING)
+            val sid = genRequest.imageSessionId ?: uploadedImageCache.createSession(uid)
+            generateTaskCache.cacheGenerateTaskStatue(uid, sid, GenTaskStatue.PROCESSING)
             scope.launch(currentCoroutineContext().minusKey(Job).minusKey(CoroutineDispatcher)) {
                 try {
                     val result = generate(genRequest, request)
-                    generateTaskCache.cacheGenerateTaskResult(uid, result)
+                    generateTaskCache.cacheGenerateTaskResult(uid, sid, result)
                 } catch (e: Exception) {
                     log.error("生成失败: {}", e.message, e)
-                    generateTaskCache.cacheGenerateTaskStatue(uid, GenTaskStatue.FAILED)
+                    generateTaskCache.cacheGenerateTaskStatue(uid, sid, GenTaskStatue.FAILED)
                 }
             }
+            finalSid = sid
         }
+        return finalSid
     }
 
-    override suspend fun getGenerateTaskResult(): GenTaskResult {
+    override suspend fun getGenerateTaskResult(sid: String): GenTaskResult {
         val uid = securityService.authentication.get().name
-        val cacheGenerateTaskResult = generateTaskCache.getGenerateTaskResult(uid)
-        val statue = generateTaskCache.getGenerateTaskStatue(uid)
+        val cacheGenerateTaskResult = generateTaskCache.getGenerateTaskResult(uid, sid)
+        val statue = generateTaskCache.getGenerateTaskStatue(uid, sid)
         return if (cacheGenerateTaskResult != null) {
-            generateTaskCache.clearAll(uid)
+            generateTaskCache.clearAll(uid, sid)
             return GenTaskResult(
                 status = GenTaskStatue.COMPLETED,
                 result = cacheGenerateTaskResult

@@ -10,7 +10,7 @@ import coralsum.service.GenTaskResult
 import coralsum.service.IntentAssessment
 import org.mapstruct.*
 
-@Mapper(componentModel = MappingConstants.ComponentModel.JAKARTA)
+@Mapper(componentModel = MappingConstants.ComponentModel.JAKARTA, uses = [GenerativeObjectFactory::class])
 interface GenerativeConvert {
     @BeanMapping(unmappedTargetPolicy = ReportingPolicy.IGNORE)
     fun toResponse(genResult: GenResult): GenResultResponse
@@ -68,6 +68,4 @@ interface GenerativeConvert {
         mediaResolution: MediaResolution?,
     ): GenRequest
 
-    @org.mapstruct.ObjectFactory
-    fun createGenRequest(text: String): GenRequest = GenRequest(text = text)
 }

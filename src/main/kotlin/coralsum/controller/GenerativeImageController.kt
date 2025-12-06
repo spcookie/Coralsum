@@ -5,7 +5,7 @@ import coralsum.common.enums.*
 import coralsum.common.response.GenResultResponse
 import coralsum.common.response.GenTaskResultResponse
 import coralsum.common.response.IntentAssessmentResponse
-import coralsum.component.aop.Debounce
+import coralsum.component.annotation.Debounce
 import coralsum.convert.GenerativeConvert
 import coralsum.infrastructure.repository.OpenUserRepository
 import coralsum.infrastructure.repository.OutletUserRepository
@@ -28,6 +28,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.Size
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URI
@@ -56,8 +57,8 @@ class GenerativeImageController(
     @Debounce(name = "gi.generate", windowMillis = 3000, byUid = true)
     suspend fun generate(
         @Parameter(description = "图片上传标识") @Part("sid") sid: String?,
-        @Parameter(description = "生成文本", required = true) @Part @NotEmpty text: String,
-        @Parameter(description = "系统提示") @Part system: String?,
+        @Parameter(description = "生成文本", required = true) @Part @NotEmpty @Size(max = 1000) text: String,
+        @Parameter(description = "系统提示") @Part @Size(max = 1000) system: String?,
         @Parameter(description = "宽高比") @Part aspectRatio: AspectRatio?,
         @Parameter(description = "模型类型") @Part modelType: ModelType?,
         @Parameter(description = "候选数量") @Part candidateCount: Int?,
@@ -151,7 +152,7 @@ class GenerativeImageController(
                 URL(url).openStream().use { it.readBytes() }
             }
         } catch (_: Exception) {
-            return HttpResponse.serverError()
+            return HttpResponse.status<ModelAndView<Map<String, Any>>>(HttpStatus.BAD_GATEWAY)
         }
         val mime = when (ref.substringAfterLast('.', "").lowercase()) {
             "png" -> "image/png"
@@ -201,7 +202,7 @@ class GenerativeImageController(
     @Post("/assess-intent", consumes = [MediaType.TEXT_PLAIN])
     @Operation(summary = "评估生成意图", description = "基于用户文本判断是否为生成/修改图片意图")
     @Debounce(name = "gi.assessIntent", windowMillis = 1500, byUid = true)
-    suspend fun assessIntent(@Body @NotEmpty text: String): Res<IntentAssessmentResponse> {
+    suspend fun assessIntent(@Body @NotEmpty @Size(max = 1000) text: String): Res<IntentAssessmentResponse> {
         val assessment = service.assessIntent(text)
         return Res.success(convert.toResponse(assessment))
     }
@@ -213,8 +214,8 @@ class GenerativeImageController(
     @Debounce(name = "gi.submitTask", windowMillis = 3000, byUid = true)
     suspend fun submitGenerateTask(
         @Parameter(description = "图片上传标识") @Part("sid") sid: String?,
-        @Parameter(description = "生成文本", required = true) @Part @NotEmpty text: String,
-        @Parameter(description = "系统提示") @Part system: String?,
+        @Parameter(description = "生成文本", required = true) @Part @NotEmpty @Size(max = 1000) text: String,
+        @Parameter(description = "系统提示") @Part @Size(max = 1000) system: String?,
         @Parameter(description = "宽高比") @Part aspectRatio: AspectRatio?,
         @Parameter(description = "模型类型") @Part modelType: ModelType?,
         @Parameter(description = "候选数量") @Part candidateCount: Int?,
@@ -227,7 +228,7 @@ class GenerativeImageController(
         @Parameter(description = "图片分辨率") @Part imageSize: ImageSize?,
         @Parameter(description = "媒体分辨率") @Part mediaResolution: MediaResolution?,
         request: HttpRequest<*>,
-    ): Res<Unit> {
+    ): Res<String?> {
         val genReq = convert.toRequest(
             text,
             sid,
@@ -244,8 +245,8 @@ class GenerativeImageController(
             imageSize,
             mediaResolution
         )
-        service.submitGenerateTask(genReq, request)
-        return Res.success()
+        val sessionId = service.submitGenerateTask(genReq, request)
+        return Res.success(sessionId)
     }
 
     @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -265,9 +266,13 @@ class GenerativeImageController(
     @Secured(SecurityRule.IS_AUTHENTICATED)
     @Version("v1")
     @Get("/get-task-result")
-    @Operation(summary = "查询生成任务结果", description = "获取最近一次生成任务的状态与结果")
-    suspend fun getGenerateTaskResult(): Res<GenTaskResultResponse> {
-        val generateTaskResult = service.getGenerateTaskResult()
+    @Operation(summary = "查询生成任务结果", description = "按sid获取生成任务的状态与结果")
+    suspend fun getGenerateTaskResult(@QueryValue("sid") sid: String?): Res<GenTaskResultResponse> {
+        val generateTaskResult = if (sid.isNullOrBlank()) {
+            coralsum.service.GenTaskResult(status = coralsum.common.enums.GenTaskStatue.NONE)
+        } else {
+            service.getGenerateTaskResult(sid)
+        }
         return Res.success(convert.toResponse(generateTaskResult))
     }
 

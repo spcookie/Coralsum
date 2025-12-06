@@ -4,7 +4,7 @@ import coralsum.common.dto.Res
 import coralsum.common.request.RedeemPointsReq
 import coralsum.common.request.RedeemPointsResp
 import coralsum.common.response.EstimateParamsResponse
-import coralsum.component.aop.Debounce
+import coralsum.component.annotation.Debounce
 import coralsum.config.PricingConfig
 import coralsum.convert.PricingConvert
 import coralsum.service.IPointsKeyService

@@ -78,8 +78,8 @@ const i18nObjForLang = useI18n()
 
 function mapLang(v: string) {
   const base = v.toLowerCase()
-  if (base.startsWith('zh-tw')) return 'zh-TW'
-  if (base.startsWith('zh')) return 'zh'
+  if (base.startsWith('zh-tw') || base.startsWith('zh-hant')) return 'zh-TW'
+  if (base.startsWith('zh-cn') || base.startsWith('zh-hans') || base === 'zh') return 'zh-CN'
   const allow = ['en', 'ja', 'ko', 'es', 'fr', 'de', 'ru', 'pt', 'it', 'nl', 'tr', 'pl', 'sv', 'cs', 'hu', 'uk', 'vi', 'id']
   const code = base.split('-')[0]
   return allow.includes(code) ? code : 'auto'
@@ -141,6 +141,7 @@ const turnstileRegRef = ref<HTMLElement | null>(null)
 const turnstileRegToken = ref('')
 const turnstileEnabled = computed(() => !!(import.meta as any).env.VITE_TURNSTILE_SITEKEY)
 const usingSessionToken = ref(false)
+const turnstileRegWidgetId = ref<string | null>(null)
 
 async function sendCode() {
   const email = form.email.trim()
@@ -199,33 +200,34 @@ function goLogin() {
 }
 
 onMounted(() => {
-  const tryRender = () => {
-    const ts = (window as any).turnstile
-    if (ts && turnstileRegRef.value) {
-      const cached = getSessionTokenIfValid()
-      usingSessionToken.value = !!cached
-      if (cached) {
-        turnstileRegToken.value = cached;
-        return
-      }
-      turnstileManager.createWidget(turnstileRegRef.value as any, {
-        sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
-        theme: settings.darkMode ? 'dark' : 'light',
-        language: mapLang(String((i18nObjForLang as any).locale.value || 'auto')),
-        size: isTurnstileRecentlyVerified() ? 'invisible' : 'normal',
-        onSuccess: (token) => {
-          turnstileRegToken.value = token;
-          markTurnstileVerified(token)
-        },
-        onError: () => {
-          turnstileRegToken.value = ''
-        }
-      })
-    } else {
-      setTimeout(tryRender, 200)
-    }
+  const cached = getSessionTokenIfValid()
+  usingSessionToken.value = !!cached
+  if (cached) {
+    turnstileRegToken.value = cached
+    return
   }
-  tryRender()
+  if (turnstileRegRef.value) {
+    const invisible = isTurnstileRecentlyVerified()
+    turnstileManager.createWidget(turnstileRegRef.value as any, {
+      sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
+      theme: settings.darkMode ? 'dark' : 'light',
+      language: mapLang(String((i18nObjForLang as any).locale.value || 'auto')),
+      size: invisible ? 'invisible' : 'normal',
+      onSuccess: (token) => {
+        turnstileRegToken.value = token
+        markTurnstileVerified(token)
+      },
+      onError: () => {
+        turnstileRegToken.value = ''
+      }
+    }).then((id) => {
+      turnstileRegWidgetId.value = id
+      if (invisible && id) {
+        const ts: any = (window as any).turnstile
+        ts && ts.execute(id)
+      }
+    })
+  }
 })
 
 onUnmounted(() => {
@@ -1277,34 +1279,6 @@ watch(() => router.currentRoute.value.fullPath, () => {
 watch(() => true, () => {
 })
 
-const renderTurnstile = () => {
-  const ts = (window as any).turnstile
-  if (!ts || !turnstileRegRef.value) return
-  ts.render(turnstileRegRef.value, {
-    sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
-    theme: 'auto',
-    size: 'normal',
-    callback: (token: string) => {
-      turnstileRegToken.value = token
-    },
-    'error-callback': () => {
-      turnstileRegToken.value = ''
-    },
-    'expired-callback': () => {
-      turnstileRegToken.value = ''
-    }
-  })
-}
-
-const tryRenderTurnstile = () => {
-  if ((window as any).turnstile && turnstileRegRef.value) {
-    renderTurnstile()
-  } else {
-    setTimeout(tryRenderTurnstile, 200)
-  }
-}
-
-tryRenderTurnstile()
 </script>
 
 <style scoped></style>

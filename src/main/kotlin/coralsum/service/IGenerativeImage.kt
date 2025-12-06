@@ -4,6 +4,7 @@ import coralsum.common.enums.*
 import io.micronaut.http.HttpRequest
 import io.micronaut.serde.annotation.Serdeable
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.Size
 import java.io.Serializable
 
 interface IGenerativeImage {
@@ -14,9 +15,9 @@ interface IGenerativeImage {
 
     suspend fun assessIntent(userMessage: String): IntentAssessment
 
-    suspend fun submitGenerateTask(genRequest: GenRequest, request: HttpRequest<*>)
+    suspend fun submitGenerateTask(genRequest: GenRequest, request: HttpRequest<*>): String?
 
-    suspend fun getGenerateTaskResult(): GenTaskResult
+    suspend fun getGenerateTaskResult(sid: String): GenTaskResult
 
     suspend fun linkPage(ref: String): LinkPage?
 
@@ -25,13 +26,13 @@ interface IGenerativeImage {
 @Schema(description = "生成请求参数")
 @Serdeable
 data class GenRequest(
-    @field:Schema(description = "生成文本") val text: String? = null,
+    @field:Schema(description = "生成文本") @field:Size(max = 1000) val text: String? = null,
     @field:Schema(description = "参考图片URL列表") var imageUrls: List<String>? = null,
     @field:Schema(description = "图片上传标识") var imageSessionId: String? = null,
     @field:Schema(description = "候选数量") var candidateCount: Int = 1,
     @field:Schema(description = "宽高比") var aspectRatio: AspectRatio? = null,
     @field:Schema(description = "模型类型") var modelType: ModelType? = ModelType.BASIC,
-    @field:Schema(description = "系统提示") var system: String? = null,
+    @field:Schema(description = "系统提示") @field:Size(max = 1000) var system: String? = null,
     @field:Schema(description = "温度") var temperature: Float = 1f,
     @field:Schema(description = "最大输出tokens") var maxOutputTokens: Int = 32768,
     @field:Schema(description = "TopP") var topP: Float = 1f,

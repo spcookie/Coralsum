@@ -118,3 +118,9 @@ async function bootstrap() {
 }
 
 bootstrap()
+
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(e => console.error('service worker 注册失败', e))
+    })
+}

@@ -312,7 +312,7 @@ class UserPointsServiceImpl(
             try {
                 val points = getOrCreateByOpenUserId(event.openUserId)
                 points.tier = MembershipTier.FREE
-                points.giftPoints = points.giftPoints.add(BigDecimal(5)).max(BigDecimal.ZERO)
+                points.giftPoints = points.giftPoints.add(BigDecimal(0.5)).max(BigDecimal.ZERO)
                 points.giftExpireTime = LocalDateTime.now().plusDays(30)
                 userPointsRepository.update(points)
             } catch (e: Exception) {

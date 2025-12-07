@@ -71,17 +71,25 @@ class UserPointsServiceImpl(
 
     override suspend fun hasEnoughPoints(openUserId: Long): Boolean {
         val userPoints = getOrCreateByOpenUserId(openUserId)
-        return userPoints.permanentPoints + userPoints.subscribePoints > BigDecimal.ZERO
+        val now = LocalDateTime.now()
+        val giftActive = userPoints.giftExpireTime?.isAfter(now) == true
+        val gift = if (giftActive) userPoints.giftPoints else BigDecimal.ZERO
+        return userPoints.permanentPoints + userPoints.subscribePoints + gift > BigDecimal.ZERO
     }
 
     override suspend fun reconcileTier(openUserId: Long): UserPoints {
         val points = getOrCreateByOpenUserId(openUserId)
         val now = LocalDateTime.now()
         val active = points.subscribeExpireTime?.isAfter(now) == true
+        val giftActive = points.giftExpireTime?.isAfter(now) == true
+        val giftVal = if (giftActive) points.giftPoints else BigDecimal.ZERO
+        val giftOnly =
+            (giftVal > BigDecimal.ZERO) && (points.permanentPoints + points.subscribePoints == BigDecimal.ZERO)
+        val nonGiftHas = (points.permanentPoints + points.subscribePoints) > BigDecimal.ZERO
         val newTier = when {
             active -> MembershipTier.PRO
-            !active && points.permanentPoints > BigDecimal.ZERO -> MembershipTier.PLUS
-            else -> MembershipTier.FREE
+            giftOnly || (!nonGiftHas) -> MembershipTier.FREE
+            else -> MembershipTier.PLUS
         }
         if (newTier != points.tier) {
             points.tier = newTier
@@ -227,12 +235,20 @@ class UserPointsServiceImpl(
                 // ========= 扣减逻辑 =========
 
                 var remaining = pointsToDeduct
-                if (userPoints.subscribePoints >= remaining) {
-                    userPoints.subscribePoints -= remaining
+                val giftActive = userPoints.giftExpireTime?.isAfter(LocalDateTime.now()) == true
+                val giftAvail = if (giftActive) userPoints.giftPoints else BigDecimal.ZERO
+                if (giftAvail >= remaining) {
+                    userPoints.giftPoints -= remaining
                 } else {
-                    remaining -= userPoints.subscribePoints
-                    userPoints.subscribePoints = BigDecimal.ZERO
-                    userPoints.permanentPoints -= remaining
+                    remaining -= giftAvail
+                    if (giftActive) userPoints.giftPoints = BigDecimal.ZERO
+                    if (userPoints.subscribePoints >= remaining) {
+                        userPoints.subscribePoints -= remaining
+                    } else {
+                        remaining -= userPoints.subscribePoints
+                        userPoints.subscribePoints = BigDecimal.ZERO
+                        userPoints.permanentPoints -= remaining
+                    }
                 }
 
                 userPointsRepository.update(userPoints)
@@ -296,7 +312,8 @@ class UserPointsServiceImpl(
             try {
                 val points = getOrCreateByOpenUserId(event.openUserId)
                 points.tier = MembershipTier.FREE
-                points.permanentPoints = points.permanentPoints.add(BigDecimal(50)).max(BigDecimal.ZERO)
+                points.giftPoints = points.giftPoints.add(BigDecimal(5)).max(BigDecimal.ZERO)
+                points.giftExpireTime = LocalDateTime.now().plusDays(30)
                 userPointsRepository.update(points)
             } catch (e: Exception) {
                 log.error("Failed to grant initial points", e)

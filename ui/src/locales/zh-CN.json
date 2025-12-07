@@ -30,7 +30,9 @@
     },
     "subscribe": "订阅积分",
     "permanent": "永久积分",
+    "gift": "赠予积分",
     "expire": "订阅到期时间",
+    "gift_expire": "赠予到期时间",
     "insufficient": "积分不足"
   },
   "app": {

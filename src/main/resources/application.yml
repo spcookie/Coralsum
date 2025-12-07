@@ -12,17 +12,7 @@ micronaut:
         logger-name: request-access
         log-format: common
     port: 8080
-    cors:
-      enabled: true
-      configurations:
-        web:
-          allowed-origins:
-            - "*"
-          allowed-methods:
-            - "*"
-          allowed-headers:
-            - "*"
-          max-age: 3600
+    dispatch-options-requests: false
   http:
     client:
       read-timeout: 5m
@@ -65,7 +55,7 @@ micronaut:
         signatures:
           secret:
             generator:
-              secret: gH7sK92ns8DkPw93Jdls82bnSd92Ks82
+              secret: ${JWT_TOKEN}
               jws-algorithm: HS256
       generator:
         access-token:
@@ -75,13 +65,14 @@ micronaut:
         enabled: true
         path: /api/auth/login
     intercept-url-map:
+      - pattern: /**
+        http-method: OPTIONS
+        access:
+          - isAnonymous()
       - pattern: /swagger/*
         access:
           - isAnonymous()
       - pattern: /mn-os/*
-        access:
-          - isAnonymous()
-      - pattern: /favicon.ico
         access:
           - isAnonymous()
       - pattern: /dashboard
@@ -90,7 +81,7 @@ micronaut:
       - pattern: /assets/**
         access:
           - isAnonymous()
-      - pattern: /favicon.svg
+      - pattern: /favicon*
         access:
           - isAnonymous()
       - pattern: "/"
@@ -106,6 +97,7 @@ micronaut:
   email:
     from:
       email: no-reply@spcookie.top
+      name: Coralsum
 #ehcache:
 #  storage-path: ${user.dir}/caches
 #  caches:
@@ -152,8 +144,8 @@ flyway:
 #    io.micronaut.data.query: DEBUG
 #    io.r2dbc.h2: DEBUG
 #    org.h2.jdbc: DEBUG
-problem:
-  stack-trace: false
+#problem:
+#  stack-trace: false
 jobrunr:
   job-scheduler:
     enabled: true
@@ -161,10 +153,8 @@ jobrunr:
     enabled: true
   dashboard:
     enabled: true
-aws:
-  region: ap-southeast-1
-oss:
-  bucket: mac-nano
+#aws:
+#  region: ap-southeast-1
 resilience4j:
   ratelimiter:
     enabled: true
@@ -178,6 +168,23 @@ resilience4j:
     instances:
       callGenerateImage:
         baseConfig: default
+javamail:
+  properties:
+    mail:
+      smtp:
+        host: smtpdm.aliyun.com
+        port: 465
+        auth: true
+        ssl:
+          enable: true
+        starttls:
+          enable: false
+        timeout: 10000
+  authentication:
+    username: no-reply@spcookie.top
+    password: ${EMAIL_PASSWORD}
+oss:
+  bucket: mac-nano
 preview:
   ttlSeconds: 1500
 pricing:

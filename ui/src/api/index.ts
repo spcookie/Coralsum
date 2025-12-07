@@ -51,8 +51,12 @@ export async function getProfile() {
         tier: data.tier,
         permanentPoints: Number(data.permanent_points || 0),
         subscribePoints: Number(data.subscribe_points || 0),
+        giftPoints: Number((data.gift_points ?? data.giftPoints) || 0),
         subscribeExpireTime: typeof data.subscribe_expire_time === 'number' ? Number(data.subscribe_expire_time) : null,
-        points: Number(data.permanent_points || 0) + Number(data.subscribe_points || 0),
+        giftExpireTime: typeof (data.gift_expire_time ?? data.giftExpireTime) === 'number'
+            ? Number(data.gift_expire_time ?? data.giftExpireTime)
+            : null,
+        points: Number(data.permanent_points || 0) + Number(data.subscribe_points || 0) + Number((data.gift_points ?? data.giftPoints) || 0),
     }
 }
 
@@ -72,8 +76,12 @@ export async function updateProfileName(name: string) {
         tier: data.tier,
         permanentPoints: Number(data.permanent_points || 0),
         subscribePoints: Number(data.subscribe_points || 0),
+        giftPoints: Number((data.gift_points ?? data.giftPoints) || 0),
         subscribeExpireTime: typeof data.subscribe_expire_time === 'number' ? Number(data.subscribe_expire_time) : null,
-        points: Number(data.permanent_points || 0) + Number(data.subscribe_points || 0),
+        giftExpireTime: typeof (data.gift_expire_time ?? data.giftExpireTime) === 'number'
+            ? Number(data.gift_expire_time ?? data.giftExpireTime)
+            : null,
+        points: Number(data.permanent_points || 0) + Number(data.subscribe_points || 0) + Number((data.gift_points ?? data.giftPoints) || 0),
     }
 }
 
@@ -172,7 +180,7 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
     throw {message: '生成超时，请稍后重试', status: 504}
 }
 
-export async function uploadImage(file: File, sid?: string): Promise<string> {
+export async function uploadImage(file: File, sid?: string | undefined): Promise<string> {
     const fd = new FormData()
     fd.append('image', file, (file as any).name || 'image')
     if (sid) fd.append('sid', sid)

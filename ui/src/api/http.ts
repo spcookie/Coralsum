@@ -1,7 +1,8 @@
 import axios from 'axios'
 import {useUserStore} from '@/stores/user'
 
-const http = axios.create({baseURL: '/api', timeout: 1000 * 60 * 5})
+const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+const http = axios.create({baseURL: apiBase, timeout: 1000 * 60 * 5})
 
 http.interceptors.request.use((config) => {
     const user = useUserStore()
@@ -67,67 +68,69 @@ http.interceptors.response.use(
 
 export default http
 
-export const uploadHttp = (() => {
-    const base = (import.meta as any)?.env?.VITE_UPLOAD_BASE_URL || '/api'
-    const inst = axios.create({baseURL: base, timeout: 1000 * 60 * 5})
-    inst.interceptors.request.use((config) => {
-        const user = useUserStore()
-        if (user?.token) {
-            config.headers = config.headers || {}
-            ;(config.headers as any).Authorization = `Bearer ${user.token}`
+const base = import.meta.env.VITE_UPLOAD_BASE_URL || apiBase
+
+const uploadHttp = axios.create({baseURL: base, timeout: 1000 * 60 * 5})
+
+uploadHttp.interceptors.request.use((config) => {
+    const user = useUserStore()
+    if (user?.token) {
+        config.headers = config.headers || {}
+        ;(config.headers as any).Authorization = `Bearer ${user.token}`
+    }
+    try {
+        const lang = localStorage.getItem('lang') || navigator.language
+        config.headers = config.headers || {}
+        ;(config.headers as any)['Accept-Language'] = (lang || 'en').replace('_', '-')
+    } catch {
+    }
+    return config
+})
+
+uploadHttp.interceptors.response.use(
+    (res) => {
+        const {status, data} = res
+        if (status < 200 || status >= 300) {
+            return Promise.reject(res)
         }
-        try {
-            const lang = localStorage.getItem('lang') || navigator.language
-            config.headers = config.headers || {}
-            ;(config.headers as any)['Accept-Language'] = (lang || 'en').replace('_', '-')
-        } catch {
-        }
-        return config
-    })
-    inst.interceptors.response.use(
-        (res) => {
-            const {status, data} = res
-            if (status < 200 || status >= 300) {
-                return Promise.reject(res)
-            }
-            if (data && typeof data === 'object' && 'code' in (data as any)) {
-                const code = (data as any).code as string
-                const message = (data as any).message as string
-                const payload = (data as any).data
-                if (code !== 'SUCCESS') {
-                    if (code === 'UNAUTHORIZED' || code === 'FORBIDDEN') {
-                        const user = useUserStore()
-                        const hadAuthHeader = !!((res as any)?.config?.headers)?.Authorization
-                        const hadToken = !!user?.token
-                        const authExpired = hadAuthHeader || hadToken
-                        if (authExpired) {
-                            ;(res as any).__authExpired = true
-                        }
-                        user.token = ''
-                        user.requireLogin()
-                        return Promise.reject({code, message, data: payload, __authExpired: true})
+        if (data && typeof data === 'object' && 'code' in (data as any)) {
+            const code = (data as any).code as string
+            const message = (data as any).message as string
+            const payload = (data as any).data
+            if (code !== 'SUCCESS') {
+                if (code === 'UNAUTHORIZED' || code === 'FORBIDDEN') {
+                    const user = useUserStore()
+                    const hadAuthHeader = !!((res as any)?.config?.headers)?.Authorization
+                    const hadToken = !!user?.token
+                    const authExpired = hadAuthHeader || hadToken
+                    if (authExpired) {
+                        ;(res as any).__authExpired = true
                     }
-                    return Promise.reject({code, message, data: payload})
+                    user.token = ''
+                    user.requireLogin()
+                    return Promise.reject({code, message, data: payload, __authExpired: true})
                 }
-                ;(res as any).data = payload
+                return Promise.reject({code, message, data: payload})
             }
-            return res
-        },
-        (err) => {
-            const user = useUserStore()
-            const status = err?.response?.status
-            const hadAuthHeader = !!(err?.config?.headers)?.Authorization
-            const hadToken = !!user?.token
-            const authExpired = hadAuthHeader || hadToken
-            if (status === 401 || status === 403) {
-                if (authExpired) {
-                    ;(err as any).__authExpired = true
-                }
-                user.token = ''
-                user.requireLogin()
-            }
-            return Promise.reject(err)
+            ;(res as any).data = payload
         }
-    )
-    return inst
-})()
+        return res
+    },
+    (err) => {
+        const user = useUserStore()
+        const status = err?.response?.status
+        const hadAuthHeader = !!(err?.config?.headers)?.Authorization
+        const hadToken = !!user?.token
+        const authExpired = hadAuthHeader || hadToken
+        if (status === 401 || status === 403) {
+            if (authExpired) {
+                ;(err as any).__authExpired = true
+            }
+            user.token = ''
+            user.requireLogin()
+        }
+        return Promise.reject(err)
+    }
+)
+
+export {uploadHttp}

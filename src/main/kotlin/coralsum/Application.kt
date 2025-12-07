@@ -27,7 +27,10 @@ fun main(args: Array<String>) {
 fun initProps() {
 //    val absolutePath = RuntimePath.getExecutableDir().absolutePath
 //    System.setProperty("user.dir", absolutePath)
-    System.setProperty("store.base", System.getProperty("user.dir").replace("\\", "/"))
+    val current = System.getProperty("store.base")
+    if (current.isNullOrBlank()) {
+        System.setProperty("store.base", System.getProperty("user.dir").replace("\\", "/"))
+    }
 }
 
 fun startH2Console() {

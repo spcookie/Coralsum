@@ -30,7 +30,9 @@
     },
     "subscribe": "訂閱積分",
     "permanent": "永久積分",
+    "gift": "贈予積分",
     "expire": "訂閱到期時間",
+    "gift_expire": "贈予到期時間",
     "insufficient": "積分不足"
   },
   "app": {

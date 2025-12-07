@@ -48,7 +48,14 @@ class WebUserServiceImpl(
                 2,
                 RoundingMode.HALF_UP
             ) * 100.toBigDecimal()).toInt(),
+            giftPoints = ((userPoints?.giftPoints ?: BigDecimal.ZERO).setScale(
+                2,
+                RoundingMode.HALF_UP
+            ) * 100.toBigDecimal()).toInt(),
             subscribeExpireTime = userPoints?.subscribeExpireTime?.let {
+                it.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            },
+            giftExpireTime = userPoints?.giftExpireTime?.let {
                 it.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
             },
             tier = userPoints?.tier ?: MembershipTier.FREE,

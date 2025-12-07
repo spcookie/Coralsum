@@ -23,7 +23,8 @@ class BasicAuthenticationProvider(
     ): Publisher<AuthenticationResponse> {
         return Mono.deferContextual { ctx ->
             mono(ReactorContext(ctx)) {
-                val user = if (authenticationRequest.secret.isBlank() || authenticationRequest.identity.isBlank()) {
+
+            val user = if (authenticationRequest.secret.isBlank() || authenticationRequest.identity.isBlank()) {
                     null
                 } else {
                     try {

@@ -30,8 +30,10 @@
     },
     "subscribe": "Subscribe Points",
     "permanent": "Permanent Points",
+    "gift": "Gift Points",
     "insufficient": "Insufficient points",
-    "expire": "Subscription Expiry"
+    "expire": "Subscription Expiry",
+    "gift_expire": "Gift Expiry"
   },
   "app": {
     "title": "Coralsum"

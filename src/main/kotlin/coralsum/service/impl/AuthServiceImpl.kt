@@ -53,7 +53,7 @@ class AuthServiceImpl(
         if (latest == null || latest.expireTime.isBefore(LocalDateTime.now()) || latest.code != code) return false
         val exists = outletUserRepository.findBySourceCodeAndUserSource(email, UserSource.WEB)
         if (exists != null && !exists.secret.isNullOrBlank()) return false
-        val openUser = OpenUser(uid = IdUtil.getSnowflakeNextIdStr(), assignRole = "FREE")
+        val openUser = OpenUser(uid = IdUtil.getSnowflakeNextIdStr(), assignRole = "USER")
         val savedOpen = openUserRepository.save(openUser)
         outletUserRepository.save(
             OutletUser(

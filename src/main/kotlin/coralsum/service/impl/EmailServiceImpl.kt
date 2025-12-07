@@ -11,12 +11,10 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.thymeleaf.TemplateEngine
 import org.thymeleaf.context.Context
-import software.amazon.awssdk.services.ses.model.SesRequest
-import software.amazon.awssdk.services.ses.model.SesResponse
 
 @Singleton
 class EmailServiceImpl(
-    private val emailSender: EmailSender<SesRequest, SesResponse>,
+    private val emailSender: EmailSender<*, *>,
     private val templateEngine: TemplateEngine,
 ) : IEmailService {
 
@@ -41,8 +39,7 @@ class EmailServiceImpl(
                 .subject("${"Coralsum"} ${(if (purpose == "REGISTER") "注册" else "重置密码")} 验证码")
                 .body(MultipartBody(html, plain))
 
-            val send = emailSender.send(mail)
-            log.info("Email sent: ${send.responseMetadata().requestId()}")
+            emailSender.send(mail)
         }
     }
 }

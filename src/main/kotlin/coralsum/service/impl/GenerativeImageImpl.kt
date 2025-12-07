@@ -13,7 +13,6 @@ import coralsum.common.event.GenerativeImageCostEvent
 import coralsum.component.excption.BusinessException
 import coralsum.component.models.NanoBanana
 import coralsum.component.models.Upscayl
-import coralsum.config.CloudflareConfig
 import coralsum.config.GoogleConfig
 import coralsum.config.OssConfig
 import coralsum.config.PreviewConfig
@@ -74,7 +73,6 @@ import kotlin.time.toJavaDuration
 @Singleton
 class GenerativeImageImpl(
     val googleConfig: GoogleConfig,
-    val cloudflareConfig: CloudflareConfig,
     val securityService: SecurityService,
     val jsonMapper: JsonMapper,
     val generateImageReqRecordRepository: GenerateImageReqRecordRepository,
@@ -228,13 +226,13 @@ class GenerativeImageImpl(
                         else -> "application/octet-stream"
                     }
                     oss.putObject(resolveBucket(), key, ByteArrayInputStream(bytes), metadata)
-                    cloudflareConfig.host + "/api/generative-image?ref=${key}"
+                    "/api/generative-image?ref=${key}"
                 }
                 watch.stop()
                 imageReqRecord.durationMs = watch.duration.toMillis()
 
                 val text = pairs.map { it.first }.firstOrNull { !it.isNullOrBlank() } ?: ""
-                val linkImages = refs.map { cloudflareConfig.host + "/api/generative-image/link?ref=" + it }
+                val linkImages = refs.map { "/api/generative-image/link?ref=$it" }
                 GenResult(
                     inputTokens = imageReqRecord.inputTokens,
                     outputTokens = imageReqRecord.outputTokens,
@@ -449,7 +447,7 @@ class GenerativeImageImpl(
     private fun sign(ref: String, uid: String, exp: Long): String {
         val hmac = HMac(HmacAlgorithm.HmacSHA256, previewConfig.secret.toByteArray())
         val data = "$ref|$uid|$exp"
-        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(hmac.digest(data))
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(hmac.digest(data))
     }
 
     private fun verifyToken(ref: String, token: String?): String? {

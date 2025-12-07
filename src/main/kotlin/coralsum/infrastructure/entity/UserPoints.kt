@@ -26,7 +26,12 @@ data class UserPoints(
     @field:TypeDef(type = DataType.BIGDECIMAL)
     var subscribePoints: BigDecimal = BigDecimal.ZERO,
 
+    @field:TypeDef(type = DataType.BIGDECIMAL)
+    var giftPoints: BigDecimal = BigDecimal.ZERO,
+
     var subscribeExpireTime: LocalDateTime? = null,
+
+    var giftExpireTime: LocalDateTime? = null,
 
     var subscribeType: SubscribeType? = null,
 

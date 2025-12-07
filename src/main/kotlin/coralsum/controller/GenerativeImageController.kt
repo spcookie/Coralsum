@@ -19,6 +19,7 @@ import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.*
 import io.micronaut.http.exceptions.HttpStatusException
 import io.micronaut.http.multipart.StreamingFileUpload
+import io.micronaut.http.server.cors.CrossOrigin
 import io.micronaut.http.server.util.HttpClientAddressResolver
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
@@ -260,6 +261,21 @@ class GenerativeImageController(
     suspend fun uploadImage(image: StreamingFileUpload, @Part("sid") sid: String?): Res<String?> {
         val sessionId = service.uploadImage(image, sid)
         return Res.success(sessionId)
+    }
+
+    @CrossOrigin(allowedOriginsRegex = ".*")
+    @Secured(SecurityRule.IS_ANONYMOUS)
+    @Version("v1")
+    @Options("/upload")
+    fun uploadOptions(request: HttpRequest<*>): HttpResponse<Any> {
+        val origin = request.headers.get("Origin") ?: "*"
+        return HttpResponse.ok<Any>().headers { headers ->
+            headers.add("Access-Control-Allow-Origin", origin)
+            headers.add("Vary", "Origin")
+            headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+            headers.add("Access-Control-Allow-Headers", "authorization, x-api-version, content-type")
+            headers.add("Access-Control-Max-Age", "3600")
+        }
     }
 
 

@@ -28,7 +28,7 @@
       </div>
       <n-input v-model:value="prompt" :autosize="{ minRows: 6, maxRows: 12 }" :disabled="generating"
                :placeholder="t('left.prompt.placeholder')"
-               :maxlength="1000" show-count type="textarea"/>
+               :maxlength="4500" show-count type="textarea"/>
     </div>
     <n-collapse :expanded-names="basicExpandedNames" @update:expanded-names="onBasicExpandChange">
       <n-collapse-item name="img">
@@ -559,8 +559,8 @@ function onGenerate() {
     message.error(t('left.prompt.fill'))
     return
   }
-  if (prompt.value.length > 1000) {
-    message.error('最多 1000 字')
+  if (prompt.value.length > 4500) {
+    message.error('最多 4500 字')
     return
   }
   if (!user.profileReady) {

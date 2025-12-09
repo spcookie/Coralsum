@@ -102,7 +102,6 @@ class PricingConfig {
         var natRmbPerGb: Double = 1.1
         /** 代理流量单价（RMB/GB），默认 1.6 */
         var proxyRmbPerGb: Double = 1.6
-
         /** 图片访问倍数（用于放大流量成本），默认 2.5 */
         var visitMultiplier: Double = 2.5
     }

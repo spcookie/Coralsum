@@ -14,5 +14,7 @@ interface IUserPointsService {
 
     suspend fun hasEnoughPoints(openUserId: Long): Boolean
 
+    suspend fun hasEnoughPoints(openUserId: Long, estimate: coralsum.common.request.EstimatePointsReq): Boolean
+
     suspend fun reconcileTier(openUserId: Long): UserPoints
 }

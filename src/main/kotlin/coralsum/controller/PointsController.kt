@@ -1,8 +1,10 @@
 package coralsum.controller
 
 import coralsum.common.dto.Res
+import coralsum.common.request.EstimatePointsReq
 import coralsum.common.request.RedeemPointsReq
 import coralsum.common.response.EstimateParamsResponse
+import coralsum.common.response.EstimatePointsResp
 import coralsum.common.response.RedeemPointsResp
 import coralsum.component.annotation.Debounce
 import coralsum.config.PricingConfig
@@ -54,7 +56,7 @@ class PointsController(
     @Version("v1")
     @Post("/estimate")
     @Operation(summary = "积分扣减预估", description = "根据输入参数返回预估成本与积分扣减")
-    suspend fun estimate(@Body @Valid req: coralsum.common.request.EstimatePointsReq): Res<coralsum.common.response.EstimatePointsResp> {
+    suspend fun estimate(@Body @Valid req: EstimatePointsReq): Res<EstimatePointsResp> {
         val resp = pointsEstimateService.estimate(req)
         return Res.success(resp)
     }

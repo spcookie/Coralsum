@@ -10,7 +10,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 @Serdeable
-data class UploadedImageRef(val uri: String, val mimeType: String) : Serializable
+data class UploadedImageRef(val uri: String, val mimeType: String, val size: Int = 0) : Serializable
 
 @Singleton
 class UploadedImageCache {

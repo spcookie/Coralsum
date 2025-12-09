@@ -5,6 +5,7 @@ import coralsum.common.enums.MembershipTier
 import coralsum.common.enums.SubscribeType
 import coralsum.common.event.GenerativeImageCostEvent
 import coralsum.common.event.UserRegisteredEvent
+import coralsum.common.request.EstimatePointsReq
 import coralsum.config.PricingConfig
 import coralsum.infrastructure.entity.OpenUser
 import coralsum.infrastructure.entity.UserPoints
@@ -13,6 +14,7 @@ import coralsum.infrastructure.repository.GenerateImageReqRefRepository
 import coralsum.infrastructure.repository.OpenUserRepository
 import coralsum.infrastructure.repository.UserPointsDeductionRepository
 import coralsum.infrastructure.repository.UserPointsRepository
+import coralsum.service.IPointsEstimateService
 import coralsum.service.IUserPointsService
 import coralsum.toolkit.logger
 import io.micronaut.runtime.event.annotation.EventListener
@@ -32,6 +34,7 @@ class UserPointsServiceImpl(
     private val pricingConfig: PricingConfig,
     private val generateImageReqRefRepository: GenerateImageReqRefRepository,
     private val userPointsDeductionRepository: UserPointsDeductionRepository,
+    private val pointsEstimateService: IPointsEstimateService,
 ) : IUserPointsService {
 
     companion object {
@@ -75,6 +78,21 @@ class UserPointsServiceImpl(
         val giftActive = userPoints.giftExpireTime?.isAfter(now) == true
         val gift = if (giftActive) userPoints.giftPoints else BigDecimal.ZERO
         return userPoints.permanentPoints + userPoints.subscribePoints + gift > BigDecimal.ZERO
+    }
+
+    override suspend fun hasEnoughPoints(openUserId: Long, estimate: EstimatePointsReq): Boolean {
+        val points = getOrCreateByOpenUserId(openUserId)
+        val now = LocalDateTime.now()
+        val giftActive = points.giftExpireTime?.isAfter(now) == true
+        val giftAvail = if (giftActive) points.giftPoints else BigDecimal.ZERO
+        val subscribeActive = points.subscribeExpireTime?.isAfter(now) == true
+        val subscribeAvail = if (subscribeActive) points.subscribePoints else BigDecimal.ZERO
+        val available = points.permanentPoints + subscribeAvail + giftAvail
+        val est = pointsEstimateService.estimate(estimate)
+        val remaining = available.multiply(pricingConfig.pointsPerRmb.toBigDecimal())
+            .setScale(0, RoundingMode.HALF_UP)
+        return remaining >= est.pointsToDeduct.toBigDecimal()
+
     }
 
     override suspend fun reconcileTier(openUserId: Long): UserPoints {

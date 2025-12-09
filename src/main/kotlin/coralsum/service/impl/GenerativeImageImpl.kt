@@ -9,7 +9,9 @@ import com.aliyun.oss.model.ObjectMetadata
 import coralsum.common.enums.GenTaskStatue
 import coralsum.common.enums.ImageSize
 import coralsum.common.enums.MediaResolution
+import coralsum.common.enums.ModelType
 import coralsum.common.event.GenerativeImageCostEvent
+import coralsum.common.request.EstimatePointsReq
 import coralsum.component.excption.BusinessException
 import coralsum.component.models.NanoBanana
 import coralsum.component.models.Upscayl
@@ -153,10 +155,7 @@ class GenerativeImageImpl(
 
     override suspend fun generate(genRequest: GenRequest, request: HttpRequest<*>): GenResult {
         val uid = securityService.authentication.get().name
-        val openUser = openUserRepository.findByUid(uid)
-        if (!userPointsService.hasEnoughPoints(openUser!!.id!!)) {
-            throw BusinessException("积分不足")
-        }
+        validPoint(uid, genRequest)
         val watch = StopWatch.createStarted()
         val sid = genRequest.imageSessionId
         val cachedRefs = if (sid != null) uploadedImageCache.list(uid, sid) ?: emptyList() else emptyList()
@@ -269,7 +268,7 @@ class GenerativeImageImpl(
                         timestampMs = System.currentTimeMillis(),
                         success = refs.isNotEmpty(),
                         upscaylScale = genRequest.upscaylScale?.scale ?: 1,
-                        modelType = genRequest.modelType ?: coralsum.common.enums.ModelType.BASIC
+                        modelType = genRequest.modelType ?: ModelType.BASIC
                     )
                 )
                 try {
@@ -286,6 +285,36 @@ class GenerativeImageImpl(
             }
         }
         return genResult
+    }
+
+    private suspend fun validPoint(uid: String, genRequest: GenRequest) {
+        val openUser = openUserRepository.findByUid(uid)
+        if (openUser == null) throw BusinessException("积分不足")
+        val estimateReq = getEstimatePointsReq(uid, genRequest)
+        if (!userPointsService.hasEnoughPoints(openUser.id!!, estimateReq)) {
+            throw BusinessException("积分不足")
+        }
+    }
+
+    private fun getEstimatePointsReq(
+        uid: String,
+        genRequest: GenRequest
+    ): EstimatePointsReq {
+        val cachedInputRefs = uploadedImageCache.list(uid, (genRequest.imageSessionId ?: "")) ?: emptyList()
+        val inputBytes = cachedInputRefs.sumOf { it.size }
+        val estimateReq = EstimatePointsReq(
+            candidateCount = genRequest.candidateCount,
+            imageSizeCategory = genRequest.imageSize ?: ImageSize.X1,
+            imageSizeBytes = 0,
+            imageFormat = genRequest.format,
+            inputCharCount = genRequest.text?.length ?: 0,
+            inputPreviewBytes = inputBytes,
+            timestampMs = System.currentTimeMillis(),
+            success = false,
+            upscaylScale = genRequest.upscaylScale?.scale ?: 1,
+            modelType = genRequest.modelType ?: ModelType.BASIC,
+        )
+        return estimateReq
     }
 
     override suspend fun assessIntent(userMessage: String): IntentAssessment {
@@ -342,10 +371,7 @@ class GenerativeImageImpl(
         var finalSid: String? = genRequest.imageSessionId
         withContext(Dispatchers.IO) {
             val uid = securityService.authentication.get().name
-            val openUser = openUserRepository.findByUid(uid)
-            if (openUser == null || !userPointsService.hasEnoughPoints(openUser.id!!)) {
-                throw BusinessException("积分不足")
-            }
+            validPoint(uid, genRequest)
             val sid = genRequest.imageSessionId ?: uploadedImageCache.createSession(uid)
             generateTaskCache.cacheGenerateTaskStatue(uid, sid, GenTaskStatue.PROCESSING)
             scope.launch(currentCoroutineContext().minusKey(Job).minusKey(CoroutineDispatcher)) {
@@ -442,9 +468,15 @@ class GenerativeImageImpl(
         val finalSid = sid ?: uploadedImageCache.createSession(uid)
         val up = withContext(Dispatchers.IO) {
             val ins = runCatching { image.asInputStream() }.getOrNull() ?: return@withContext null
-            runCatching { nano.upload(ins, image.filename) }.getOrNull()
+            val bytes = runCatching { ins.readAllBytes() }.getOrNull() ?: return@withContext null
+            runCatching { nano.upload(ByteArrayInputStream(bytes), image.filename) }.getOrNull()
+                ?.let { it to bytes.size }
         }
-        if (up != null) uploadedImageCache.append(uid, finalSid, UploadedImageRef(up.uri, up.mimeType))
+        if (up != null) uploadedImageCache.append(
+            uid,
+            finalSid,
+            UploadedImageRef(up.first.uri, up.first.mimeType, up.second)
+        )
         return finalSid
     }
 

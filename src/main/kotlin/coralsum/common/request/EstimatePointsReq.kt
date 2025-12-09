@@ -11,11 +11,7 @@ import jakarta.validation.constraints.PositiveOrZero
 
 @Serdeable
 data class EstimatePointsReq(
-    @field:PositiveOrZero val inputTokens: Int,
-    @field:PositiveOrZero val thoughtsTokens: Int = 0,
-    @field:PositiveOrZero val outputTokens: Int,
     @field:PositiveOrZero val candidateCount: Int = 1,
-    @field:PositiveOrZero val imageCount: Int = 1,
     val imageSizeCategory: ImageSize,
     @field:PositiveOrZero val imageSizeBytes: Int = 0,
     val imageFormat: ImageFormat = ImageFormat.PNG,

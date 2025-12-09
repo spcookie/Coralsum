@@ -47,16 +47,3 @@ data class RedeemPointsReq(
     @field:NotBlank(message = "密钥不能为空")
     val key: String,
 )
-
-@Serdeable
-data class RedeemPointsResp(
-    val pointsAdded: Int,
-    val points: Int,
-)
-
-@Serdeable
-data class ToggleConfigReq(
-    @field:Positive(message = "配置ID需为正数")
-    val id: Long,
-    val disabled: Boolean,
-)

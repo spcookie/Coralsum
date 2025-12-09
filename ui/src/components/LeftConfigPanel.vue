@@ -461,6 +461,7 @@ import {Icon} from '@iconify/vue'
 import {useSettingsStore} from '@/stores/settings'
 import {useUserStore} from '@/stores/user'
 import {getEstimateParams} from '@/api'
+import {storeToRefs} from 'pinia'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {
   darkTheme,
@@ -494,18 +495,22 @@ const settings = useSettingsStore()
 const user = useUserStore()
 const prompt = ref('')
 const promptEmpty = computed(() => prompt.value.trim().length === 0)
-const systemPrompt = ref('')
+const systemPrompt = computed({
+  get: () => settings.systemPrompt,
+  set: (v: string) => settings.setSystemPrompt(v)
+})
 const files = ref<File[]>([])
 const uploadList = ref<any[]>([])
-const SYSTEM_PROMPT_KEY = 'coralsum.systemPrompt'
-const basicExpandedNames = ref<Array<string | number>>([])
+const {basicExpandedNames} = storeToRefs(settings)
 
 onMounted(() => {
   try {
-    const v = localStorage.getItem(SYSTEM_PROMPT_KEY) || ''
-    if (v && v.length > 0) systemPrompt.value = v
-    if ((systemPrompt.value || '').trim().length > 0 && !basicExpandedNames.value.includes('sys')) {
-      basicExpandedNames.value.push('sys')
+    const legacy = localStorage.getItem('coralsum.systemPrompt') || ''
+    if (!settings.systemPrompt && legacy) {
+      settings.setSystemPrompt(legacy)
+      localStorage.removeItem('coralsum.systemPrompt')
+    } else {
+      settings.setSystemPrompt(settings.systemPrompt)
     }
   } catch {
   }
@@ -573,6 +578,11 @@ function onGenerate() {
     message.error(t('points.insufficient'))
     return
   }
+  const need = estimatedPoints.value == null ? 0 : Number(estimatedPoints.value || 0)
+  if (need > 0 && pts < need) {
+    message.error(`${t('points.insufficient')}，${t('left.estimate.tip')}：${need}`)
+    return
+  }
   emit('generate', {prompt: prompt.value, systemPrompt: systemPrompt.value, files: files.value})
 }
 
@@ -594,26 +604,10 @@ watch(() => user.token, (t) => {
   if (t && t.length > 0) loadPricing()
 })
 
-watch(systemPrompt, (v) => {
-  const s = (v || '').trim()
-  try {
-    if (s.length > 0) {
-      localStorage.setItem(SYSTEM_PROMPT_KEY, s)
-      if (!basicExpandedNames.value.includes('sys')) {
-        basicExpandedNames.value = [...basicExpandedNames.value, 'sys']
-      }
-    } else {
-      localStorage.removeItem(SYSTEM_PROMPT_KEY)
-      if (basicExpandedNames.value.includes('sys')) {
-        basicExpandedNames.value = basicExpandedNames.value.filter((n) => n !== 'sys')
-      }
-    }
-  } catch {
-  }
-})
+// 依赖 Pinia 的 setSystemPrompt 行为来维护 basicExpandedNames 与持久化
 
 function onBasicExpandChange(names: Array<string | number>) {
-  basicExpandedNames.value = Array.isArray(names) ? names : []
+  settings.setBasicExpandedNames(names)
 }
 
 const estimatedPoints = computed(() => {
@@ -655,10 +649,14 @@ const estimatedPoints = computed(() => {
   const visitMultiplier = Number(p.trafficVisitMultiplier || 5)
   const totalBytes = bytesPerImage * images * visitMultiplier
   const gb = totalBytes / (1024 * 1024 * 1024)
-  const ossBusy = Number(p.ossBusyRmbPerGb || 0.5)
+  const hour = new Date().getHours()
+  const startHour = Number(p.ossBusyStartHour || 8)
+  const endHour = Number(p.ossBusyEndHour || 24)
+  const busy = hour >= startHour && hour < endHour
+  const ossRate = Number((busy ? p.ossBusyRmbPerGb : p.ossIdleRmbPerGb) || 0.5)
   const natRate = Number(p.trafficNatRmbPerGb || 1.1)
   const proxyRate = Number(p.trafficProxyRmbPerGb || 1.6)
-  const ossRmb = gb * ossBusy
+  const ossRmb = gb * ossRate
   const natRmb = gb * natRate
   const proxyRmb = gb * proxyRate
 

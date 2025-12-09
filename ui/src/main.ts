@@ -48,9 +48,7 @@ import phShare from '@iconify-icons/ph/share'
 import phInfo from '@iconify-icons/ph/info'
 import solarStarsBoldDuotone from '@iconify-icons/solar/stars-bold-duotone'
 
-if (import.meta.env.DEV) {
-    import('./api/mockjs')
-}
+// 关闭 MockJS（会使用 new Function，受 CSP 限制）
 
 // 预先应用暗黑模式，避免刷新时闪烁
 try {
@@ -111,6 +109,11 @@ const router = createRouter({
 async function bootstrap() {
     const i18n = await createI18nInstance()
     const app = createApp(App)
+    app.config.warnHandler = (msg, instance, trace) => {
+        const s = String(msg || '')
+        if (s.includes('Slot "default" invoked outside of the render function')) return
+        console.warn(msg, trace)
+    }
     app.use(pinia)
     app.use(router)
     app.use(i18n)

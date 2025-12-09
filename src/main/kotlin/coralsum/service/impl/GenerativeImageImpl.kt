@@ -342,6 +342,10 @@ class GenerativeImageImpl(
         var finalSid: String? = genRequest.imageSessionId
         withContext(Dispatchers.IO) {
             val uid = securityService.authentication.get().name
+            val openUser = openUserRepository.findByUid(uid)
+            if (openUser == null || !userPointsService.hasEnoughPoints(openUser.id!!)) {
+                throw BusinessException("积分不足")
+            }
             val sid = genRequest.imageSessionId ?: uploadedImageCache.createSession(uid)
             generateTaskCache.cacheGenerateTaskStatue(uid, sid, GenTaskStatue.PROCESSING)
             scope.launch(currentCoroutineContext().minusKey(Job).minusKey(CoroutineDispatcher)) {

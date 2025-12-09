@@ -178,7 +178,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, ref, watch} from 'vue'
+import {computed, nextTick, ref, watch} from 'vue'
 import {useI18n} from 'vue-i18n'
 import {Icon} from '@iconify/vue'
 import {useUserStore} from '@/stores/user'
@@ -232,7 +232,9 @@ function redeem() {
           }
           message.success(t('redeem.success', {points: addedView.toFixed(0)}))
           redeemKey.value = ''
-          showRedeem.value = false
+          nextTick(() => {
+            showRedeem.value = false
+          })
         })
         .catch((e: any) => {
           const status = e?.status
@@ -271,7 +273,9 @@ function openHistory() {
   }
   showHistory.value = true
   page.value = 1
-  loadHistory()
+  nextTick(() => {
+    loadHistory()
+  })
 }
 
 async function loadHistory() {
@@ -348,7 +352,9 @@ function doLogout() {
     user.logout()
     message.success(t('messages.logout_success'))
   } finally {
-    showLogout.value = false
+    nextTick(() => {
+      showLogout.value = false
+    })
   }
 }
 

@@ -172,14 +172,13 @@
                   </n-button>
                 </div>
               </n-form-item>
-              <div v-if="turnstileEnabled" ref="turnstilePwdRef"></div>
-              <div v-if="pwdError" class="text-xs text-red-600">{{ pwdError }}</div>
+
             </div>
           </n-collapse-item>
         </n-collapse>
         <div class="flex gap-2 justify-end">
           <n-button @click="user.showProfileModal=false">{{ t('profile.modal.cancel') }}</n-button>
-          <n-button :disabled="pwdVerifying" :loading="pwdVerifying" type="primary" @click="saveProfile">
+          <n-button type="primary" @click="saveProfile">
             {{ t('profile.modal.save') }}
           </n-button>
         </div>
@@ -384,7 +383,7 @@ import {
   sendEmailCode,
   updateProfileName
 } from '@/api'
-import {markSessionTokenUsed, markTurnstileVerified, turnstileManager} from '@/utils/turnstile'
+
 import {countHistory, deleteHistory, listHistory} from '@/utils/indexedDb'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 
@@ -468,12 +467,7 @@ const confirmPwd = ref('')
 const emailCode = ref('')
 const profileFormRef = ref<FormInst | null>(null)
 const profileForm = reactive({name: nameParts.value.base, oldPwd: '', newPwd: '', confirmPwd: '', emailCode: ''})
-const turnstileEnabled = computed(() => !!(import.meta as any).env.VITE_TURNSTILE_SITEKEY)
-const turnstilePwdRef = ref<HTMLElement | null>(null)
-const turnstilePwdToken = ref('')
-const turnstilePwdWidgetId = ref<string | null>(null)
-const pwdVerifying = ref(false)
-const pwdError = ref('')
+
 const profileRules: FormRules = {
   newPwd: [
     {required: true, message: () => t('messages.password_required'), trigger: ['input', 'blur']},
@@ -627,51 +621,17 @@ async function saveProfile() {
   try {
     if (hasPwdInput) {
       await profileFormRef.value?.validate()
-      if (turnstileEnabled.value) {
-        pwdError.value = ''
-        pwdVerifying.value = true
-        const ts: any = (window as any).turnstile
-        if (!turnstilePwdWidgetId.value) {
-          await nextTick()
-          const id = await turnstileManager.createWidget(turnstilePwdRef.value as any, {
-            sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
-            theme: settings.darkMode ? 'dark' : 'light',
-            language: mapLang(String((i18nObjForLang as any).locale.value || 'auto')),
-            size: 'invisible',
-            onSuccess: (token) => {
-              turnstilePwdToken.value = token
-              markTurnstileVerified(token)
-              pwdError.value = ''
-            },
-            onError: (err) => {
-              turnstilePwdToken.value = ''
-              pwdError.value = typeof err === 'string' ? err : '渲染失败'
-            }
-          })
-          turnstilePwdWidgetId.value = id
-        }
-        if (ts && turnstilePwdWidgetId.value) ts.execute(turnstilePwdWidgetId.value)
-        const ok = await waitToken(turnstilePwdToken, 5000)
-        if (!ok) {
-          pwdError.value = '请先完成验证'
-          pwdVerifying.value = false
-          return
-        }
-        pwdVerifying.value = false
-      }
       await changePassword(
           user.email,
           String(profileForm.oldPwd || '').trim(),
           String(profileForm.newPwd || '').trim(),
-          String(profileForm.emailCode || '').trim(),
-          turnstileEnabled.value ? turnstilePwdToken.value : undefined
+          String(profileForm.emailCode || '').trim()
       )
-      if (turnstileEnabled.value) markSessionTokenUsed()
       profileForm.oldPwd = ''
       profileForm.newPwd = ''
       profileForm.confirmPwd = ''
       profileForm.emailCode = ''
-      turnstilePwdToken.value = ''
+
     }
 
     if (doName) {
@@ -796,7 +756,9 @@ function openHistory() {
   }
   showHistory.value = true
   page.value = 1
-  loadHistory()
+  nextTick(() => {
+    loadHistory()
+  })
 }
 
 async function loadHistory() {

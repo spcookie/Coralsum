@@ -95,7 +95,7 @@
     "email_required": "请输入邮箱",
     "email_invalid": "邮箱格式不正确",
     "password_required": "请输入密码",
-    "password_invalid": "密码需6-16位，且含字母与数字；可包含@._-!#$%^&*等符号",
+    "password_invalid": "密码需6-16位，且含字母与数字；可包含 ＠、.、_、-、!、#、$、%、^、&、* 等符号",
     "check_inputs": "请检查输入项",
     "login_success": "登录成功",
     "auth_expired": "登录已过期，请重新登录",

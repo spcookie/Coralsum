@@ -1,6 +1,5 @@
 import http, {uploadHttp} from './http'
 import {useUserStore} from '@/stores/user'
-import {markSessionTokenUsed} from '@/utils/turnstile'
 
 export interface GenerateRequest {
     prompt: string
@@ -85,15 +84,8 @@ export async function updateProfileName(name: string) {
     }
 }
 
-export async function changePassword(email: string, oldPassword: string, newPassword: string, code: string, turnstileToken?: string) {
+export async function changePassword(email: string, oldPassword: string, newPassword: string, code: string) {
     const headers: any = {}
-    if (turnstileToken) {
-        headers['CF-Turnstile-Response'] = turnstileToken
-        try {
-            markSessionTokenUsed()
-        } catch {
-        }
-    }
     const {data} = await http.post('/user/change-password', {
         email,
         old_password: oldPassword,
@@ -241,28 +233,14 @@ export async function getExternalBlob(url: string): Promise<Blob> {
     return data as Blob
 }
 
-export async function register(email: string, password: string, code: string, turnstileToken?: string) {
+export async function register(email: string, password: string, code: string) {
     const headers: any = {}
-    if (turnstileToken) {
-        headers['CF-Turnstile-Response'] = turnstileToken
-        try {
-            markSessionTokenUsed()
-        } catch {
-        }
-    }
     const {data} = await http.post('/auth/register', {email, password, code}, {headers})
     return data
 }
 
-export async function resetPassword(email: string, newPassword: string, code: string, turnstileToken?: string) {
+export async function resetPassword(email: string, newPassword: string, code: string) {
     const headers: any = {}
-    if (turnstileToken) {
-        headers['CF-Turnstile-Response'] = turnstileToken
-        try {
-            markSessionTokenUsed()
-        } catch {
-        }
-    }
     const {data} = await http.post('/auth/reset-password', {email, new_password: newPassword, code}, {headers})
     return data
 }
@@ -370,6 +348,8 @@ export async function getEstimateParams(): Promise<{
     estimatedBytesPerImage: Record<string, number>
     ossBusyRmbPerGb: number
     ossIdleRmbPerGb: number
+    ossBusyStartHour: number
+    ossBusyEndHour: number
     trafficNatRmbPerGb: number
     trafficProxyRmbPerGb: number
     trafficVisitMultiplier: number
@@ -411,6 +391,8 @@ export async function getEstimateParams(): Promise<{
         estimatedBytesPerImage,
         ossBusyRmbPerGb: Number(payload.oss_busy_rmb_per_gb ?? 0),
         ossIdleRmbPerGb: Number(payload.oss_idle_rmb_per_gb ?? 0),
+        ossBusyStartHour: Number(payload.oss_busy_start_hour ?? 8),
+        ossBusyEndHour: Number(payload.oss_busy_end_hour ?? 24),
         trafficNatRmbPerGb: Number(payload.traffic_nat_rmb_per_gb ?? 0),
         trafficProxyRmbPerGb: Number(payload.traffic_proxy_rmb_per_gb ?? 0),
         trafficVisitMultiplier: Number(payload.traffic_visit_multiplier ?? 1),

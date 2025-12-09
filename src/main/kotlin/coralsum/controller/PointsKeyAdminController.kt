@@ -3,8 +3,8 @@ package coralsum.controller
 import coralsum.common.dto.Res
 import coralsum.common.request.CreatePointsKeyConfigReq
 import coralsum.common.request.GeneratePointsKeysReq
-import coralsum.common.request.ToggleConfigReq
 import coralsum.common.request.ToggleKeysReq
+import coralsum.common.response.ToggleConfigReq
 import coralsum.component.annotation.Debounce
 import coralsum.service.IPointsKeyService
 import io.micronaut.http.annotation.*

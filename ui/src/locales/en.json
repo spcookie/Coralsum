@@ -95,7 +95,7 @@
     "email_required": "Please enter email",
     "email_invalid": "Invalid email format",
     "password_required": "Please enter password",
-    "password_invalid": "Password must be 6–16 chars, include letters and numbers; symbols @._-!#$%^&* allowed",
+    "password_invalid": "Password must be 6–16 chars, include letters and numbers; allowed symbols: ＠ . _ - ! # $ % ^ & *",
     "check_inputs": "Please check inputs",
     "login_success": "Signed in successfully",
     "auth_expired": "Session expired, please sign in again",

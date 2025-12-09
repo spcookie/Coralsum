@@ -20,11 +20,26 @@ export const useSettingsStore = defineStore('settings', {
         mediaResolution: 'auto' as MediaResolution,
         modelType: 'Basic' as ModelType,
         darkMode: false,
-        advancedExpanded: false
+        advancedExpanded: false,
+        systemPrompt: '' as string,
+        basicExpandedNames: [] as Array<string | number>
     }),
     actions: {
         toggleDark() {
             this.darkMode = !this.darkMode
+        },
+        setSystemPrompt(v: string) {
+            const s = (v || '').trim()
+            this.systemPrompt = s
+            const hasSys = this.basicExpandedNames.includes('sys')
+            if (s.length > 0) {
+                if (!hasSys) this.basicExpandedNames = [...this.basicExpandedNames, 'sys']
+            } else {
+                if (hasSys) this.basicExpandedNames = this.basicExpandedNames.filter((n) => n !== 'sys')
+            }
+        },
+        setBasicExpandedNames(names: Array<string | number>) {
+            this.basicExpandedNames = Array.isArray(names) ? names : []
         },
         reset() {
             this.candidateRadio = 1
@@ -37,6 +52,8 @@ export const useSettingsStore = defineStore('settings', {
             this.imageSize = '1K'
             this.mediaResolution = 'auto'
             this.modelType = 'Basic'
+            this.systemPrompt = ''
+            this.basicExpandedNames = []
         }
     }
 })

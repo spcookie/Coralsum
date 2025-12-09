@@ -38,12 +38,10 @@
               </n-button>
             </div>
           </n-form-item>
-          <div v-show="!usingSessionToken">
-            <div ref="turnstileRegRef"></div>
-          </div>
+
           <div class="flex gap-2 justify-end">
             <n-button @click="goLogin">{{ t('auth.login.title') }}</n-button>
-            <n-button :disabled="!valid || (turnstileEnabled && !turnstileRegToken)" :loading="registerLoading"
+            <n-button :disabled="!valid" :loading="registerLoading"
                       type="primary" @click="doRegister">
               {{ t('auth.register') }}
             </n-button>
@@ -63,13 +61,7 @@ import {NButton, NCard, NForm, NFormItem, NInput, useMessage} from 'naive-ui'
 import {Icon} from '@iconify/vue'
 import {register, sendEmailCode} from '@/api'
 import {useUserStore} from '@/stores/user'
-import {
-  getSessionTokenIfValid,
-  isTurnstileRecentlyVerified,
-  markSessionTokenUsed,
-  markTurnstileVerified,
-  turnstileManager
-} from '@/utils/turnstile'
+
 import {useSettingsStore} from '@/stores/settings'
 
 const router = useRouter()
@@ -94,6 +86,7 @@ const regConfirmVisible = ref(false)
 const registerLoading = ref(false)
 const sendCodeLoading = ref(false)
 const sendCodeCd = ref(0)
+const turnstileRegRef = ref<any>(null)
 const sendCodeLabel = computed(() => {
   const base = t('profile.modal.send_code')
   return sendCodeCd.value > 0 ? `${base}(${sendCodeCd.value}s)` : base
@@ -137,11 +130,7 @@ const rules: FormRules = {
   ]
 }
 const valid = computed(() => emailRegex.test(form.email.trim()) && pwdRegex.test(form.password.trim()) && form.confirm.trim() === form.password.trim() && codeRegex.test(form.code.trim()))
-const turnstileRegRef = ref<HTMLElement | null>(null)
-const turnstileRegToken = ref('')
-const turnstileEnabled = computed(() => !!(import.meta as any).env.VITE_TURNSTILE_SITEKEY)
-const usingSessionToken = ref(false)
-const turnstileRegWidgetId = ref<string | null>(null)
+
 
 async function sendCode() {
   const email = form.email.trim()
@@ -182,8 +171,7 @@ async function doRegister() {
       return
     }
     registerLoading.value = true
-    await register(form.email.trim(), form.password.trim(), form.code.trim(), turnstileEnabled.value ? turnstileRegToken.value : undefined)
-    markSessionTokenUsed()
+    await register(form.email.trim(), form.password.trim(), form.code.trim())
     message.success(t('messages.register_success'))
     user.requireLogin()
     router.push('/')
@@ -200,38 +188,9 @@ function goLogin() {
 }
 
 onMounted(() => {
-  const cached = getSessionTokenIfValid()
-  usingSessionToken.value = !!cached
-  if (cached) {
-    turnstileRegToken.value = cached
-    return
-  }
-  if (turnstileRegRef.value) {
-    const invisible = isTurnstileRecentlyVerified()
-    turnstileManager.createWidget(turnstileRegRef.value as any, {
-      sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
-      theme: settings.darkMode ? 'dark' : 'light',
-      language: mapLang(String((i18nObjForLang as any).locale.value || 'auto')),
-      size: invisible ? 'invisible' : 'normal',
-      onSuccess: (token) => {
-        turnstileRegToken.value = token
-        markTurnstileVerified(token)
-      },
-      onError: () => {
-        turnstileRegToken.value = ''
-      }
-    }).then((id) => {
-      turnstileRegWidgetId.value = id
-      if (invisible && id) {
-        const ts: any = (window as any).turnstile
-        ts && ts.execute(id)
-      }
-    })
-  }
 })
 
 onUnmounted(() => {
-  turnstileManager.removeWidget(turnstileRegRef.value as any)
 })
 watch(() => form.email, (v) => {
 })

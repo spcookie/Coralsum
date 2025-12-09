@@ -33,12 +33,10 @@
               </n-button>
             </div>
           </n-form-item>
-          <div v-show="!usingSessionToken">
-            <div ref="turnstileResetRef"></div>
-          </div>
+
           <div class="flex gap-2 justify-end">
             <n-button @click="goLogin">{{ t('auth.login.title') }}</n-button>
-            <n-button :disabled="!valid || (turnstileEnabled && !turnstileResetToken)" :loading="resetLoading"
+            <n-button :disabled="!valid" :loading="resetLoading"
                       type="primary" @click="doReset">{{
                 t('auth.reset')
               }}
@@ -59,13 +57,7 @@ import {NButton, NCard, NForm, NFormItem, NInput, useMessage} from 'naive-ui'
 import {Icon} from '@iconify/vue'
 import {resetPassword, sendEmailCode} from '@/api'
 import {useUserStore} from '@/stores/user'
-import {
-  getSessionTokenIfValid,
-  isTurnstileRecentlyVerified,
-  markSessionTokenUsed,
-  markTurnstileVerified,
-  turnstileManager
-} from '@/utils/turnstile'
+
 import {useSettingsStore} from '@/stores/settings'
 
 const router = useRouter()
@@ -133,11 +125,7 @@ const rules: FormRules = {
   ]
 }
 const valid = computed(() => emailRegex.test(form.email.trim()) && pwdRegex.test(form.newPassword.trim()) && form.confirm.trim() === form.newPassword.trim() && codeRegex.test(form.code.trim()))
-const turnstileResetRef = ref<HTMLElement | null>(null)
-const turnstileResetToken = ref('')
-const turnstileEnabled = computed(() => !!(import.meta as any).env.VITE_TURNSTILE_SITEKEY)
-const usingSessionToken = ref(false)
-const turnstileResetWidgetId = ref<string | null>(null)
+
 
 async function sendCode() {
   const email = form.email.trim()
@@ -174,8 +162,7 @@ async function doReset() {
       return
     }
     resetLoading.value = true
-    await resetPassword(form.email.trim(), form.newPassword.trim(), form.code.trim(), turnstileEnabled.value ? turnstileResetToken.value : undefined)
-    markSessionTokenUsed()
+    await resetPassword(form.email.trim(), form.newPassword.trim(), form.code.trim())
     message.success(t('messages.reset_success') || '重置成功，请登录')
     user.requireLogin()
     router.push('/')
@@ -196,38 +183,9 @@ onUnmounted(() => {
 })
 
 onMounted(() => {
-  const cached = getSessionTokenIfValid()
-  usingSessionToken.value = !!cached
-  if (cached) {
-    turnstileResetToken.value = cached
-    return
-  }
-  if (turnstileResetRef.value) {
-    const invisible = isTurnstileRecentlyVerified()
-    turnstileManager.createWidget(turnstileResetRef.value as any, {
-      sitekey: (import.meta as any).env.VITE_TURNSTILE_SITEKEY || '',
-      theme: settings.darkMode ? 'dark' : 'light',
-      language: mapLang(String((i18nObjForLang as any).locale.value || 'auto')),
-      size: invisible ? 'invisible' : 'normal',
-      onSuccess: (token) => {
-        turnstileResetToken.value = token
-        markTurnstileVerified(token)
-      },
-      onError: () => {
-        turnstileResetToken.value = ''
-      }
-    }).then((id) => {
-      turnstileResetWidgetId.value = id
-      if (invisible && id) {
-        const ts: any = (window as any).turnstile
-        ts && ts.execute(id)
-      }
-    })
-  }
 })
 
 onUnmounted(() => {
-  turnstileManager.removeWidget(turnstileResetRef.value as any)
 })
 
 </script>

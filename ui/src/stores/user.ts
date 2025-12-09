@@ -85,7 +85,14 @@ export const useUserStore = defineStore('user', {
         ,
         logout() {
             try {
-                localStorage.removeItem('pinia_user')
+                try {
+                    localStorage.removeItem('pinia_user')
+                } catch {
+                }
+                try {
+                    sessionStorage.clear()
+                } catch {
+                }
             } catch {
             }
             this.$reset()

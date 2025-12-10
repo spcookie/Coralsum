@@ -325,6 +325,22 @@
     "image_generate": "图片生成",
     "key_manage": "密钥管理"
   },
+  "tools": {
+    "title": "工具",
+    "meme_slicer": {
+      "title": "表情包切图",
+      "upload": "上传图片",
+      "pick_history": "从历史选择",
+      "rows": "行数",
+      "cols": "列数",
+      "preview": "生成预览",
+      "download_zip": "打包下载",
+      "max_count": "最大数量：{count}",
+      "max_rows": "最大行数：{count}",
+      "max_cols": "最大列数：{count}",
+      "reset": "重置分割线"
+    }
+  },
   "keys": {
     "config": {
       "title": "生成密钥配置",

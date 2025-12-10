@@ -325,6 +325,22 @@
     "image_generate": "Image Generation",
     "key_manage": "Key Management"
   },
+  "tools": {
+    "title": "Tools",
+    "meme_slicer": {
+      "title": "Meme Slicer",
+      "upload": "Upload Image",
+      "pick_history": "Pick from History",
+      "rows": "Rows",
+      "cols": "Cols",
+      "preview": "Generate Preview",
+      "download_zip": "Download ZIP",
+      "max_count": "Max Count: {count}",
+      "max_rows": "Max Rows: {count}",
+      "max_cols": "Max Cols: {count}",
+      "reset": "Reset Guides"
+    }
+  },
   "keys": {
     "config": {
       "title": "Key Config Generation",

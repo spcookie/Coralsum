@@ -20,6 +20,14 @@
     </n-tooltip>
     <n-tooltip v-if="user.profileReady" placement="right">
       <template #trigger>
+        <n-button circle quaternary @click="onToolsPage ? goHome() : goTools()">
+          <Icon :icon="onToolsPage ? 'mdi:image' : 'mdi:wrench'" class="text-xl"/>
+        </n-button>
+      </template>
+      {{ onToolsPage ? t('menu.image_generate') : t('tools.title') }}
+    </n-tooltip>
+    <n-tooltip v-if="user.profileReady" placement="right">
+      <template #trigger>
         <n-button circle quaternary @click="showRedeem = true">
           <Icon class="text-xl" icon="mdi:key"/>
         </n-button>
@@ -194,6 +202,7 @@ const message = useMessage()
 const router = useRouter()
 const route = useRoute()
 const onCtlPage = computed(() => route.name === 'ctl-keys')
+const onToolsPage = computed(() => route.name === 'tools')
 
 function openProfile() {
   user.requireProfile()
@@ -205,6 +214,10 @@ function goCtlKeys() {
 
 function goHome() {
   router.push('/')
+}
+
+function goTools() {
+  router.push('/tools')
 }
 
 const showRedeem = ref(false)

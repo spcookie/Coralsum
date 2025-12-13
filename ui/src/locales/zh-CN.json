@@ -123,8 +123,8 @@
     "copy_failed": "复制失败"
   },
   "error": {
-    "unauthorized": "未授权",
-    "forbidden": "禁止访问",
+    "unauthorized": "未认证",
+    "forbidden": "未授权",
     "not_found": "资源未找到",
     "internal": "服务器内部错误"
   },
@@ -164,7 +164,9 @@
       "guide_title": "提示指南与最佳实践",
       "fill": "请填写提示词",
       "desc": "用自然语言描述你想生成或修改的内容。建议包含主体、风格、构图与色调，并明确限制条件与细节，避免歧义。",
-      "open_guide": "打开提示指南"
+      "open_guide": "打开提示指南",
+      "maxlen": "提示词最多 {count} 字",
+      "clear": "清空提示词"
     },
     "image_input": {
       "title": "输入图片",
@@ -175,7 +177,8 @@
     "system_prompt": {
       "title": "系统提示词",
       "tip": "面向模型的高级指令，用于约束整体风格、行为与安全策略。建议与提示词分离，保持客观、简洁。",
-      "placeholder": "设置生成风格、光影或细节，让AI更精准理解你的创意"
+      "placeholder": "设置生成风格、光影或细节，让AI更精准理解你的创意",
+      "clear": "清空系统提示词"
     },
     "actions": {
       "reset": "重置",
@@ -312,6 +315,23 @@
         "title": "控制镜头：",
         "desc": "使用摄影/电影语言控制构图，如 wide-angle、macro、low-angle 等。"
       }
+    },
+    "idea_picker": {
+      "title": "选择提示词模版",
+      "filter_categories": "分类",
+      "filter_tags": "标签",
+      "sort": "排序",
+      "sort_updated": "按更新时间",
+      "sort_hot": "按热度",
+      "badge_new": "New",
+      "badge_hot": "Hot",
+      "badge_need_image": "需图片",
+      "badge_need_pro": "需高级模型",
+      "badge_need_edit": "需编辑提示词",
+      "apply": "应用",
+      "effect": "效果图",
+      "original": "原图",
+      "empty": "暂无模版"
     }
   },
   "upload": {
@@ -324,6 +344,101 @@
   "menu": {
     "image_generate": "图片生成",
     "key_manage": "密钥管理"
+  },
+  "ideas": {
+    "title": "创意管理",
+    "actions": {
+      "add": "新增",
+      "refresh": "刷新",
+      "reset": "重置",
+      "edit": "编辑",
+      "delete": "删除",
+      "save": "保存"
+    },
+    "columns": {
+      "id": "ID",
+      "name": "名称",
+      "description": "描述",
+      "category": "分类",
+      "prompt": "提示词",
+      "tags": "标签",
+      "tips": "提示",
+      "usage_count": "使用次数",
+      "last_used": "最近使用",
+      "updated": "更新",
+      "action": "操作",
+      "parent": "父类目"
+    },
+    "categories": {
+      "title": "分类管理",
+      "placeholder_name": "分类名称",
+      "placeholder_desc": "描述（可选）",
+      "placeholder_parent": "父类目（可选）",
+      "tree_title": "分类结构",
+      "input_name": "请输入分类名称",
+      "confirm_delete": "是否删除该分类？"
+    },
+    "tags": {
+      "title": "标签管理",
+      "placeholder_name": "标签名称",
+      "input_name": "请输入标签名称",
+      "confirm_delete": "是否删除该标签？"
+    },
+    "templates": {
+      "title": "提示词模版",
+      "filter_category": "按分类筛选",
+      "filter_tags": "按标签筛选",
+      "create": "新建模版",
+      "import_json": "批量导入",
+      "confirm_delete": "是否删除该模版？",
+      "sort": {
+        "updated": "按更新时间",
+        "hot": "按热度"
+      },
+      "create_title": "新建模版",
+      "edit_title": "编辑模版",
+      "form": {
+        "name": "名称",
+        "category": "分类",
+        "category_placeholder": "分类（可选）",
+        "description": "描述",
+        "description_placeholder": "描述（可选）",
+        "prompt": "提示词",
+        "prompt_placeholder": "提示词",
+        "tips": "提示需求",
+        "tags": "标签",
+        "tags_placeholder": "标签（可选）",
+        "need_image": "需要图片",
+        "need_pro_model": "需要高级模型",
+        "need_edit_prompt": "需要编辑提示词"
+      },
+      "upload_original_title": "配图上传：原图（最多10张，每张≤1M）",
+      "upload_original_hint": "当前：{count} 张",
+      "upload_effect_title": "效果图（最多1张，每张≤1M）",
+      "upload_select": "选择图片",
+      "save_before_upload": "请先保存模版",
+      "error_file_too_large": "图片大小超过 1M",
+      "uploaded": "已上传",
+      "not_uploaded": "未上传",
+      "import_modal": {
+        "title": "批量导入（JSON）",
+        "desc": "JSON 数组，每项：name、prompt、description（可选）、category（可选）、tags（数组，可选）、tipsNeedImage、tipsNeedProModel、tipsNeedEditPrompt",
+        "placeholder": "粘贴 JSON",
+        "cancel": "取消",
+        "confirm": "导入",
+        "parse_failed": "JSON 解析失败",
+        "success": "导入成功：{count}",
+        "failed": "导入失败"
+      }
+    },
+    "msg": {
+      "add_success": "新增成功",
+      "add_failed": "新增失败",
+      "delete_success": "删除成功",
+      "delete_failed": "删除失败",
+      "save_success": "保存成功",
+      "save_failed": "保存失败"
+    }
   },
   "tools": {
     "title": "工具",
@@ -338,7 +453,8 @@
       "max_count": "最大数量：{count}",
       "max_rows": "最大行数：{count}",
       "max_cols": "最大列数：{count}",
-      "reset": "重置分割线"
+      "reset": "重置分割线",
+      "draggable_tip": "分割线与边框支持拖拽调整"
     }
   },
   "keys": {
@@ -348,9 +464,12 @@
       "placeholder_name": "如：新春活动礼包",
       "permanent": "永久积分(RMB)",
       "subscribe": "订阅积分(RMB)",
+      "gift": "赠与积分(RMB)",
       "subscribe_type": "订阅类型",
       "period_unit": "周期单位",
       "period_count": "周期数量",
+      "gift_period_unit": "赠与周期单位",
+      "gift_period_count": "赠与周期数量",
       "save": "保存配置",
       "list": "配置列表",
       "current": "当前选择",
@@ -402,9 +521,12 @@
       "name": "名称",
       "permanent": "永久积分",
       "subscribe": "订阅积分",
+      "gift": "赠与积分",
       "subscribe_type": "订阅类型",
       "period_unit": "周期单位",
       "period_count": "周期数量",
+      "gift_period_unit": "赠与周期单位",
+      "gift_period_count": "赠与周期数量",
       "status": "状态",
       "action": "操作"
     },
@@ -429,6 +551,7 @@
   },
   "footer": {
     "opensource": "Copyright © 2025 Coralsum. 项目开源，采用",
-    "mit": "MIT 许可证"
+    "mit": "MIT 许可证",
+    "online_users": "在线人数"
   }
 }

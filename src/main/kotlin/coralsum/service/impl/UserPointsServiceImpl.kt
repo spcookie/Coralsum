@@ -72,6 +72,28 @@ class UserPointsServiceImpl(
         return userPointsRepository.update(points)
     }
 
+    override suspend fun addGiftPoints(
+        openUserId: Long,
+        delta: Int,
+        periodUnit: String?,
+        periodCount: Int?
+    ): UserPoints {
+        val points = getOrCreateByOpenUserId(openUserId)
+        points.giftPoints = points.giftPoints.add(delta.toBigDecimal()).max(BigDecimal.ZERO)
+        val now = LocalDateTime.now()
+        val base = points.giftExpireTime?.let { if (it.isAfter(now)) it else now } ?: now
+        val unit = periodUnit?.uppercase()
+        val cnt = (periodCount ?: 0).coerceAtLeast(0)
+        points.giftExpireTime = when {
+            unit == null || cnt <= 0 -> base.plusDays(30)
+            unit == "DAY" -> base.plusDays(cnt.toLong())
+            unit == "MONTH" -> base.plusMonths(cnt.toLong())
+            unit == "YEAR" -> base.plusYears(cnt.toLong())
+            else -> base.plusDays(30)
+        }
+        return userPointsRepository.update(points)
+    }
+
     override suspend fun hasEnoughPoints(openUserId: Long): Boolean {
         val userPoints = getOrCreateByOpenUserId(openUserId)
         val now = LocalDateTime.now()

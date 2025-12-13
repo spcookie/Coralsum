@@ -20,6 +20,7 @@ export const useSettingsStore = defineStore('settings', {
         mediaResolution: 'auto' as MediaResolution,
         modelType: 'Basic' as ModelType,
         darkMode: false,
+        sidebarCollapsed: true,
         advancedExpanded: false,
         systemPrompt: '' as string,
         basicExpandedNames: [] as Array<string | number>
@@ -27,6 +28,9 @@ export const useSettingsStore = defineStore('settings', {
     actions: {
         toggleDark() {
             this.darkMode = !this.darkMode
+        },
+        toggleSidebar() {
+            this.sidebarCollapsed = !this.sidebarCollapsed
         },
         setSystemPrompt(v: string) {
             const s = (v || '').trim()

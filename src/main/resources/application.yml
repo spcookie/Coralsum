@@ -69,6 +69,9 @@ micronaut:
         http-method: OPTIONS
         access:
           - isAnonymous()
+      - pattern: /api/ws/**
+        access:
+          - isAnonymous()
       - pattern: /swagger/*
         access:
           - isAnonymous()

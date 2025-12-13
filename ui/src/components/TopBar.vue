@@ -1,9 +1,13 @@
 <template>
   <div
       class="h-14 border-b border-transparent px-3 sm:px-4 flex items-center justify-between glass bg-white/40 dark:bg-black/30">
-    <div class="font-medium text-neutral-700 dark:text-neutral-200 flex items-center gap-2">
-      <Icon class="text-xl" icon="solar:stars-bold-duotone"/>
-      <span>{{ t('app.title') }}</span>
+    <div class="flex items-center">
+      <n-breadcrumb>
+        <n-breadcrumb-item v-for="(c,i) in crumbs" :key="i">
+          <router-link v-if="c.to" :to="c.to">{{ c.label }}</router-link>
+          <span v-else>{{ c.label }}</span>
+        </n-breadcrumb-item>
+      </n-breadcrumb>
     </div>
     <div class="flex items-center gap-2 sm:gap-3 flex-wrap text-sm">
       <div class="hidden sm:flex items-center gap-2">
@@ -165,8 +169,7 @@
               </n-form-item>
               <n-form-item path="code">
                 <div class="flex items-center gap-2">
-                  <n-input v-model:value="profileForm.emailCode" :placeholder="t('profile.modal.email_code')"
-                           class="flex-1"/>
+                  <n-input-otp v-model:value="codeArrProfile" :length="6" class="flex-1"/>
                   <n-button :disabled="sendCodeCd > 0 || sendCodeLoading" :loading="sendCodeLoading" size="small"
                             tertiary @click="sendCode">{{ sendCodeLabel }}
                   </n-button>
@@ -202,8 +205,7 @@
     <n-form ref="formRef" :model="loginForm" :rules="rules">
       <div class="space-y-3">
         <n-form-item path="email">
-          <n-input v-model:value="loginForm.email" :placeholder="t('profile.modal.email')"
-                   @keydown.enter.prevent="login"/>
+          <n-input v-model:value="loginForm.email" @keydown.enter.prevent="login"/>
         </n-form-item>
         <n-form-item path="password">
           <n-input v-model:value="loginForm.password" :type="loginPwdVisible ? 'text' : 'password'" maxlength="16"
@@ -358,11 +360,14 @@ import type {FormInst, FormRules} from 'naive-ui'
 import {
   NBadge,
   NButton,
+  NBreadcrumb,
+  NBreadcrumbItem,
   NCollapse,
   NCollapseItem,
   NForm,
   NFormItem,
   NInput,
+  NInputOtp,
   NModal,
   NNumberAnimation,
   NPagination,
@@ -394,6 +399,20 @@ const {formatDate} = useI18nFormat()
 const router = useRouter()
 const user = useUserStore()
 const message = useMessage()
+const onHomePage = computed(() => {
+  const r = router.currentRoute.value
+  return r?.name === 'home' || r?.path === '/'
+})
+const crumbs = computed(() => {
+  const r = router.currentRoute.value
+  const home = {label: i18nObjForLang.t('menu.image_generate'), to: '/'}
+  if (!r) return [home]
+  const name = String(r.name || '')
+  if (name === 'tools') return [home, {label: i18nObjForLang.t('tools.title')}]
+  if (name === 'ideas-admin') return [home, {label: i18nObjForLang.t('ideas.title')}]
+  if (name === 'ctl-keys') return [home, {label: i18nObjForLang.t('menu.key_manage')}]
+  return [{label: i18nObjForLang.t('menu.image_generate')}]
+})
 // 使用全局用户 Store 控制登录弹窗
 const loginForm = reactive({email: '', password: ''})
 const formRef = ref<FormInst | null>(null)
@@ -465,6 +484,7 @@ const oldPwd = ref('')
 const newPwd = ref('')
 const confirmPwd = ref('')
 const emailCode = ref('')
+const codeArrProfile = ref<string[]>([])
 const profileFormRef = ref<FormInst | null>(null)
 const profileForm = reactive({name: nameParts.value.base, oldPwd: '', newPwd: '', confirmPwd: '', emailCode: ''})
 
@@ -745,6 +765,10 @@ watch(() => user.showProfileModal, (v) => {
   if (v) profileForm.name = nameParts.value.base
 })
 
+watch(codeArrProfile, (arr) => {
+  profileForm.emailCode = arr.join('')
+}, {deep: true})
+
 watch(() => user.showLoginModal, (v) => {
 })
 
@@ -927,3 +951,4 @@ async function waitToken(tokenRef: any, timeoutMs: number) {
 </script>
 
 <style scoped></style>
+ 

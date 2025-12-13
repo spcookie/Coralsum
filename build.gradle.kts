@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.micronaut.validation)
     implementation(libs.micronaut.objectstorage.local)
     implementation(libs.micronaut.views.thymeleaf)
+    implementation("io.micronaut:micronaut-websocket")
     implementation(libs.resilience4j.consumer)
     implementation(libs.resilience4j.kotlin)
     implementation(libs.resilience4j.ratelimiter)

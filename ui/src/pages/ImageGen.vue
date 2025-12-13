@@ -19,9 +19,18 @@
           </div>
           <div class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Model Crafted by Nano Banana Pro 🍌</div>
           <div class="mt-2 w-full px-4 text-center break-words text-xs text-neutral-500 dark:text-neutral-400">
-            {{ t('footer.opensource') }}
-            <a class="underline" href="https://opensource.org/licenses/MIT" rel="noopener noreferrer"
-               target="_blank">{{ t('footer.mit') }}</a>
+            <span class="inline-flex items-center justify-center">
+              <svg aria-hidden="true" class="mr-1 w-4 h-4 text-neutral-600 dark:text-neutral-300" fill="currentColor"
+                   viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h10v-2.5C11 14.17 6.33 13 4 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.96 1.96 1.96 3.45V19h8v-1.5c0-2.33-4.67-3.5-8-3.5z"/>
+              </svg>
+              <span>{{ t('footer.online_users') }} {{ ws.count }}</span>
+              <svg :class="ws.connected ? 'text-green-500' : 'text-red-500'" aria-hidden="true" class="ml-2 w-3.5 h-3.5" fill="currentColor"
+                   viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="6"/>
+              </svg>
+            </span>
           </div>
         </div>
       </div>
@@ -44,12 +53,14 @@ import {
   refreshUserInfoByEmail
 } from '@/api'
 import {useUserStore} from '@/stores/user'
+import {useWsStore} from '@/stores/ws'
 import {useMessage} from 'naive-ui'
 import {addHistoryFromResult} from '@/utils/indexedDb'
 
 const settings = useSettingsStore()
 const {t} = useI18n()
 const user = useUserStore()
+const ws = useWsStore()
 const result = ref<any>()
 const loading = ref(false)
 const btnLoading = ref(false)

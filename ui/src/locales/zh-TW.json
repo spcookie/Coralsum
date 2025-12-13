@@ -164,7 +164,9 @@
       "guide_title": "提示指南與最佳實踐",
       "fill": "請填寫提示詞",
       "desc": "以自然語言描述你想生成或編輯的內容。建議包含主體、風格、構圖與色調，明確限制條件與細節，避免歧義。",
-      "open_guide": "打開提示指南"
+      "open_guide": "打開提示指南",
+      "maxlen": "提示詞最多 {count} 字",
+      "clear": "清空提示詞"
     },
     "image_input": {
       "title": "輸入圖片",
@@ -175,7 +177,8 @@
     "system_prompt": {
       "title": "系統提示詞",
       "tip": "面向模型的高階指令，用於約束整體風格、行為與安全策略。建議與提示詞分離，保持客觀、簡潔。",
-      "placeholder": "設定生成風格、光影或細節，讓 AI 更精準理解你的創意"
+      "placeholder": "設定生成風格、光影或細節，讓 AI 更精準理解你的創意",
+      "clear": "清空系統提示詞"
     },
     "actions": {
       "reset": "重置",
@@ -312,6 +315,23 @@
         "title": "控制鏡頭：",
         "desc": "使用攝影/電影語言控制構圖，如 wide-angle、macro、low-angle 等。"
       }
+    },
+    "idea_picker": {
+      "title": "選擇提示詞模版",
+      "filter_categories": "分類",
+      "filter_tags": "標籤",
+      "sort": "排序",
+      "sort_updated": "按更新時間",
+      "sort_hot": "按熱度",
+      "badge_new": "New",
+      "badge_hot": "Hot",
+      "badge_need_image": "需圖片",
+      "badge_need_pro": "需高階模型",
+      "badge_need_edit": "需編輯提示詞",
+      "apply": "應用",
+      "effect": "效果圖",
+      "original": "原圖",
+      "empty": "暫無模版"
     }
   },
   "upload": {
@@ -338,7 +358,8 @@
       "max_count": "最大數量：{count}",
       "max_rows": "最大行數：{count}",
       "max_cols": "最大列數：{count}",
-      "reset": "重置分割線"
+      "reset": "重置分割線",
+      "draggable_tip": "分割線與邊框支援拖曳調整"
     }
   },
   "keys": {
@@ -348,9 +369,12 @@
       "placeholder_name": "例：新春活動禮包",
       "permanent": "永久積分(RMB)",
       "subscribe": "訂閱積分(RMB)",
+      "gift": "贈與積分(RMB)",
       "subscribe_type": "訂閱類型",
       "period_unit": "週期單位",
       "period_count": "週期數量",
+      "gift_period_unit": "贈與週期單位",
+      "gift_period_count": "贈與週期數量",
       "save": "保存配置",
       "list": "配置列表",
       "current": "當前選擇",
@@ -402,9 +426,12 @@
       "name": "名稱",
       "permanent": "永久積分",
       "subscribe": "訂閱積分",
+      "gift": "贈與積分",
       "subscribe_type": "訂閱類型",
       "period_unit": "週期單位",
       "period_count": "週期數量",
+      "gift_period_unit": "贈與週期單位",
+      "gift_period_count": "贈與週期數量",
       "status": "狀態",
       "action": "操作"
     },
@@ -429,6 +456,102 @@
   },
   "footer": {
     "opensource": "Copyright © 2025 Coralsum. 專案開源，採用",
-    "mit": "MIT 授權"
+    "mit": "MIT 授權",
+    "online_users": "線上人數"
+  },
+  "ideas": {
+    "title": "創意管理",
+    "actions": {
+      "add": "新增",
+      "refresh": "刷新",
+      "reset": "重置",
+      "edit": "編輯",
+      "delete": "刪除",
+      "save": "保存"
+    },
+    "columns": {
+      "id": "ID",
+      "name": "名稱",
+      "description": "描述",
+      "category": "分類",
+      "prompt": "提示詞",
+      "tags": "標籤",
+      "tips": "提示",
+      "usage_count": "使用次數",
+      "last_used": "最近使用",
+      "updated": "更新",
+      "action": "操作",
+      "parent": "父類目"
+    },
+    "categories": {
+      "title": "分類管理",
+      "placeholder_name": "分類名稱",
+      "placeholder_desc": "描述（可選）",
+      "placeholder_parent": "父類目（可選）",
+      "tree_title": "分類結構",
+      "input_name": "請輸入分類名稱",
+      "confirm_delete": "是否刪除該分類？"
+    },
+    "tags": {
+      "title": "標籤管理",
+      "placeholder_name": "標籤名稱",
+      "input_name": "請輸入標籤名稱",
+      "confirm_delete": "是否刪除該標籤？"
+    },
+    "templates": {
+      "title": "提示詞模板",
+      "filter_category": "按分類篩選",
+      "filter_tags": "按標籤篩選",
+      "create": "新建模板",
+      "import_json": "批量導入",
+      "confirm_delete": "是否刪除該模板？",
+      "sort": {
+        "updated": "按更新時間",
+        "hot": "按熱度"
+      },
+      "create_title": "新建模板",
+      "edit_title": "編輯模板",
+      "form": {
+        "name": "名稱",
+        "category": "分類",
+        "category_placeholder": "分類（可選）",
+        "description": "描述",
+        "description_placeholder": "描述（可選）",
+        "prompt": "提示詞",
+        "prompt_placeholder": "提示詞",
+        "tips": "提示需求",
+        "tags": "標籤",
+        "tags_placeholder": "標籤（可選）",
+        "need_image": "需要圖片",
+        "need_pro_model": "需要高階模型",
+        "need_edit_prompt": "需要編輯提示詞"
+      },
+      "upload_original_title": "配圖上傳：原圖（最多10張，每張≤1M）",
+      "upload_original_hint": "當前：{count} 張",
+      "upload_effect_title": "效果圖（最多1張，每張≤1M）",
+      "upload_select": "選擇圖片",
+      "save_before_upload": "請先保存模板",
+      "error_file_too_large": "圖片大小超過 1M",
+      "uploaded": "已上傳",
+      "not_uploaded": "未上傳",
+      "import_modal": {
+        "title": "批量導入（JSON）",
+        "desc": "JSON 陣列；每項：name、prompt、description（可選）、category（可選）、tags（陣列，可選）、tipsNeedImage、tipsNeedProModel、tipsNeedEditPrompt",
+        "placeholder": "貼上 JSON",
+        "cancel": "取消",
+        "confirm": "導入",
+        "parse_failed": "JSON 解析失敗",
+        "success": "導入成功：{count}",
+        "failed": "導入失敗"
+      }
+    },
+    "msg": {
+      "add_success": "新增成功",
+      "add_failed": "新增失敗",
+      "delete_success": "刪除成功",
+      "delete_failed": "刪除失敗",
+      "save_success": "保存成功",
+      "save_failed": "保存失敗"
+    }
   }
 }

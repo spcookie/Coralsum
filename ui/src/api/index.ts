@@ -211,6 +211,16 @@ export async function getPreviewBytes(ref: string, pt?: string): Promise<Blob> {
     return data as Blob
 }
 
+export async function getPreviewUrl(ref: string, pt?: string): Promise<string> {
+    const headers: any = {'X-API-Version': 'v1'}
+    const user = useUserStore()
+    if (user?.token) headers.Authorization = `Bearer ${user.token}`
+    const params: any = {ref}
+    if (pt) params.pt = pt
+    const {data} = await http.get('/generative-image/url', {params, headers})
+    return String(data || '')
+}
+
 export async function getImageShareLink(ref: string, darkMode?: boolean): Promise<string> {
     const headers: any = {'X-API-Version': 'v1'}
     try {
@@ -257,17 +267,23 @@ export async function createPointsKeyConfig(payload: {
     name: string
     permanentPoints?: number
     subscribePoints?: number
+    giftPoints?: number
     subscribeType?: string
     periodUnit?: string
     periodCount?: number
+    giftPeriodUnit?: string
+    giftPeriodCount?: number
 }) {
     const body: any = {
         name: payload.name,
         permanent_points: payload.permanentPoints,
         subscribe_points: payload.subscribePoints,
+        gift_points: payload.giftPoints,
         subscribe_type: payload.subscribeType,
         period_unit: payload.periodUnit,
-        period_count: payload.periodCount
+        period_count: payload.periodCount,
+        gift_period_unit: payload.giftPeriodUnit,
+        gift_period_count: payload.giftPeriodCount
     }
     const {data} = await http.post('/ctl/points-keys/config', body)
     return data

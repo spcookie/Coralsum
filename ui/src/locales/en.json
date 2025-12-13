@@ -164,7 +164,9 @@
       "guide_title": "Prompt Guide & Best Practices",
       "fill": "Please fill the prompt",
       "desc": "Describe what you want to generate or edit in natural language. Include subject, style, composition and tone with clear constraints and details.",
-      "open_guide": "Open Prompt Guide"
+      "open_guide": "Open Prompt Guide",
+      "maxlen": "Prompt up to {count} characters",
+      "clear": "Clear Prompt"
     },
     "image_input": {
       "title": "Input Images",
@@ -175,7 +177,8 @@
     "system_prompt": {
       "title": "System Prompt",
       "tip": "High-level instructions to constrain style, behavior and safety. Keep objective and concise.",
-      "placeholder": "Set style, lighting or details for better understanding"
+      "placeholder": "Set style, lighting or details for better understanding",
+      "clear": "Clear System Prompt"
     },
     "actions": {
       "reset": "Reset",
@@ -312,6 +315,23 @@
         "title": "Control Camera:",
         "desc": "Use photo/cinema language like wide-angle shot, macro shot, low-angle perspective."
       }
+    },
+    "idea_picker": {
+      "title": "Choose Prompt Template",
+      "filter_categories": "Categories",
+      "filter_tags": "Tags",
+      "sort": "Sort",
+      "sort_updated": "Updated",
+      "sort_hot": "Hot",
+      "badge_new": "New",
+      "badge_hot": "Hot",
+      "badge_need_image": "Needs Image",
+      "badge_need_pro": "Needs Pro Model",
+      "badge_need_edit": "Needs Edit Prompt",
+      "apply": "Apply",
+      "effect": "Effect",
+      "original": "Original",
+      "empty": "No templates"
     }
   },
   "upload": {
@@ -338,7 +358,8 @@
       "max_count": "Max Count: {count}",
       "max_rows": "Max Rows: {count}",
       "max_cols": "Max Cols: {count}",
-      "reset": "Reset Guides"
+      "reset": "Reset Guides",
+      "draggable_tip": "Guides and borders are draggable"
     }
   },
   "keys": {
@@ -348,9 +369,12 @@
       "placeholder_name": "e.g., Spring Festival Pack",
       "permanent": "Permanent Points (RMB)",
       "subscribe": "Subscribe Points (RMB)",
+      "gift": "Gift Points (RMB)",
       "subscribe_type": "Subscribe Type",
       "period_unit": "Period Unit",
       "period_count": "Period Count",
+      "gift_period_unit": "Gift Period Unit",
+      "gift_period_count": "Gift Period Count",
       "save": "Save Config",
       "list": "Config List",
       "current": "Current",
@@ -402,9 +426,12 @@
       "name": "Name",
       "permanent": "Permanent Points",
       "subscribe": "Subscribe Points",
+      "gift": "Gift Points",
       "subscribe_type": "Subscribe Type",
       "period_unit": "Period Unit",
       "period_count": "Period Count",
+      "gift_period_unit": "Gift Period Unit",
+      "gift_period_count": "Gift Period Count",
       "status": "Status",
       "action": "Action"
     },
@@ -429,6 +456,102 @@
   },
   "footer": {
     "opensource": "Copyright © 2025 Coralsum. Open-source under",
-    "mit": "MIT License"
+    "mit": "MIT License",
+    "online_users": "Online"
+  },
+  "ideas": {
+    "title": "Ideas Management",
+    "actions": {
+      "add": "Add",
+      "refresh": "Refresh",
+      "reset": "Reset",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save"
+    },
+    "columns": {
+      "id": "ID",
+      "name": "Name",
+      "description": "Description",
+      "category": "Category",
+      "prompt": "Prompt",
+      "tags": "Tags",
+      "tips": "Tips",
+      "usage_count": "Usage",
+      "last_used": "Last Used",
+      "updated": "Updated",
+      "action": "Action",
+      "parent": "Parent"
+    },
+    "categories": {
+      "title": "Categories",
+      "placeholder_name": "Category name",
+      "placeholder_desc": "Description (optional)",
+      "placeholder_parent": "Parent (optional)",
+      "tree_title": "Category Tree",
+      "input_name": "Please enter category name",
+      "confirm_delete": "Delete this category?"
+    },
+    "tags": {
+      "title": "Tags",
+      "placeholder_name": "Tag name",
+      "input_name": "Please enter tag name",
+      "confirm_delete": "Delete this tag?"
+    },
+    "templates": {
+      "title": "Prompt Templates",
+      "filter_category": "Filter by category",
+      "filter_tags": "Filter by tags",
+      "create": "Create Template",
+      "import_json": "Import",
+      "confirm_delete": "Delete this template?",
+      "sort": {
+        "updated": "By Updated Time",
+        "hot": "By Popularity"
+      },
+      "create_title": "Create Template",
+      "edit_title": "Edit Template",
+      "form": {
+        "name": "Name",
+        "category": "Category",
+        "category_placeholder": "Category (optional)",
+        "description": "Description",
+        "description_placeholder": "Description (optional)",
+        "prompt": "Prompt",
+        "prompt_placeholder": "Prompt",
+        "tips": "Tips Requirements",
+        "tags": "Tags",
+        "tags_placeholder": "Tags (optional)",
+        "need_image": "Needs Image",
+        "need_pro_model": "Needs Pro Model",
+        "need_edit_prompt": "Needs Edit Prompt"
+      },
+      "upload_original_title": "Images: Original (max 10, ≤1MB each)",
+      "upload_original_hint": "Current: {count}",
+      "upload_effect_title": "Effect Image (max 1, ≤1MB)",
+      "upload_select": "Select Images",
+      "save_before_upload": "Please save the template first",
+      "error_file_too_large": "Image too large (>1MB)",
+      "uploaded": "Uploaded",
+      "not_uploaded": "Not uploaded",
+      "import_modal": {
+        "title": "Batch Import",
+        "desc": "JSON array; each item: name, prompt, description (optional), category (optional), tags (array, optional), tipsNeedImage, tipsNeedProModel, tipsNeedEditPrompt",
+        "placeholder": "Paste JSON",
+        "cancel": "Cancel",
+        "confirm": "Import",
+        "parse_failed": "JSON parse failed",
+        "success": "Imported: {count}",
+        "failed": "Import failed"
+      }
+    },
+    "msg": {
+      "add_success": "Added successfully",
+      "add_failed": "Add failed",
+      "delete_success": "Deleted successfully",
+      "delete_failed": "Delete failed",
+      "save_success": "Saved successfully",
+      "save_failed": "Save failed"
+    }
   }
 }

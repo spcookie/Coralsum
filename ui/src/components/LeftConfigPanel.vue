@@ -12,7 +12,21 @@
             <div class="text-xs text-white">{{ t('left.prompt.desc') }}</div>
           </n-tooltip>
         </div>
-        <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
+        <div class="flex items-center gap-1">
+          <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
+            <template #trigger>
+              <button
+                  aria-label="打开创意模版"
+                  class="inline-flex items-center justify-center cursor-pointer w-6 h-6 p-1 rounded-full transition-colors duration-200 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                  @click="openIdeaPicker"
+              >
+                <Icon class="text-amber-600 transition-colors duration-200 hover:text-amber-700"
+                      icon="mdi:lightbulb-on-outline"/>
+              </button>
+            </template>
+            <div class="text-xs text-white">创意模版</div>
+          </n-tooltip>
+          <n-tooltip class="tooltip-xs" placement="top" trigger="hover">
           <template #trigger>
             <button
                 :aria-label="t('left.prompt.open_guide')"
@@ -24,11 +38,12 @@
             </button>
           </template>
           <div class="text-xs text-white">{{ t('left.prompt.guide') }}</div>
-        </n-tooltip>
+          </n-tooltip>
+        </div>
       </div>
       <n-input v-model:value="prompt" :autosize="{ minRows: 6, maxRows: 12 }" :disabled="generating"
                :placeholder="t('left.prompt.placeholder')"
-               :maxlength="4500" show-count type="textarea"/>
+               :maxlength="2000" clearable show-count type="textarea" @clear="clearPrompt"/>
     </div>
     <n-collapse :expanded-names="basicExpandedNames" @update:expanded-names="onBasicExpandChange">
       <n-collapse-item name="img">
@@ -94,7 +109,7 @@
         </template>
         <n-input v-model:value="systemPrompt" :autosize="{ minRows: 4, maxRows: 10 }" :disabled="generating"
                  :placeholder="t('left.system_prompt.placeholder')"
-                 :maxlength="1000" show-count type="textarea"/>
+                 :maxlength="1000" clearable show-count type="textarea" @clear="clearSystemPrompt"/>
       </n-collapse-item>
     </n-collapse>
     <div class="grid grid-cols-2 gap-3">
@@ -450,6 +465,101 @@
         </ul>
       </div>
     </n-modal>
+    <n-modal v-model:show="ideaPickerShow" :style="{ width: 'min(920px, 92vw)', margin: '20px auto' }"
+             :title="t('left.idea_picker.title')" display-directive="show"
+             preset="card">
+      <div class="space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div class="filter-tags flex flex-wrap items-center gap-2">
+            <span class="text-[12px] text-neutral-500">{{ t('left.idea_picker.filter_categories') }}</span>
+            <n-tag v-for="opt in pickerCatOptions" :key="opt.value" :bordered="false" :checked="(pickerCategoryIds||[]).includes(opt.value)" checkable
+                   round size="small" type="success"
+                   @update:checked="(c)=>toggleCategory(opt.value, c)">{{ opt.label }}
+            </n-tag>
+          </div>
+          <div class="filter-tags flex flex-wrap items-center gap-2">
+            <span class="text-[12px] text-neutral-500">{{ t('left.idea_picker.filter_tags') }}</span>
+            <n-tag v-for="opt in pickerTagOptions" :key="opt.value" :checked="(pickerTagIds||[]).includes(opt.value)" bordered checkable size="small"
+                   type="info" @update:checked="(c)=>toggleTag(opt.value, c)">
+              {{ opt.label }}
+            </n-tag>
+          </div>
+          <n-select v-model:value="pickerSortBy" :options="pickerSortOptions" :placeholder="t('left.idea_picker.sort')"
+                    size="small"/>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div v-for="it in pickerTemplates" :key="it.id"
+               class="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white/70 dark:bg-black/30 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+            <div class="p-3 space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <n-button class="apply-btn" size="tiny" tertiary type="success" @click="applyTemplate(it)">
+                    <Icon icon="ph:check-circle"/>
+                    <span>{{ t('left.idea_picker.apply') }}</span>
+                  </n-button>
+                  <div class="font-semibold text-sm text-neutral-800 dark:text-neutral-200">{{ it.name }}</div>
+                </div>
+                <div class="text-[10px] flex items-center gap-0.5">
+                  <span v-if="newBadge(it)"
+                        class="px-1 py-0 rounded bg-green-50 text-green-700 border border-green-200">{{
+                      t('left.idea_picker.badge_new')
+                    }}</span>
+                  <span v-if="hotBadge(it)" class="px-1 py-0 rounded bg-red-50 text-red-700 border border-red-200">{{
+                      t('left.idea_picker.badge_hot')
+                    }}</span>
+                </div>
+              </div>
+              <div class="chips-sm flex flex-wrap items-center gap-1">
+                <n-tag v-if="it.categoryName" :bordered="false" round size="small" type="success">{{
+                    it.categoryName
+                  }}
+                </n-tag>
+                <n-tag v-for="tag in it.tagNames || []" :key="tag" bordered size="small" type="info">{{ tag }}</n-tag>
+              </div>
+              <div v-if="it.description"
+                   class="text-[12px] text-neutral-600 dark:text-neutral-300 whitespace-pre-wrap line-clamp-3">
+                {{ it.description }}
+              </div>
+              <div
+                  class="text-[12px] text-neutral-700 dark:text-neutral-200 whitespace-pre-wrap rounded-md bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 p-2">
+                {{ it.promptText }}
+              </div>
+              <div class="space-y-2">
+                <div v-if="it.effectImageUrl" class="space-y-1">
+                  <div class="text-[11px] text-neutral-500">{{ t('left.idea_picker.effect') }}</div>
+                  <div
+                      class="square-box rounded-md border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/40">
+                    <img :src="it.effectImageUrl" class="absolute inset-0 w-full h-full object-contain" loading="lazy"/>
+                  </div>
+                </div>
+                <div v-if="(it.originalImageUrls||[]).length" class="space-y-1">
+                  <div class="text-[11px] text-neutral-500">{{ t('left.idea_picker.original') }}</div>
+                  <div class="grid grid-cols-3 sm:grid-cols-4 gap-1">
+                    <div v-for="(url,idx) in it.originalImageUrls" :key="idx"
+                         class="square-box rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/40 cursor-pointer"
+                         @click="onThumbClick(url, idx)">
+                      <img :src="url" class="absolute inset-0 w-full h-full object-contain" loading="lazy"/>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="text-[10px] flex flex-wrap gap-0.5">
+                <span v-if="it.tipsNeedImage" class="px-1 py-0 rounded bg-blue-50 text-blue-700 border border-blue-200">IMG</span>
+                <span v-if="it.tipsNeedProModel"
+                      class="px-1 py-0 rounded bg-violet-50 text-violet-700 border border-violet-200">PRO</span>
+                <span v-if="it.tipsNeedEditPrompt"
+                      class="px-1 py-0 rounded bg-amber-50 text-amber-700 border border-amber-200">EDIT</span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        <div v-if="pickerTemplates.length===0" class="p-6 text-center text-neutral-500">{{
+            t('left.idea_picker.empty')
+          }}
+        </div>
+      </div>
+    </n-modal>
     <ImagePreviewer v-model:modelValue="previewShow" :src="previewSrc"/>
   </div>
 </template>
@@ -460,7 +570,7 @@ import {useI18n} from 'vue-i18n'
 import {Icon} from '@iconify/vue'
 import {useSettingsStore} from '@/stores/settings'
 import {useUserStore} from '@/stores/user'
-import {getEstimateParams} from '@/api'
+import {getEstimateParams, getPreviewUrl} from '@/api'
 import {storeToRefs} from 'pinia'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {
@@ -470,7 +580,9 @@ import {
   NCollapseItem,
   NConfigProvider,
   NInput,
+  NSelect,
   NModal,
+  NTag,
   NRadioButton,
   NRadioGroup,
   NSlider,
@@ -481,6 +593,14 @@ import {
   useMessage,
   useThemeVars
 } from 'naive-ui'
+import {
+  listIdeaCategories,
+  listIdeaTags,
+  listIdeaTemplates,
+  markIdeaTemplateUsed,
+  IdeaTemplate,
+  getIdeaImageUrl
+} from '@/api/ideas'
 
 const emit = defineEmits<{
   (e: 'generate', payload: { prompt: string; systemPrompt?: string; files: File[] }): void
@@ -517,6 +637,7 @@ onMounted(() => {
 })
 const confirmReset = ref(false)
 const promptGuideShow = ref(false)
+const ideaPickerShow = ref(false)
 const selectedIndex = ref<number | null>(null)
 const previewShow = ref(false)
 const previewSrc = ref('')
@@ -564,8 +685,8 @@ function onGenerate() {
     message.error(t('left.prompt.fill'))
     return
   }
-  if (prompt.value.length > 4500) {
-    message.error('最多 4500 字')
+  if (prompt.value.length > 2000) {
+    message.error(t('left.prompt.maxlen', {count: 2000}))
     return
   }
   if (!user.profileReady) {
@@ -694,6 +815,121 @@ function openPromptGuide() {
   promptGuideShow.value = true
 }
 
+function openIdeaPicker() {
+  ideaPickerShow.value = true
+  if (!ideaPickerLoaded.value) loadIdeaPicker()
+}
+
+const pickerCategoryIds = ref<number[] | null>(null)
+const pickerTagIds = ref<number[] | null>(null)
+const pickerSortBy = ref<'updated' | 'hot'>('updated')
+const pickerTemplates = ref<IdeaTemplate[]>([])
+const pickerCatOptions = ref<any[]>([])
+const pickerTagOptions = ref<any[]>([])
+const ideaPickerLoaded = ref(false)
+const pickerSortOptions = [
+  {label: t('left.idea_picker.sort_updated'), value: 'updated'},
+  {label: t('left.idea_picker.sort_hot'), value: 'hot'}
+]
+
+async function loadIdeaPicker() {
+  try {
+    const [cats, tags] = await Promise.all([listIdeaCategories(), listIdeaTags()])
+    pickerCatOptions.value = (cats || []).map((c: any) => ({label: c.name, value: c.id}))
+    pickerTagOptions.value = (tags || []).map((t: any) => ({label: t.name, value: t.id}))
+    const params: any = {sortBy: pickerSortBy.value, order: 'desc'}
+    if (pickerCategoryIds.value && pickerCategoryIds.value.length) params.categoryIds = pickerCategoryIds.value
+    if (pickerTagIds.value && pickerTagIds.value.length) params.tagIds = pickerTagIds.value
+    pickerTemplates.value = await listIdeaTemplates(params)
+    await prefetchTemplateImageUrls()
+    ideaPickerLoaded.value = true
+  } catch {
+  }
+}
+
+watch([pickerCategoryIds, pickerTagIds, pickerSortBy], () => {
+  loadIdeaPicker()
+})
+
+function toggleCategory(id: number, checked: boolean) {
+  const arr = pickerCategoryIds.value || []
+  const set = new Set(arr)
+  if (checked) set.add(id)
+  else set.delete(id)
+  pickerCategoryIds.value = Array.from(set)
+}
+
+function toggleTag(id: number, checked: boolean) {
+  const arr = pickerTagIds.value || []
+  const set = new Set(arr)
+  if (checked) set.add(id)
+  else set.delete(id)
+  pickerTagIds.value = Array.from(set)
+}
+
+async function prefetchTemplateImageUrls() {
+  const list = pickerTemplates.value || []
+  const promises: Promise<void>[] = []
+  for (const it of list) {
+    if (it.effectImageUri) {
+      promises.push((async () => {
+        try {
+          it.effectImageUrl = await getIdeaImageUrl(it.effectImageUri!)
+        } catch {
+          it.effectImageUrl = `/api/generative-image?ref=${encodeURIComponent(it.effectImageUri!)}`
+        }
+      })())
+    }
+    const raws = it.originalImageUris || []
+    if (raws.length) {
+      promises.push((async () => {
+        const urls: string[] = []
+        for (const r of raws) {
+          try {
+            urls.push(await getIdeaImageUrl(r))
+          } catch {
+            urls.push(`/api/generative-image?ref=${encodeURIComponent(r)}`)
+          }
+        }
+        it.originalImageUrls = urls
+      })())
+    }
+  }
+  if (promises.length) await Promise.all(promises)
+}
+
+function parseTime(s?: string): number {
+  if (!s) return 0
+  const iso = s.includes('T') ? s : s.replace(' ', 'T')
+  const t = Date.parse(iso)
+  return Number.isNaN(t) ? 0 : t
+}
+
+const NEW_DAYS = 7
+const HOT_COUNT = 20
+
+function newBadge(it: IdeaTemplate): boolean {
+  if (it.isNew === true) return true
+  const now = Date.now()
+  const ts = parseTime(it.updateTime) || parseTime(it.createTime)
+  if (!ts) return false
+  const diffDays = (now - ts) / (1000 * 60 * 60 * 24)
+  return diffDays <= NEW_DAYS
+}
+
+function hotBadge(it: IdeaTemplate): boolean {
+  if (it.isHot === true) return true
+  const cnt = Number(it.usageCount || 0)
+  return cnt >= HOT_COUNT
+}
+
+function applyTemplate(it: IdeaTemplate) {
+  prompt.value = it.promptText || ''
+  ideaPickerShow.value = false
+  markIdeaTemplateUsed(it.id).catch(() => {
+  })
+}
+
 function handlePaste(e: ClipboardEvent) {
   if (generating.value) return
   const items = e.clipboardData?.items || []
@@ -750,6 +986,14 @@ function beforeUpload(data: any) {
     return false
   }
   return true
+}
+
+function clearPrompt() {
+  prompt.value = ''
+}
+
+function clearSystemPrompt() {
+  systemPrompt.value = ''
 }
 
 const sliderThemeOverrides = computed(() => ({
@@ -904,4 +1148,36 @@ function onAdvancedExpandChange(names: Array<string | number>) {
   opacity: 1
 }
 </style>
-const { t } = useI18n()
+<style scoped>
+.filter-tags :deep(.n-tag) {
+  font-size: 11px;
+  line-height: 18px;
+  height: 20px;
+  padding: 0 6px;
+}
+
+.chips-sm :deep(.n-tag) {
+  font-size: 11px;
+  line-height: 18px;
+  height: 20px;
+  padding: 0 6px;
+}
+
+.apply-btn :deep(.n-button__content) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.apply-btn {
+  padding: 0 8px;
+  height: 22px;
+}
+
+.square-box {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+}
+</style>

@@ -28,6 +28,15 @@
             <n-form-item :label="t('keys.config.period_count')" path="periodCount">
               <n-input-number v-model:value="form.periodCount" :precision="0" min="0"/>
             </n-form-item>
+            <n-form-item :label="t('keys.config.gift_period_unit')" class="max-w-[220px]">
+              <n-select v-model:value="form.giftPeriodUnit" :options="periodUnitOptions" class="w-[200px]"/>
+            </n-form-item>
+            <n-form-item :label="t('keys.config.gift_period_count')" path="giftPeriodCount">
+              <n-input-number v-model:value="form.giftPeriodCount" :precision="0" min="0"/>
+            </n-form-item>
+            <n-form-item :label="t('keys.config.gift')" class="flex-1" path="giftPoints">
+              <n-input-number v-model:value="form.giftPoints" :precision="2" min="0"/>
+            </n-form-item>
           </div>
           <div class="flex gap-2 justify-end mt-2">
             <n-button :disabled="saving || genLoading" :loading="saving" @click="saveConfig">{{
@@ -136,9 +145,12 @@ const form = reactive({
   name: '',
   permanentPoints: 0,
   subscribePoints: 0,
+  giftPoints: 0,
   subscribeType: 'MONTHLY',
-  periodUnit: 'MONTH',
+  periodUnit: null,
   periodCount: 0,
+  giftPeriodUnit: null,
+  giftPeriodCount: 0,
 
 })
 const genCount = ref(1)
@@ -174,12 +186,48 @@ const rules: FormRules = {
       trigger: ['change', 'blur']
     }
   ],
+  giftPoints: [
+    {
+      validator: (_r, v: any) => (v ?? 0) >= 0 || new Error(t('messages.check_inputs')),
+      trigger: ['change', 'blur']
+    }
+  ],
   periodCount: [
     {
       validator: (_r, v: any) => {
         const val = Number(v ?? 0)
-        if (!form.periodUnit) return true
+        if ((form.subscribePoints ?? 0) <= 0) return true
         return (Number.isFinite(val) && val > 0) || new Error(t('messages.check_inputs'))
+      },
+      trigger: ['change', 'blur']
+    }
+  ],
+  periodUnit: [
+    {
+      validator: (_r, v: any) => {
+        if ((form.subscribePoints ?? 0) <= 0) return true
+        const s = String(v ?? '').trim()
+        return s.length > 0 || new Error(t('messages.check_inputs'))
+      },
+      trigger: ['change', 'blur']
+    }
+  ],
+  giftPeriodCount: [
+    {
+      validator: (_r, v: any) => {
+        const val = Number(v ?? 0)
+        if ((form.giftPoints ?? 0) <= 0) return true
+        return (Number.isFinite(val) && val > 0) || new Error(t('messages.check_inputs'))
+      },
+      trigger: ['change', 'blur']
+    }
+  ],
+  giftPeriodUnit: [
+    {
+      validator: (_r, v: any) => {
+        if ((form.giftPoints ?? 0) <= 0) return true
+        const s = String(v ?? '').trim()
+        return s.length > 0 || new Error(t('messages.check_inputs'))
       },
       trigger: ['change', 'blur']
     }
@@ -208,6 +256,14 @@ async function saveConfig() {
     }
     const payload: any = {...form}
     payload.name = String(payload.name ?? '').trim()
+    if ((payload.subscribePoints ?? 0) <= 0) {
+      payload.periodUnit = undefined
+      payload.periodCount = 0
+    }
+    if ((payload.giftPoints ?? 0) <= 0) {
+      payload.giftPeriodUnit = undefined
+      payload.giftPeriodCount = 0
+    }
     const saved = await createPointsKeyConfig(payload)
     selectedConfigId.value = saved.id
     await loadConfigs()
@@ -349,9 +405,12 @@ function renderConfigTip(row: any) {
   const name = obj?.name ?? '--'
   const perm = obj?.permanent_points ?? obj?.permanentPoints ?? '--'
   const subs = obj?.subscribe_points ?? obj?.subscribePoints ?? '--'
+  const gift = obj?.gift_points ?? obj?.giftPoints ?? '--'
   const st = obj?.subscribe_type ?? obj?.subscribeType ?? '--'
   const pu = obj?.period_unit ?? obj?.periodUnit ?? '--'
   const pc = obj?.period_count ?? obj?.periodCount ?? '--'
+  const gpu = obj?.gift_period_unit ?? obj?.giftPeriodUnit ?? '--'
+  const gpc = obj?.gift_period_count ?? obj?.giftPeriodCount ?? '--'
   const disabled = obj?.disabled ?? '--'
   const copyBtn = h(NButton, {size: 'tiny', onClick: () => copyText(pretty)}, {default: () => t('keys.copy.json')})
   return h('div', {class: 'space-y-2 w-[460px] max-w-[70vw]'}, [
@@ -360,9 +419,12 @@ function renderConfigTip(row: any) {
       h('div', {}, `${t('keys.columns.name')}：${name}`),
       h('div', {}, `${t('keys.columns.permanent')}：${perm}`),
       h('div', {}, `${t('keys.columns.subscribe')}：${subs}`),
+      h('div', {}, `${t('keys.columns.gift')}：${gift}`),
       h('div', {}, `${t('keys.columns.subscribe_type')}：${st}`),
       h('div', {}, `${t('keys.columns.period_unit')}：${pu}`),
       h('div', {}, `${t('keys.columns.period_count')}：${pc}`),
+      h('div', {}, `${t('keys.columns.gift_period_unit')}：${gpu}`),
+      h('div', {}, `${t('keys.columns.gift_period_count')}：${gpc}`),
       h('div', {}, `${t('keys.columns.status')}：${String(!!disabled)}`),
     ]),
     h('div', {class: 'flex items-center justify-between'}, [
@@ -498,9 +560,12 @@ const cfgColumns = [
   {title: t('keys.columns.name'), key: 'name'},
   {title: t('keys.columns.permanent'), key: 'permanentPoints'},
   {title: t('keys.columns.subscribe'), key: 'subscribePoints'},
+  {title: t('keys.columns.gift'), key: 'giftPoints'},
   {title: t('keys.columns.subscribe_type'), key: 'subscribeType'},
   {title: t('keys.columns.period_unit'), key: 'periodUnit'},
   {title: t('keys.columns.period_count'), key: 'periodCount'},
+  {title: t('keys.columns.gift_period_unit'), key: 'giftPeriodUnit'},
+  {title: t('keys.columns.gift_period_count'), key: 'giftPeriodCount'},
   {
     title: t('keys.columns.status'),
     key: 'status',
@@ -625,9 +690,12 @@ function mapCfgRow(r: any) {
     name: r.name,
     permanentPoints: r.permanent_points ?? r.permanentPoints,
     subscribePoints: r.subscribe_points ?? r.subscribePoints,
+    giftPoints: r.gift_points ?? r.giftPoints,
     subscribeType: r.subscribe_type ?? r.subscribeType,
     periodUnit: r.period_unit ?? r.periodUnit,
     periodCount: r.period_count ?? r.periodCount,
+    giftPeriodUnit: r.gift_period_unit ?? r.giftPeriodUnit,
+    giftPeriodCount: r.gift_period_count ?? r.giftPeriodCount,
     disabled: !!(r.disabled ?? r.disabled),
   }
 }

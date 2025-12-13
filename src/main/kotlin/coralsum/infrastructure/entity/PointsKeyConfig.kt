@@ -30,6 +30,10 @@ data class PointsKeyConfig(
     @field:MappedProperty("SUBSCRIBE_POINTS")
     val subscribePoints: BigDecimal = BigDecimal.ZERO,
 
+    @field:TypeDef(type = DataType.BIGDECIMAL)
+    @field:MappedProperty("GIFT_POINTS")
+    val giftPoints: BigDecimal = BigDecimal.ZERO,
+
     @field:MappedProperty("SUBSCRIBE_TYPE")
     val subscribeType: String? = null,
 
@@ -37,6 +41,11 @@ data class PointsKeyConfig(
     val periodUnit: String? = null,
     @field:MappedProperty("PERIOD_COUNT")
     val periodCount: Int = 0,
+
+    @field:MappedProperty("GIFT_PERIOD_UNIT")
+    val giftPeriodUnit: String? = null,
+    @field:MappedProperty("GIFT_PERIOD_COUNT")
+    val giftPeriodCount: Int = 0,
 
     @field:MappedProperty("DISABLED")
     val disabled: Boolean = false,

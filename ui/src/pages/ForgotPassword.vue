@@ -4,7 +4,7 @@
       <n-form ref="formRef" :model="form" :rules="rules">
         <div class="space-y-3">
           <n-form-item path="email">
-            <n-input v-model:value="form.email" :placeholder="t('profile.modal.email')"/>
+            <n-input v-model:value="form.email"/>
           </n-form-item>
           <n-form-item path="newPassword">
             <n-input v-model:value="form.newPassword" :type="newPwdVisible ? 'text' : 'password'" maxlength="16"
@@ -26,8 +26,7 @@
           </n-form-item>
           <n-form-item path="code">
             <div class="flex items-center gap-2">
-              <n-input v-model:value="form.code" :placeholder="t('profile.modal.email_code')" class="flex-1"
-                       maxlength="6"/>
+              <n-input-otp v-model:value="codeArr" :length="6" class="flex-1"/>
               <n-button :disabled="sendCodeCd > 0 || sendCodeLoading" :loading="sendCodeLoading" size="medium" tertiary
                         @click="sendCode">{{ sendCodeLabel }}
               </n-button>
@@ -49,11 +48,11 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, onMounted, onUnmounted, reactive, ref} from 'vue'
+import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
 import {useI18n} from 'vue-i18n'
 import {useRouter} from 'vue-router'
 import type {FormInst, FormRules} from 'naive-ui'
-import {NButton, NCard, NForm, NFormItem, NInput, useMessage} from 'naive-ui'
+import {NButton, NCard, NForm, NFormItem, NInput, NInputOtp, useMessage} from 'naive-ui'
 import {Icon} from '@iconify/vue'
 import {resetPassword, sendEmailCode} from '@/api'
 import {useUserStore} from '@/stores/user'
@@ -77,6 +76,7 @@ const user = useUserStore()
 const settings = useSettingsStore()
 const formRef = ref<FormInst | null>(null)
 const form = reactive({email: '', newPassword: '', confirm: '', code: ''})
+const codeArr = ref<string[]>([])
 const resetLoading = ref(false)
 const newPwdVisible = ref(false)
 const confirmVisible = ref(false)
@@ -187,6 +187,10 @@ onMounted(() => {
 
 onUnmounted(() => {
 })
+
+watch(codeArr, (arr) => {
+  form.code = arr.join('')
+}, {deep: true})
 
 </script>
 

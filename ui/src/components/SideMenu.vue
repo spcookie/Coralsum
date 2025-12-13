@@ -1,65 +1,169 @@
 <template>
   <div
-      class="hidden sm:flex w-14 border-r border-neutral-200 dark:border-neutral-800 flex-col items-center py-3 gap-4 glass bg-white/40 dark:bg-black/30">
-    <n-tooltip v-if="user.profileReady" placement="right">
-      <template #trigger>
-        <n-button circle quaternary @click="openProfile">
-          <Icon class="text-xl" icon="mdi:account-cog"/>
-        </n-button>
-      </template>
-      {{ t('profile.modal.title') }}
-    </n-tooltip>
+      :class="[settings.sidebarCollapsed ? 'w-14' : 'w-56']"
+      class="hidden sm:flex border-r border-neutral-200 dark:border-neutral-800 flex-col py-3 glass bg-white/40 dark:bg-black/30">
+    <template v-if="settings.sidebarCollapsed">
+      <div class="flex-1 flex flex-col items-center gap-3">
+        <n-tooltip v-if="user.profileReady" placement="right">
+          <template #trigger>
+            <n-button circle quaternary @click="openProfile">
+              <Icon class="text-xl" icon="mdi:account-cog"/>
+            </n-button>
+          </template>
+          {{ t('profile.modal.title') }}
+        </n-tooltip>
 
     <n-tooltip v-if="user.profileReady && (user.permissions || []).includes('CTL')" placement="right">
       <template #trigger>
-        <n-button circle quaternary @click="onCtlPage ? goHome() : goCtlKeys()">
-          <Icon :icon="onCtlPage ? 'mdi:image' : 'mdi:key-chain'" class="text-xl"/>
+        <n-button circle quaternary @click="goCtlKeys">
+          <Icon class="text-xl" icon="mdi:key-chain"/>
         </n-button>
       </template>
-      {{ onCtlPage ? t('menu.image_generate') : t('menu.key_manage') }}
+      {{ t('menu.key_manage') }}
     </n-tooltip>
     <n-tooltip v-if="user.profileReady" placement="right">
       <template #trigger>
-        <n-button circle quaternary @click="onToolsPage ? goHome() : goTools()">
-          <Icon :icon="onToolsPage ? 'mdi:image' : 'mdi:wrench'" class="text-xl"/>
+        <n-button circle quaternary @click="goTools">
+          <Icon class="text-xl" icon="mdi:wrench"/>
         </n-button>
       </template>
-      {{ onToolsPage ? t('menu.image_generate') : t('tools.title') }}
+      {{ t('tools.title') }}
     </n-tooltip>
-    <n-tooltip v-if="user.profileReady" placement="right">
-      <template #trigger>
-        <n-button circle quaternary @click="showRedeem = true">
-          <Icon class="text-xl" icon="mdi:key"/>
+        <n-tooltip v-if="user.profileReady && (user.permissions || []).includes('CTL')" placement="right">
+          <template #trigger>
+            <n-button circle quaternary @click="goIdeas">
+              <Icon class="text-xl" icon="mdi:lightbulb-on-outline"/>
         </n-button>
       </template>
-      {{ t('redeem.title') }}
+          {{ t('ideas.title') }}
     </n-tooltip>
-    <n-tooltip v-if="user.profileReady" placement="right">
-      <template #trigger>
-        <n-button circle quaternary @click="openHistory">
-          <Icon class="text-xl" icon="mdi:history"/>
-        </n-button>
-      </template>
-      {{ t('profile.history.title') }}
-    </n-tooltip>
+        <n-tooltip v-if="user.profileReady" placement="right">
+          <template #trigger>
+            <n-button circle quaternary @click="showRedeem = true">
+              <Icon class="text-xl" icon="mdi:key"/>
+            </n-button>
+          </template>
+          {{ t('redeem.title') }}
+        </n-tooltip>
+        <n-tooltip v-if="user.profileReady" placement="right">
+          <template #trigger>
+            <n-button circle quaternary @click="openHistory">
+              <Icon class="text-xl" icon="mdi:history"/>
+            </n-button>
+          </template>
+          {{ t('profile.history.title') }}
+        </n-tooltip>
 
-    <n-tooltip v-if="!user.profileReady" placement="right">
-      <template #trigger>
-        <n-button circle quaternary @click="user.requireLogin()">
-          <Icon class="text-xl" icon="mdi:account-arrow-right"/>
-        </n-button>
-      </template>
-      {{ t('auth.login.title') }}
-    </n-tooltip>
+        <n-tooltip v-if="!user.profileReady" placement="right">
+          <template #trigger>
+            <n-button circle quaternary @click="user.requireLogin()">
+              <Icon class="text-xl" icon="mdi:account-arrow-right"/>
+            </n-button>
+          </template>
+          {{ t('auth.login.title') }}
+        </n-tooltip>
 
-    <n-tooltip v-if="user.profileReady" placement="right">
-      <template #trigger>
-        <n-button circle quaternary @click="showLogout = true">
-          <Icon class="text-xl" icon="mdi:logout"/>
+        <n-tooltip v-if="user.profileReady" placement="right">
+          <template #trigger>
+            <n-button circle quaternary @click="showLogout = true">
+              <Icon class="text-xl" icon="mdi:logout"/>
+            </n-button>
+          </template>
+          {{ t('profile.logout.title') }}
+        </n-tooltip>
+      </div>
+      <div class="mt-auto w-full px-2 pt-2 border-t border-neutral-200 dark:border-neutral-800 flex justify-center">
+        <n-button circle quaternary @click="toggleCollapse">
+          <Icon :icon="settings.sidebarCollapsed ? 'mdi:menu' : 'mdi:menu-open'" class="text-xl"/>
         </n-button>
-      </template>
-      {{ t('profile.logout.title') }}
-    </n-tooltip>
+      </div>
+    </template>
+    <template v-else>
+      <div class="flex-1 flex flex-col px-2">
+        <div class="flex flex-col gap-1 py-2 pl-2">
+          <div class="text-[0.95rem] font-bold tracking-wide uppercase">Coralsum</div>
+          <div class="text-xs">by @spcookie</div>
+        </div>
+        <div class="flex flex-col gap-3 py-2">
+          <n-button :class="['w-full h-10 px-2 justify-start', onHomePage ? activeItemClass : baseItemClass]" quaternary
+                    size="medium"
+                    @click="goHome">
+            <div class="flex items-center gap-2 w-full">
+              <Icon class="text-xl" icon="mdi:home"/>
+              <span class="truncate">{{ t('menu.image_generate') }}</span>
+            </div>
+          </n-button>
+          <n-button v-if="(user.permissions || []).includes('CTL')" :class="['w-full h-10 px-2 justify-start', onIdeasPage ? activeItemClass : baseItemClass]" quaternary
+                    size="medium"
+                    @click="goIdeas">
+            <div class="flex items-center gap-2 w-full">
+              <Icon class="text-xl" icon="mdi:lightbulb-on-outline"/>
+              <span class="truncate">{{ t('ideas.title') }}</span>
+            </div>
+          </n-button>
+          <n-button v-if="(user.permissions || []).includes('CTL')" :class="['w-full h-10 px-2 justify-start', onCtlPage ? activeItemClass : baseItemClass]" quaternary
+                    size="medium"
+                    @click="goCtlKeys">
+            <div class="flex items-center gap-2 w-full">
+              <Icon class="text-xl" icon="mdi:key-chain"/>
+              <span class="truncate">{{ t('menu.key_manage') }}</span>
+            </div>
+          </n-button>
+          <n-button :class="['w-full h-10 px-2 justify-start', onToolsPage ? activeItemClass : baseItemClass]" quaternary
+                    size="medium"
+                    @click="goTools">
+            <div class="flex items-center gap-2 w-full">
+              <Icon class="text-xl" icon="mdi:wrench"/>
+              <span class="truncate">{{ t('tools.title') }}</span>
+            </div>
+          </n-button>
+        </div>
+      </div>
+      <div class="mt-auto w-full px-2 pt-2">
+        <div class="flex flex-col gap-2 py-2">
+          <n-button v-if="user.profileReady" :class="['w-full h-10 px-2 justify-start', baseItemClass]" quaternary
+                    size="medium" @click="openProfile">
+            <div class="flex items-center gap-2 w-full">
+              <Icon class="text-xl" icon="mdi:account-cog"/>
+              <span class="truncate">{{ t('profile.modal.title') }}</span>
+            </div>
+          </n-button>
+          <n-button v-if="user.profileReady" :class="['w-full h-10 px-2 justify-start', baseItemClass]" quaternary
+                    size="medium" @click="openHistory">
+            <div class="flex items-center gap-2 w-full">
+              <Icon class="text-xl" icon="mdi:history"/>
+              <span class="truncate">{{ t('profile.history.title') }}</span>
+            </div>
+          </n-button>
+          <n-button v-if="user.profileReady" :class="['w-full h-10 px-2 justify-start', baseItemClass]" quaternary
+                    size="medium" @click="showRedeem = true">
+            <div class="flex items-center gap-2 w-full">
+              <Icon class="text-xl" icon="mdi:key"/>
+              <span class="truncate">{{ t('redeem.title') }}</span>
+            </div>
+          </n-button>
+          <n-button v-if="!user.profileReady" :class="['w-full h-10 px-2 justify-start', baseItemClass]" quaternary
+                    size="medium" @click="user.requireLogin()">
+            <div class="flex items-center gap-2 w-full">
+              <Icon class="text-xl" icon="mdi:account-arrow-right"/>
+              <span class="truncate">{{ t('auth.login.title') }}</span>
+            </div>
+          </n-button>
+          <n-button v-if="user.profileReady" :class="['w-full h-10 px-2 justify-start', baseItemClass]" quaternary
+                    size="medium" @click="showLogout = true">
+            <div class="flex items-center gap-2 w-full">
+              <Icon class="text-xl" icon="mdi:logout"/>
+              <span class="truncate">{{ t('profile.logout.title') }}</span>
+            </div>
+          </n-button>
+        </div>
+        <div class="pb-2 flex justify-center">
+          <n-button circle quaternary @click="toggleCollapse">
+            <Icon :icon="settings.sidebarCollapsed ? 'mdi:menu' : 'mdi:menu-open'" class="text-xl"/>
+          </n-button>
+        </div>
+      </div>
+    </template>
 
     <n-modal v-model:show="showRedeem" :style="{ width: '420px', maxWidth: '92vw', margin: '0 auto' }" preset="card"
              :title="t('redeem.title')">
@@ -195,14 +299,26 @@ import {getProfile, redeemPoints} from '@/api'
 import {countHistory, deleteHistory, listHistory} from '@/utils/indexedDb'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {useRoute, useRouter} from 'vue-router'
+import {useSettingsStore} from '@/stores/settings'
 
 const user = useUserStore()
 const {t} = useI18n()
 const message = useMessage()
 const router = useRouter()
 const route = useRoute()
+const settings = useSettingsStore()
+const activeItemClass = 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-300'
+const baseItemClass = 'text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+
+function toggleCollapse() {
+  const fn = (settings as any).toggleSidebar
+  if (typeof fn === 'function') fn.call(settings)
+  else settings.sidebarCollapsed = !settings.sidebarCollapsed
+}
 const onCtlPage = computed(() => route.name === 'ctl-keys')
 const onToolsPage = computed(() => route.name === 'tools')
+const onIdeasPage = computed(() => route.name === 'ideas-admin')
+const onHomePage = computed(() => route.path === '/' || route.name === 'home')
 
 function openProfile() {
   user.requireProfile()
@@ -218,6 +334,10 @@ function goHome() {
 
 function goTools() {
   router.push('/tools')
+}
+
+function goIdeas() {
+  router.push('/ideas')
 }
 
 const showRedeem = ref(false)

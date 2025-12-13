@@ -42,6 +42,7 @@
                         @update:value="onGridChange"/>
       </div>
       <div class="flex items-center gap-2 sm:ml-auto">
+        <n-tag size="small" type="info">{{ t('tools.meme_slicer.draggable_tip') }}</n-tag>
         <n-tag size="small" type="info">{{ t('tools.meme_slicer.max_rows', {count: maxRows}) }}</n-tag>
         <n-tag size="small" type="info">{{ t('tools.meme_slicer.max_cols', {count: maxCols}) }}</n-tag>
       </div>

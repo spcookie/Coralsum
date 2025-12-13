@@ -39,9 +39,15 @@ export default defineConfig({
         host: true,
         allowedHosts: ['localhost', 'coralsum.spcookie.top'],
         proxy: {
+            '/api/ws': {
+                target: 'ws://localhost:8080',
+                changeOrigin: true,
+                ws: true
+            },
             '/api': {
                 target: 'http://localhost:8080',
-                changeOrigin: true
+                changeOrigin: true,
+                ws: true
             }
         }
     },

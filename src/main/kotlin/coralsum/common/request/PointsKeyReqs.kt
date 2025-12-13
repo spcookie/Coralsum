@@ -16,12 +16,18 @@ data class CreatePointsKeyConfigReq(
     @field:DecimalMin(value = "0", inclusive = true, message = "订阅积分需≥0")
     val subscribePoints: BigDecimal = BigDecimal.ZERO,
 
+    @field:DecimalMin(value = "0", inclusive = true, message = "赠与积分需≥0")
+    val giftPoints: BigDecimal = BigDecimal.ZERO,
+
     val subscribeType: String? = null,
     val periodUnit: String? = null,
 
     @field:PositiveOrZero(message = "周期数量需≥0")
     val periodCount: Int = 0,
 
+    val giftPeriodUnit: String? = null,
+    @field:PositiveOrZero(message = "周期数量需≥0")
+    val giftPeriodCount: Int = 0,
 )
 
 @Serdeable

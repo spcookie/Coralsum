@@ -117,6 +117,20 @@ class GenerativeImageController(
         }
     }
 
+    @Secured(SecurityRule.IS_ANONYMOUS)
+    @Version("v1")
+    @Get("/url")
+    @Operation(summary = "获取一次性预览URL", description = "生成 OSS 预签名一次性链接用于直接图片访问")
+    suspend fun previewUrl(
+        @QueryValue ref: String,
+        @QueryValue("pt") token: String?,
+        request: HttpRequest<*>,
+    ): Res<String?> {
+        val ip = addressResolver.resolve(request)
+        val url = service.preview(ref, ip, token)
+        return Res.success(url)
+    }
+
     @Secured(SecurityRule.IS_AUTHENTICATED)
     @Version("v1")
     @Get("/link")

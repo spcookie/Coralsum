@@ -25,6 +25,13 @@ class HtmlErrorResponseBodyProvider(
     override fun body(errorContext: ErrorContext, response: HttpResponse<*>): String {
         val status = response.status.code
         val reason = response.status.reason
+        val displayReason = when (status) {
+            401 -> lms.getMessage("error.unauthorized").orElse(reason)
+            403 -> lms.getMessage("error.forbidden").orElse(reason)
+            404 -> lms.getMessage("error.not_found").orElse(reason)
+            500 -> lms.getMessage("error.internal").orElse(reason)
+            else -> reason
+        }
         val now = ZonedDateTime.now().format(formatter)
         val desc = lms.getMessage("error.page.description.$status")
             .orElse(lms.getMessage("error.page.description").orElse("Error occurred."))
@@ -40,7 +47,7 @@ class HtmlErrorResponseBodyProvider(
         <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Coralsum · $status $reason</title>
+        <title>Coralsum · $status $displayReason</title>
         <link rel="icon" href="/favicon.svg">
         <style>
         :root{--bg:#ffffff;--text:#0f172a;--muted:#64748b;--card:#f8fafc;--border:#e2e8f0;--accent:#2563eb}
@@ -67,7 +74,7 @@ class HtmlErrorResponseBodyProvider(
         <div class="header">
         <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 7v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.5" fill="currentColor"/></svg>
         <span class="badge">$status</span>
-        <h1 class="title">$reason</h1>
+        <h1 class="title">$displayReason</h1>
         </div>
         <p class="desc">$desc</p>
         <div class="meta">

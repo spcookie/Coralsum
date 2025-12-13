@@ -41,7 +41,8 @@ http.interceptors.response.use(
                     }
                     user.token = ''
                     user.requireLogin()
-                    return Promise.reject({code, message, data: payload, __authExpired: true})
+                    const status = code === 'UNAUTHORIZED' ? 401 : 403
+                    return Promise.reject({code, message, data: payload, __authExpired: true, status})
                 }
                 return Promise.reject({code, message, data: payload})
             }
@@ -108,7 +109,8 @@ uploadHttp.interceptors.response.use(
                     }
                     user.token = ''
                     user.requireLogin()
-                    return Promise.reject({code, message, data: payload, __authExpired: true})
+                    const status = code === 'UNAUTHORIZED' ? 401 : 403
+                    return Promise.reject({code, message, data: payload, __authExpired: true, status})
                 }
                 return Promise.reject({code, message, data: payload})
             }

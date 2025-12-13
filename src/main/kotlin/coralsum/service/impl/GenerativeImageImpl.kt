@@ -422,7 +422,7 @@ class GenerativeImageImpl(
     }
 
     @RateLimiter(name = "callGenerateImage")
-    @Retryable(attempts = "2", delay = "2s")
+    @Retryable(attempts = "2", delay = "1s")
     fun doGenerate(
         genRequest: GenRequest,
         imageReqRecord: GenerateImageReqRecord,
@@ -455,10 +455,6 @@ class GenerativeImageImpl(
             imageReqRecord.retryCount += 1
         }
         val generateResult = pair.first
-        val retry = generateResult.first == null && generateResult.second == null
-        if (retry) {
-            throw BusinessException("模型返回内容为空")
-        }
         return generateResult
     }
 

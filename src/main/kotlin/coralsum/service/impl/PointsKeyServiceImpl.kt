@@ -37,13 +37,33 @@ class PointsKeyServiceImpl(
 ) : IPointsKeyService {
 
     override suspend fun createConfig(req: CreatePointsKeyConfigReq, operator: String?): PointsKeyConfig {
+        // 条件校验：订阅周期与赠与周期
+        if (req.subscribePoints > BigDecimal.ZERO) {
+            if (req.periodUnit.isNullOrBlank() || req.periodCount <= 0) {
+                throw BusinessException("订阅积分>0时需填写订阅周期与单位")
+            }
+        }
+        if (req.giftPoints > BigDecimal.ZERO) {
+            if (req.giftPeriodUnit.isNullOrBlank() || req.giftPeriodCount <= 0) {
+                throw BusinessException("赠与积分>0时需填写赠与周期与单位")
+            }
+        }
+
+        val normalizedPeriodUnit = if (req.subscribePoints > BigDecimal.ZERO) req.periodUnit else null
+        val normalizedPeriodCount = if (req.subscribePoints > BigDecimal.ZERO) req.periodCount else 0
+        val normalizedGiftPeriodUnit = if (req.giftPoints > BigDecimal.ZERO) req.giftPeriodUnit else null
+        val normalizedGiftPeriodCount = if (req.giftPoints > BigDecimal.ZERO) req.giftPeriodCount else 0
+
         val config = PointsKeyConfig(
             name = req.name,
             permanentPoints = req.permanentPoints,
             subscribePoints = req.subscribePoints,
+            giftPoints = req.giftPoints,
             subscribeType = req.subscribeType,
-            periodUnit = req.periodUnit,
-            periodCount = req.periodCount,
+            periodUnit = normalizedPeriodUnit,
+            periodCount = normalizedPeriodCount,
+            giftPeriodUnit = normalizedGiftPeriodUnit,
+            giftPeriodCount = normalizedGiftPeriodCount,
             disabled = false,
         )
         return pointsKeyConfigRepository.save(config)
@@ -167,6 +187,14 @@ class PointsKeyServiceImpl(
 
         val permAdd = cfg.permanentPoints
         val subsAdd = cfg.subscribePoints
+        val giftAdd = cfg.giftPoints
+
+        if (giftAdd > BigDecimal.ZERO) {
+            val existed = pointsKeyRepository.findByConfigIdAndUsedUidAndUsedTrue(pk.configId, uid)
+            if (existed != null) {
+                throw BusinessException("同一赠与配置每位用户限兑一次")
+            }
+        }
         // 累加积分
         if (permAdd > BigDecimal.ZERO) {
             userPointsService.addPermanentPoints(
@@ -178,6 +206,15 @@ class PointsKeyServiceImpl(
             userPointsService.addSubscribePoints(
                 openUserId,
                 subsAdd.setScale(2, RoundingMode.HALF_UP).toInt()
+            )
+        }
+
+        if (giftAdd > BigDecimal.ZERO) {
+            userPointsService.addGiftPoints(
+                openUserId,
+                giftAdd.setScale(2, RoundingMode.HALF_UP).toInt(),
+                cfg.giftPeriodUnit,
+                cfg.giftPeriodCount
             )
         }
 
@@ -221,7 +258,8 @@ class PointsKeyServiceImpl(
         pointsKeyRepository.update(usedEntity)
 
         // 计算返回值（两位小数积分按 *100 整数视图）
-        val added = permAdd.add(subsAdd).setScale(2, RoundingMode.HALF_UP).multiply(BigDecimal(100)).toInt()
+        val added =
+            permAdd.add(subsAdd).add(giftAdd).setScale(2, RoundingMode.HALF_UP).multiply(BigDecimal(100)).toInt()
         val cur = run {
             val up = userPointsService.getOrCreateByOpenUserId(openUserId)
             val total = up.permanentPoints.add(up.subscribePoints)

@@ -12,6 +12,13 @@ interface IUserPointsService {
 
     suspend fun updateSubscribeType(openUserId: Long, type: SubscribeType?): UserPoints
 
+    suspend fun addGiftPoints(
+        openUserId: Long,
+        delta: Int,
+        periodUnit: String? = null,
+        periodCount: Int? = null
+    ): UserPoints
+
     suspend fun hasEnoughPoints(openUserId: Long): Boolean
 
     suspend fun hasEnoughPoints(openUserId: Long, estimate: coralsum.common.request.EstimatePointsReq): Boolean

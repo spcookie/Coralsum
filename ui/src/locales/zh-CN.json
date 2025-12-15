@@ -343,7 +343,13 @@
   },
   "menu": {
     "image_generate": "图片生成",
-    "key_manage": "密钥管理"
+    "key_manage": "密钥管理",
+    "history": {
+      "title": "历史记录"
+    },
+    "logout": {
+      "title": "退出登录"
+    }
   },
   "ideas": {
     "title": "创意管理",

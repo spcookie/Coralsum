@@ -343,7 +343,13 @@
   },
   "menu": {
     "image_generate": "Image Generation",
-    "key_manage": "Key Management"
+    "key_manage": "Key Management",
+    "history": {
+      "title": "History"
+    },
+    "logout": {
+      "title": "Logout"
+    }
   },
   "tools": {
     "title": "Tools",

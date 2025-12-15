@@ -343,7 +343,13 @@
   },
   "menu": {
     "image_generate": "生圖",
-    "key_manage": "密鑰管理"
+    "key_manage": "密鑰管理",
+    "history": {
+      "title": "歷史記錄"
+    },
+    "logout": {
+      "title": "登出"
+    }
   },
   "tools": {
     "title": "工具",

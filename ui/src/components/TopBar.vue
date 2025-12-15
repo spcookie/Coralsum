@@ -1,7 +1,7 @@
 <template>
   <div
-      class="h-14 border-b border-transparent px-3 sm:px-4 flex items-center justify-between glass bg-white/40 dark:bg-black/30">
-    <div class="flex items-center">
+      class="hidden sm:flex h-14 border-b border-transparent px-3 sm:px-4 items-center justify-between glass bg-white/40 dark:bg-black/30">
+    <div class="hidden sm:flex items-center">
       <n-breadcrumb>
         <n-breadcrumb-item v-for="(c,i) in crumbs" :key="i">
           <router-link v-if="c.to" :to="c.to">{{ c.label }}</router-link>
@@ -94,53 +94,77 @@
     </div>
   </div>
   <div
-      class="sm:hidden w-full px-3 py-2 flex items-center justify-between glass bg-white/60 dark:bg-black/30 border-b border-neutral-200 dark:border-neutral-800">
-    <div class="flex items-center gap-2 min-w-0">
-      <Icon class="text-base" icon="mdi:account"/>
-      <span class="truncate max-w-[40vw] font-bold text-neutral-700 dark:text-neutral-200">{{ nameParts.base }}<span
-          v-if="nameParts.tag" class="font-medium text-neutral-400 dark:text-neutral-500">#{{
-          nameParts.tag
-        }}</span></span>
-      <n-tooltip v-if="user.profileReady" placement="bottom" trigger="click">
-        <template #trigger>
-          <div class="flex items-center gap-1">
-            <Icon class="text-yellow-500" icon="material-symbols:bolt-rounded"/>
-            <span class="inline-block underline underline-offset-2 decoration-[1px] decoration-solid">
-              <n-number-animation :active="true" :duration="800" :from="prevPoints" :precision="0" :to="user.points"/>
-            </span>
+      class="sm:hidden w-full glass bg-white/60 dark:bg-black/30 border-b border-neutral-200 dark:border-neutral-800 overflow-hidden">
+    <div class="px-2 py-1.5 flex items-center justify-between gap-1 min-w-0">
+      <div class="flex items-center gap-1 min-w-0 flex-1 overflow-hidden">
+        <Icon class="text-sm flex-shrink-0" icon="mdi:account"/>
+        <span class="truncate text-xs font-bold text-neutral-700 dark:text-neutral-200 max-w-[25vw]">{{
+            nameParts.base
+          }}<span
+              v-if="nameParts.tag" class="font-medium text-neutral-400 dark:text-neutral-500">#{{
+              nameParts.tag
+            }}</span></span>
+        <n-tooltip v-if="user.profileReady" placement="bottom" trigger="click">
+          <template #trigger>
+            <div class="flex items-center gap-0.5 flex-shrink-0">
+              <Icon class="text-yellow-500 text-xs" icon="material-symbols:bolt-rounded"/>
+              <span class="inline-block text-[10px] font-medium">
+                <n-number-animation :active="true" :duration="800" :from="prevPoints" :precision="0" :to="user.points"/>
+              </span>
+            </div>
+          </template>
+          <div class="text-xs text-white space-y-1">
+            <div>{{ t('points.subscribe') }}：{{ user.subscribePoints }}</div>
+            <div>{{ t('points.permanent') }}：{{ user.permanentPoints }}</div>
+            <div v-if="typeof user.giftPoints === 'number' && user.giftPoints > 0">{{
+                t('points.gift')
+              }}：{{ user.giftPoints }}
+            </div>
+            <div v-if="user.tier==='PRO' && typeof user.subscribeExpireTime === 'number'">
+              {{ t('points.expire') }}：{{
+                formatDate(user.subscribeExpireTime as number, {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit'
+                })
+              }}
+            </div>
+            <div v-if="typeof user.giftExpireTime === 'number' && user.giftExpireTime">
+              {{ t('points.gift_expire') }}：{{
+                formatDate(user.giftExpireTime as number, {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit'
+                })
+              }}
+            </div>
           </div>
-        </template>
-        <div class="text-xs text-white space-y-1">
-          <div>{{ t('points.subscribe') }}：{{ user.subscribePoints }}</div>
-          <div>{{ t('points.permanent') }}：{{ user.permanentPoints }}</div>
-          <div v-if="typeof user.giftPoints === 'number' && user.giftPoints > 0">{{
-              t('points.gift')
-            }}：{{ user.giftPoints }}
-          </div>
-          <div v-if="user.tier==='PRO' && typeof user.subscribeExpireTime === 'number'">
-            {{ t('points.expire') }}：{{
-              formatDate(user.subscribeExpireTime as number, {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-              })
-            }}
-          </div>
-          <div v-if="typeof user.giftExpireTime === 'number' && user.giftExpireTime">
-            {{ t('points.gift_expire') }}：{{
-              formatDate(user.giftExpireTime as number, {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-              })
-            }}
-          </div>
-        </div>
-      </n-tooltip>
-      <n-tag v-if="user.profileReady" :color="tierTagStyle" class="inline-flex items-center justify-center leading-none"
-             size="small">
-        {{ user.tier }}
-      </n-tag>
+        </n-tooltip>
+        <n-tag v-if="user.profileReady" :color="tierTagStyle"
+               class="inline-flex items-center justify-center leading-none flex-shrink-0 !text-[9px] !px-1 !py-0 !min-h-0 !h-4"
+               size="small">
+          {{ user.tier }}
+        </n-tag>
+      </div>
+      <div class="flex items-center gap-1 flex-shrink-0">
+        <LanguageSwitcher/>
+        <n-switch :value="settings.darkMode" size="small" @update:value="onToggleDark">
+          <template #checked>
+            <Icon icon="mdi:weather-night"/>
+          </template>
+          <template #unchecked>
+            <Icon icon="mdi:white-balance-sunny"/>
+          </template>
+        </n-switch>
+        <n-dropdown :options="mobileMenuOptions" trigger="click" @select="handleMobileMenuSelect">
+          <n-button circle quaternary size="tiny">
+            <Icon class="text-base" icon="mdi:menu"/>
+          </n-button>
+        </n-dropdown>
+        <n-button v-if="!user.profileReady" circle quaternary size="tiny" @click="user.requireLogin()">
+          <Icon class="text-sm" icon="mdi:account-arrow-right"/>
+        </n-button>
+      </div>
     </div>
   </div>
   <n-modal v-model:show="user.showProfileModal" :style="{ width: '520px', maxWidth: '92vw', margin: '0 auto' }"
@@ -348,7 +372,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, nextTick, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
+import {computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
 import {useI18n} from 'vue-i18n'
 import {useRouter} from 'vue-router'
 import {Icon} from '@iconify/vue'
@@ -359,11 +383,12 @@ import {useI18nFormat} from '@/utils/i18nFormat'
 import type {FormInst, FormRules} from 'naive-ui'
 import {
   NBadge,
-  NButton,
   NBreadcrumb,
   NBreadcrumbItem,
+  NButton,
   NCollapse,
   NCollapseItem,
+  NDropdown,
   NForm,
   NFormItem,
   NInput,
@@ -625,6 +650,10 @@ function goRegister() {
 function goForgot() {
   user.showLoginModal = false
   router.push('/forgot')
+}
+
+function goTools() {
+  router.push('/tools')
 }
 
 
@@ -947,6 +976,71 @@ async function waitToken(tokenRef: any, timeoutMs: number) {
     }
     tick()
   })
+}
+
+const mobileMenuOptions = computed(() => {
+  const options = [
+    {
+      label: t('menu.image_generate'),
+      key: 'home',
+      icon: () => h(Icon, {icon: 'mdi:image-multiple'})
+    },
+    {
+      label: t('tools.title') || 'Tools',
+      key: 'tools',
+      icon: () => h(Icon, {icon: 'mdi:wrench'})
+    }
+  ]
+
+  if (user.profileReady) {
+    options.push(
+        {
+          label: t('profile.modal.title'),
+          key: 'profile',
+          icon: () => h(Icon, {icon: 'mdi:account-cog'})
+        },
+        {
+          label: t('redeem.title'),
+          key: 'redeem',
+          icon: () => h(Icon, {icon: 'mdi:key'})
+        },
+        {
+          label: t('menu.history.title'),
+          key: 'history',
+          icon: () => h(Icon, {icon: 'mdi:history'})
+        },
+        {
+          label: t('menu.logout.title'),
+          key: 'logout',
+          icon: () => h(Icon, {icon: 'mdi:logout'})
+        }
+    )
+  }
+
+  return options
+})
+
+function handleMobileMenuSelect(key: string) {
+  switch (key) {
+    case 'home':
+      router.push('/')
+      break
+    case 'tools':
+      goTools()
+      break
+    case 'profile':
+      user.requireProfile()
+      break
+    case 'redeem':
+      showRedeemMobile.value = true
+      break
+    case 'history':
+      openHistory()
+      break
+    case 'logout':
+      showLogout.value = true
+      break
+  }
 }
 </script>
 

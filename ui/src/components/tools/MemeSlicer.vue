@@ -5,44 +5,49 @@
         <n-upload :show-file-list="false" accept="image/*" @change="onUpload">
           <n-button secondary size="small">
             <Icon class="mr-1" icon="mdi:upload"/>
-            {{ t('tools.meme_slicer.upload') }}
+            <span class="hidden sm:inline">{{ t('tools.meme_slicer.upload') }}</span>
+            <span class="sm:hidden">上传</span>
           </n-button>
         </n-upload>
       </div>
       <n-button secondary size="small" @click="showPicker = true">
         <Icon class="mr-1" icon="mdi:history"/>
-        {{ t('tools.meme_slicer.pick_history') }}
+        <span class="hidden sm:inline">{{ t('tools.meme_slicer.pick_history') }}</span>
+        <span class="sm:hidden">历史</span>
       </n-button>
       <n-button :disabled="!imgSrc" size="small" type="primary" @click="doSlice">
         <Icon class="mr-1" icon="mdi:eye"/>
-        {{ t('tools.meme_slicer.preview') }}
+        <span class="hidden sm:inline">{{ t('tools.meme_slicer.preview') }}</span>
+        <span class="sm:hidden">预览</span>
       </n-button>
       <n-button :disabled="slices.length===0" size="small" tertiary type="primary" @click="downloadZip">
         <Icon class="mr-1" icon="mdi:archive-arrow-down"/>
-        {{ t('tools.meme_slicer.download_zip') }}
+        <span class="hidden sm:inline">{{ t('tools.meme_slicer.download_zip') }}</span>
+        <span class="sm:hidden">下载</span>
       </n-button>
       <n-button size="small" type="primary" @click="resetGuides">
         <Icon class="mr-1" icon="mdi:refresh"/>
-        {{ t('tools.meme_slicer.reset') }}
+        <span class="hidden sm:inline">{{ t('tools.meme_slicer.reset') }}</span>
+        <span class="sm:hidden">重置</span>
       </n-button>
     </div>
-    <div class="flex flex-col sm:flex-row sm:flex-wrap items-center gap-3 mt-2">
+    <div class="flex flex-wrap items-center gap-3 mt-2">
       <div class="flex items-center gap-2">
         <span class="inline-block w-10 text-sm text-neutral-600 dark:text-neutral-300">{{
             t('tools.meme_slicer.rows')
           }}</span>
-        <n-input-number v-model:value="rows" :max="maxRows" :min="1" size="small" style="width: 96px"
+        <n-input-number v-model:value="rows" :max="maxRows" :min="1" size="small" style="width: 80px"
                         @update:value="onGridChange"/>
       </div>
       <div class="flex items-center gap-2">
         <span class="inline-block w-10 text-sm text-neutral-600 dark:text-neutral-300">{{
             t('tools.meme_slicer.cols')
           }}</span>
-        <n-input-number v-model:value="cols" :max="maxCols" :min="1" size="small" style="width: 96px"
+        <n-input-number v-model:value="cols" :max="maxCols" :min="1" size="small" style="width: 80px"
                         @update:value="onGridChange"/>
       </div>
-      <div class="flex items-center gap-2 sm:ml-auto">
-        <n-tag size="small" type="info">{{ t('tools.meme_slicer.draggable_tip') }}</n-tag>
+      <div class="flex flex-wrap items-center gap-2">
+        <n-tag class="hidden sm:inline-flex" size="small" type="info">{{ t('tools.meme_slicer.draggable_tip') }}</n-tag>
         <n-tag size="small" type="info">{{ t('tools.meme_slicer.max_rows', {count: maxRows}) }}</n-tag>
         <n-tag size="small" type="info">{{ t('tools.meme_slicer.max_cols', {count: maxCols}) }}</n-tag>
       </div>

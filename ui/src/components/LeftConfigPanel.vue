@@ -487,24 +487,26 @@
           <n-select v-model:value="pickerSortBy" :options="pickerSortOptions" :placeholder="t('left.idea_picker.sort')"
                     size="small"/>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
           <div v-for="it in pickerTemplates" :key="it.id"
                class="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white/70 dark:bg-black/30 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
             <div class="p-3 space-y-3">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <n-button class="apply-btn" size="tiny" tertiary type="success" @click="applyTemplate(it)">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                  <n-button class="apply-btn flex-shrink-0" size="tiny" tertiary type="success"
+                            @click="applyTemplate(it)">
                     <Icon icon="ph:check-circle"/>
                     <span>{{ t('left.idea_picker.apply') }}</span>
                   </n-button>
-                  <div class="font-semibold text-sm text-neutral-800 dark:text-neutral-200">{{ it.name }}</div>
+                  <div class="font-semibold text-sm text-neutral-800 dark:text-neutral-200 truncate">{{ it.name }}</div>
                 </div>
-                <div class="text-[10px] flex items-center gap-0.5">
+                <div class="text-[10px] flex items-center gap-0.5 flex-shrink-0">
                   <span v-if="newBadge(it)"
-                        class="px-1 py-0 rounded bg-green-50 text-green-700 border border-green-200">{{
+                        class="px-1 py-0 rounded bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">{{
                       t('left.idea_picker.badge_new')
                     }}</span>
-                  <span v-if="hotBadge(it)" class="px-1 py-0 rounded bg-red-50 text-red-700 border border-red-200">{{
+                  <span v-if="hotBadge(it)"
+                        class="px-1 py-0 rounded bg-red-50 text-red-700 border border-red-200 whitespace-nowrap">{{
                       t('left.idea_picker.badge_hot')
                     }}</span>
                 </div>
@@ -543,12 +545,19 @@
                   </div>
                 </div>
               </div>
-              <div class="text-[10px] flex flex-wrap gap-0.5">
-                <span v-if="it.tipsNeedImage" class="px-1 py-0 rounded bg-blue-50 text-blue-700 border border-blue-200">IMG</span>
+              <div class="text-[10px] flex flex-wrap gap-1">
+                <span v-if="it.tipsNeedImage"
+                      class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">{{
+                    t('left.idea_picker.badge_need_image')
+                  }}</span>
                 <span v-if="it.tipsNeedProModel"
-                      class="px-1 py-0 rounded bg-violet-50 text-violet-700 border border-violet-200">PRO</span>
+                      class="px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200">{{
+                    t('left.idea_picker.badge_need_pro')
+                  }}</span>
                 <span v-if="it.tipsNeedEditPrompt"
-                      class="px-1 py-0 rounded bg-amber-50 text-amber-700 border border-amber-200">EDIT</span>
+                      class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">{{
+                    t('left.idea_picker.badge_need_edit')
+                  }}</span>
               </div>
 
             </div>
@@ -570,7 +579,7 @@ import {useI18n} from 'vue-i18n'
 import {Icon} from '@iconify/vue'
 import {useSettingsStore} from '@/stores/settings'
 import {useUserStore} from '@/stores/user'
-import {getEstimateParams, getPreviewUrl} from '@/api'
+import {getEstimateParams} from '@/api'
 import {storeToRefs} from 'pinia'
 import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {
@@ -580,12 +589,12 @@ import {
   NCollapseItem,
   NConfigProvider,
   NInput,
-  NSelect,
   NModal,
-  NTag,
   NRadioButton,
   NRadioGroup,
+  NSelect,
   NSlider,
+  NTag,
   NTooltip,
   NUpload,
   NUploadDragger,
@@ -594,12 +603,12 @@ import {
   useThemeVars
 } from 'naive-ui'
 import {
+  getIdeaImageUrl,
+  IdeaTemplate,
   listIdeaCategories,
   listIdeaTags,
   listIdeaTemplates,
-  markIdeaTemplateUsed,
-  IdeaTemplate,
-  getIdeaImageUrl
+  markIdeaTemplateUsed
 } from '@/api/ideas'
 
 const emit = defineEmits<{

@@ -23,13 +23,14 @@
     "@iconify/iconify": "^3.1.1",
     "@iconify/vue": "^4.1.1",
     "axios": "^1.13.2",
+    "fflate": "^0.8.2",
+    "gifenc": "^1.0.3",
     "mockjs": "^1.1.0",
     "naive-ui": "^2.38.3",
     "pinia": "^2.2.6",
     "vue": "^3.5.11",
     "vue-i18n": "^9.14.0",
-    "vue-router": "^4.4.3",
-    "fflate": "^0.8.2"
+    "vue-router": "^4.4.3"
   },
   "devDependencies": {
     "@intlify/unplugin-vue-i18n": "^0.12.3",

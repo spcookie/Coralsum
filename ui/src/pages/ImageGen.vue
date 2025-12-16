@@ -329,6 +329,7 @@ async function syncGenerateStatus() {
       }
     }
     if (res.status === 'FAILED' || res.status === 'FAIL') {
+      loading.value = false
       message.error('生成任务失败')
     }
   } catch {

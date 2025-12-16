@@ -17,6 +17,9 @@
         <div v-if="active==='meme-slicer'" class="p-3">
           <MemeSlicer/>
         </div>
+        <div v-if="active==='sprite-to-gif'" class="p-3">
+          <SpriteToGif/>
+        </div>
       </div>
     </div>
   </div>
@@ -28,6 +31,7 @@ import {useI18n} from 'vue-i18n'
 import {NMenu, NSelect} from 'naive-ui'
 import {Icon} from '@iconify/vue'
 import MemeSlicer from '@/components/tools/MemeSlicer.vue'
+import SpriteToGif from '@/components/tools/SpriteToGif.vue'
 
 const {t} = useI18n()
 const active = ref('meme-slicer')
@@ -37,6 +41,11 @@ const menuOptions = [
     key: 'meme-slicer',
     label: t('tools.meme_slicer.title'),
     icon: () => h(Icon, {icon: 'mdi:scissors'})
+  },
+  {
+    key: 'sprite-to-gif',
+    label: t('tools.sprite_to_gif.title'),
+    icon: () => h(Icon, {icon: 'mdi:file-gif-box'})
   }
 ]
 

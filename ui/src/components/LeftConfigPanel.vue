@@ -469,23 +469,55 @@
              :title="t('left.idea_picker.title')" display-directive="show"
              preset="card">
       <div class="space-y-3">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <div class="filter-tags flex flex-wrap items-center gap-2">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between mb-2">
             <span class="text-[12px] text-neutral-500">{{ t('left.idea_picker.filter_categories') }}</span>
-            <n-tag v-for="opt in pickerCatOptions" :key="opt.value" :bordered="false" :checked="(pickerCategoryIds||[]).includes(opt.value)" checkable
-                   round size="small" type="success"
-                   @update:checked="(c)=>toggleCategory(opt.value, c)">{{ opt.label }}
-            </n-tag>
+            <n-button size="tiny" tertiary @click="clearFilters">
+              {{ t('left.idea_picker.clear_all') }}
+            </n-button>
           </div>
-          <div class="filter-tags flex flex-wrap items-center gap-2">
+          <div class="filter-tags">
+            <n-cascader v-model:value="pickerCategoryIds"
+                        :options="pickerCatTreeOptions"
+                        :placeholder="t('left.idea_picker.filter_categories')"
+                        check-strategy="child"
+                        clearable
+                        filterable
+                        multiple
+                        size="small"
+                        style="max-width: 300px;"
+                        @update:value="onCategoryChange"/>
+          </div>
+          <div class="filter-tags flex flex-col gap-2">
             <span class="text-[12px] text-neutral-500">{{ t('left.idea_picker.filter_tags') }}</span>
-            <n-tag v-for="opt in pickerTagOptions" :key="opt.value" :checked="(pickerTagIds||[]).includes(opt.value)" bordered checkable size="small"
-                   type="info" @update:checked="(c)=>toggleTag(opt.value, c)">
-              {{ opt.label }}
-            </n-tag>
+            <div class="flex flex-wrap gap-2">
+              <n-tag v-for="opt in pickerTagOptions"
+                     :key="opt.value"
+                     :checked="(pickerTagIds||[]).includes(opt.value)"
+                     :type="(pickerTagIds||[]).includes(opt.value) ? 'info' : 'default'"
+                     bordered
+                     checkable
+                     size="small"
+                     @update:checked="(c) => toggleTag(opt.value, c)">
+                {{ opt.label }}
+              </n-tag>
+            </div>
           </div>
-          <n-select v-model:value="pickerSortBy" :options="pickerSortOptions" :placeholder="t('left.idea_picker.sort')"
-                    size="small"/>
+          <div class="filter-tags flex flex-col gap-2">
+            <span class="text-[12px] text-neutral-500">{{ t('left.idea_picker.sort') }}</span>
+            <div class="flex flex-wrap gap-2">
+              <n-tag v-for="opt in pickerSortOptions"
+                     :key="opt.value"
+                     :checked="pickerSortBy === opt.value"
+                     :type="pickerSortBy === opt.value ? 'success' : 'default'"
+                     bordered
+                     checkable
+                     size="small"
+                     @click="() => { pickerSortBy = opt.value; loadIdeaPicker() }">
+                {{ opt.label }}
+              </n-tag>
+            </div>
+          </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
           <div v-for="it in pickerTemplates" :key="it.id"
@@ -498,7 +530,15 @@
                     <Icon icon="ph:check-circle"/>
                     <span>{{ t('left.idea_picker.apply') }}</span>
                   </n-button>
-                  <div class="font-semibold text-sm text-neutral-800 dark:text-neutral-200 truncate">{{ it.name }}</div>
+                  <n-tooltip :show-arrow="false" placement="top">
+                    <template #trigger>
+                      <div class="font-semibold text-sm text-neutral-800 dark:text-neutral-200 truncate">{{
+                          it.name
+                        }}
+                      </div>
+                    </template>
+                    {{ it.name }}
+                  </n-tooltip>
                 </div>
                 <div class="text-[10px] flex items-center gap-0.5 flex-shrink-0">
                   <span v-if="newBadge(it)"
@@ -512,9 +552,11 @@
                 </div>
               </div>
               <div class="chips-sm flex flex-wrap items-center gap-1">
-                <n-tag v-if="it.categoryName" :bordered="false" round size="small" type="success">{{
-                    it.categoryName
-                  }}
+                <n-tag v-if="(it.categoryPath||[]).length" :bordered="false" round size="small" type="success">
+                  {{ (it.categoryPath || []).join(' / ') }}
+                </n-tag>
+                <n-tag v-else-if="it.categoryName" :bordered="false" round size="small" type="success">
+                  {{ it.categoryName }}
                 </n-tag>
                 <n-tag v-for="tag in it.tagNames || []" :key="tag" bordered size="small" type="info">{{ tag }}</n-tag>
               </div>
@@ -585,6 +627,7 @@ import ImagePreviewer from '@/components/ImagePreviewer.vue'
 import {
   darkTheme,
   NButton,
+  NCascader,
   NCollapse,
   NCollapseItem,
   NConfigProvider,
@@ -592,7 +635,6 @@ import {
   NModal,
   NRadioButton,
   NRadioGroup,
-  NSelect,
   NSlider,
   NTag,
   NTooltip,
@@ -833,7 +875,7 @@ const pickerCategoryIds = ref<number[] | null>(null)
 const pickerTagIds = ref<number[] | null>(null)
 const pickerSortBy = ref<'updated' | 'hot'>('updated')
 const pickerTemplates = ref<IdeaTemplate[]>([])
-const pickerCatOptions = ref<any[]>([])
+const pickerCatTreeOptions = ref<any[]>([])
 const pickerTagOptions = ref<any[]>([])
 const ideaPickerLoaded = ref(false)
 const pickerSortOptions = [
@@ -841,10 +883,44 @@ const pickerSortOptions = [
   {label: t('left.idea_picker.sort_hot'), value: 'hot'}
 ]
 
+function buildCategoryTree(categories: any[]): any[] {
+  const map = new Map<number, any>()
+  const roots: any[] = []
+
+  categories.forEach(c => {
+    map.set(c.id, {
+      key: c.id,
+      label: c.name,
+      value: c.id,
+      children: []
+    })
+  })
+
+  categories.forEach(c => {
+    const node = map.get(c.id)!
+    if (c.parentId != null && map.has(c.parentId)) {
+      map.get(c.parentId)!.children.push(node)
+    } else {
+      roots.push(node)
+    }
+  })
+
+  const removeEmptyChildren = (node: any) => {
+    if (node.children && node.children.length === 0) {
+      delete node.children
+    } else if (node.children) {
+      node.children.forEach(removeEmptyChildren)
+    }
+  }
+  roots.forEach(removeEmptyChildren)
+
+  return roots
+}
+
 async function loadIdeaPicker() {
   try {
     const [cats, tags] = await Promise.all([listIdeaCategories(), listIdeaTags()])
-    pickerCatOptions.value = (cats || []).map((c: any) => ({label: c.name, value: c.id}))
+    pickerCatTreeOptions.value = buildCategoryTree(cats || [])
     pickerTagOptions.value = (tags || []).map((t: any) => ({label: t.name, value: t.id}))
     const params: any = {sortBy: pickerSortBy.value, order: 'desc'}
     if (pickerCategoryIds.value && pickerCategoryIds.value.length) params.categoryIds = pickerCategoryIds.value
@@ -860,12 +936,8 @@ watch([pickerCategoryIds, pickerTagIds, pickerSortBy], () => {
   loadIdeaPicker()
 })
 
-function toggleCategory(id: number, checked: boolean) {
-  const arr = pickerCategoryIds.value || []
-  const set = new Set(arr)
-  if (checked) set.add(id)
-  else set.delete(id)
-  pickerCategoryIds.value = Array.from(set)
+function onCategoryChange() {
+  loadIdeaPicker()
 }
 
 function toggleTag(id: number, checked: boolean) {
@@ -874,6 +946,17 @@ function toggleTag(id: number, checked: boolean) {
   if (checked) set.add(id)
   else set.delete(id)
   pickerTagIds.value = Array.from(set)
+  loadIdeaPicker()
+}
+
+function onTagChange() {
+  loadIdeaPicker()
+}
+
+function clearFilters() {
+  pickerCategoryIds.value = null
+  pickerTagIds.value = []
+  loadIdeaPicker()
 }
 
 async function prefetchTemplateImageUrls() {

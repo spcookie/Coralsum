@@ -320,6 +320,8 @@
       "title": "Choose Prompt Template",
       "filter_categories": "Categories",
       "filter_tags": "Tags",
+      "clear_tags": "Clear",
+      "clear_all": "Clear Filters",
       "sort": "Sort",
       "sort_updated": "Updated",
       "sort_hot": "Hot",

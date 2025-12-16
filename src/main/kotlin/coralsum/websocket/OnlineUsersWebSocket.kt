@@ -13,7 +13,7 @@ import kotlinx.coroutines.runBlocking
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.time.Instant
-import java.util.Base64
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 @Singleton
@@ -40,7 +40,7 @@ class OnlineUsersWebSocket(
     }
 
     @OnMessage
-    fun onMessage(message: String) {
+    fun onMessage(message: String, session: WebSocketSession) {
         if (message.lowercase() == "ping") {
             return
         }
@@ -49,8 +49,9 @@ class OnlineUsersWebSocket(
 
     private fun broadcastCount() {
         val uniqueUids = sessionUidMap.values.filterNotNull().toSet().size
-        val payload = "{\"count\":$uniqueUids}"
-        broadcaster.broadcastSync(payload) { _ -> true }
+        val totalSessions = sessionUidMap.size
+        val payload = "{\"count\":$uniqueUids,\"sessions\":$totalSessions}"
+        broadcaster.broadcastAsync(payload)
     }
 
     private fun extractAndValidateUid(session: WebSocketSession): String? {

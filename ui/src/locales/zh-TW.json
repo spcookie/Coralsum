@@ -320,6 +320,8 @@
       "title": "選擇提示詞模版",
       "filter_categories": "分類",
       "filter_tags": "標籤",
+      "clear_tags": "清空",
+      "clear_all": "清空篩選",
       "sort": "排序",
       "sort_updated": "按更新時間",
       "sort_hot": "按熱度",

@@ -617,6 +617,8 @@ async function login() {
     } catch {
       profile = await refreshUserInfoByEmail()
     }
+    // Reset user state before setting new profile to ensure clean state when switching users
+    user.resetState()
     user.setProfile({...profile, token: tokenRes.access_token})
     try { await getEstimateParams() } catch {}
     user.showLoginModal = false

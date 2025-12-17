@@ -97,6 +97,9 @@ export const useUserStore = defineStore('user', {
             }
             this.$reset()
             this.showLoginModal = true
+        },
+        resetState() {
+            this.$reset()
         }
     }
 })

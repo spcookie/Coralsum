@@ -18,6 +18,7 @@ import coralsum.component.models.Upscayl
 import coralsum.config.GoogleConfig
 import coralsum.config.OssConfig
 import coralsum.config.PreviewConfig
+import coralsum.infrastructure.cache.ActiveUserTaskCache
 import coralsum.infrastructure.cache.GenerateTaskCache
 import coralsum.infrastructure.cache.UploadedImageCache
 import coralsum.infrastructure.cache.UploadedImageRef
@@ -89,6 +90,7 @@ class GenerativeImageImpl(
     val uploadedImageCache: UploadedImageCache,
     val ossConfig: OssConfig,
     val oss: OSS,
+    val activeUserTaskCache: ActiveUserTaskCache,
 ) : IGenerativeImage {
 
     private lateinit var nano: NanoBanana
@@ -372,7 +374,18 @@ class GenerativeImageImpl(
         withContext(Dispatchers.IO) {
             val uid = securityService.authentication.get().name
             validPoint(uid, genRequest)
+
+            // Check if user already has an active task
+            val existingTask = activeUserTaskCache.getActiveUserTask(uid)
+            if (existingTask != null) {
+                throw BusinessException("您已有正在进行的图片生成任务，请等待完成后再提交新任务")
+            }
+            
             val sid = genRequest.imageSessionId ?: uploadedImageCache.createSession(uid)
+
+            // Register this task as active using cache
+            activeUserTaskCache.setActiveUserTask(uid, sid)
+            
             generateTaskCache.cacheGenerateTaskStatue(uid, sid, GenTaskStatue.PROCESSING)
             scope.launch(currentCoroutineContext().minusKey(Job).minusKey(CoroutineDispatcher)) {
                 try {
@@ -381,6 +394,9 @@ class GenerativeImageImpl(
                 } catch (e: Exception) {
                     log.error("生成失败: {}", e.message, e)
                     generateTaskCache.cacheGenerateTaskStatue(uid, sid, GenTaskStatue.FAILED)
+                } finally {
+                    // Clean up the active task tracking using cache
+                    activeUserTaskCache.clearActiveUserTask(uid)
                 }
             }
             finalSid = sid
@@ -393,16 +409,19 @@ class GenerativeImageImpl(
         val cacheGenerateTaskResult = generateTaskCache.getGenerateTaskResult(uid, sid)
         val statue = generateTaskCache.getGenerateTaskStatue(uid, sid)
         return if (cacheGenerateTaskResult != null) {
-            generateTaskCache.clearAll(uid, sid)
-            return GenTaskResult(
+            // Task completed, return result but don't clear cache immediately
+            // Cache will expire naturally after 5 minutes based on configuration
+            GenTaskResult(
                 status = GenTaskStatue.COMPLETED,
                 result = cacheGenerateTaskResult
             )
         } else if (statue == null) {
+            // No record of this task
             GenTaskResult(
                 status = GenTaskStatue.NONE
             )
         } else {
+            // Task is still in progress or has failed
             GenTaskResult(
                 status = statue
             )

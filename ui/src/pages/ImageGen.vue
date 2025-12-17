@@ -311,9 +311,12 @@ async function syncGenerateStatus() {
     const res = await getGenerateTaskResult()
     if (res.status === 'PROCESSING') {
       if (!polling.value) {
+        loading.value = true
+        message.info(t('image_generation.task_in_progress'))
         polling.value = true
+        // Don't return immediately, wait for polling to complete
         await pollTaskResultLoop()
-        polling.value = false
+        // polling.value will be set to false in the finally block of pollTaskResultLoop
       }
       return
     }
@@ -330,7 +333,7 @@ async function syncGenerateStatus() {
     }
     if (res.status === 'FAILED' || res.status === 'FAIL') {
       loading.value = false
-      message.error('生成任务失败')
+      message.error(t('image_generation.task_failed'))
     }
   } catch {
   }
@@ -365,7 +368,8 @@ async function pollTaskResultLoop() {
       }
       if (res.status === 'FAILED' || res.status === 'FAIL') {
         loading.value = false
-        message.error('生成任务失败')
+        message.error(t('image_generation.task_failed'))
+        // Stop polling when task fails
         return
       }
       if (res.status === 'NONE') {
@@ -387,11 +391,17 @@ async function pollTaskResultLoop() {
     } else if (status === 500) {
       message.error('服务异常，请稍后重试')
     }
+    // Stop polling when an error occurs
+  } finally {
+    polling.value = false
   }
 }
 
 onMounted(() => {
-  syncGenerateStatus()
+  // Call syncGenerateStatus but don't wait for it to complete
+  // This allows the UI to load while background checks happen
+  syncGenerateStatus().catch(() => {
+  })
   getEstimateParams().catch(() => {})
 })
 

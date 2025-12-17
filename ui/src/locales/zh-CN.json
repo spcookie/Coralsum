@@ -7,6 +7,10 @@
     "empty": "暂无数据",
     "action_failed": "操作失败"
   },
+  "image_generation": {
+    "task_in_progress": "检测到正在进行的图片生成任务，正在获取结果...",
+    "task_failed": "生成任务失败"
+  },
   "auth": {
     "login": {
       "title": "登录"

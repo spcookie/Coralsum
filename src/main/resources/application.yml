@@ -42,6 +42,8 @@ micronaut:
       expire-after-access: 5m
     uploaded-image-urls:
       expire-after-access: 5m
+    active-user-tasks:
+      expire-after-access: 5m
   security:
     authentication: bearer
     reject-not-found: false

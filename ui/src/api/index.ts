@@ -95,7 +95,7 @@ export async function changePassword(email: string, oldPassword: string, newPass
     return data
 }
 
-export async function generate(req: GenerateRequest): Promise<GenerateResponse> {
+export async function generate(req: GenerateRequest): Promise<GenerateResponse & { sid?: string }> {
     const fd = new FormData()
     let sid: string | undefined
     if (Array.isArray(req.inputImages) && req.inputImages.length > 0) {
@@ -144,6 +144,12 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
     const submitResp = await http.post('/generative-image/submit-task', fd, {headers})
     const submitSid = (submitResp?.data?.data ?? submitResp?.data?.sid ?? submitResp?.data) as any
     if (submitSid) sid = String(submitSid || '')
+
+    // Store the sid for future reference
+    if (sid) {
+        localStorage.setItem('currentGenerateTaskSid', sid)
+    }
+    
     const intervalMs = 1500
     const maxAttempts = Math.ceil((1000 * 60 * 5) / intervalMs)
     for (let i = 0; i < maxAttempts; i++) {
@@ -153,21 +159,38 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
         const status = (data as any)?.status as string
         if (status === 'COMPLETED') {
             const result = (data as any)?.result || {}
+            // Clear the stored sid when task is completed
+            if (sid) {
+                localStorage.removeItem('currentGenerateTaskSid')
+            }
             return {
                 durationMs: result.duration_ms ?? result.durationMs,
                 inputTokens: result.input_tokens ?? result.inputTokens,
                 outputTokens: result.output_tokens ?? result.outputTokens,
                 images: result.images || [],
                 text: result.text,
-                linkImages: result.link_images ?? result.linkImages ?? []
+                linkImages: result.link_images ?? result.linkImages ?? [],
+                sid: sid
             }
         }
         if (status === 'FAILED') {
+            // Clear the stored sid when task fails
+            if (sid) {
+                localStorage.removeItem('currentGenerateTaskSid')
+            }
             throw {message: '生成任务失败', status: 500}
         }
         if (status === 'NONE') {
+            // Clear the stored sid when task is not found
+            if (sid) {
+                localStorage.removeItem('currentGenerateTaskSid')
+            }
             throw {message: '任务不存在或已失效', status: 400}
         }
+    }
+    // Clear the stored sid when task times out
+    if (sid) {
+        localStorage.removeItem('currentGenerateTaskSid')
     }
     throw {message: '生成超时，请稍后重试', status: 504}
 }
@@ -331,10 +354,22 @@ export async function getGenerateTaskResult(sid?: string): Promise<{
     result?: GenerateResponse
 }> {
     const headers: any = {'X-API-Version': 'v1'}
-    const params: any = sid ? {sid} : {}
+
+    // If no sid is provided, check if there's a stored one
+    const effectiveSid = sid || localStorage.getItem('currentGenerateTaskSid') || undefined
+
+    const params: any = effectiveSid ? {sid: effectiveSid} : {}
     const {data} = await http.get('/generative-image/get-task-result', {headers, params})
     const status = (data as any)?.status as 'COMPLETED' | 'PROCESSING' | 'NONE' | 'FAILED' | 'FAIL'
     const r = (data as any)?.result
+
+    // If task is completed, failed, or not found, clear the stored sid
+    if (status === 'COMPLETED' || status === 'FAILED' || status === 'FAIL' || status === 'NONE') {
+        if (effectiveSid) {
+            localStorage.removeItem('currentGenerateTaskSid')
+        }
+    }
+    
     return {
         status,
         result: r

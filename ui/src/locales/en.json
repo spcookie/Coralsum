@@ -6,6 +6,10 @@
     "query": "Query",
     "empty": "No data"
   },
+  "image_generation": {
+    "task_in_progress": "Detected ongoing image generation task, retrieving results...",
+    "task_failed": "Image generation task failed"
+  },
   "auth": {
     "login": {
       "title": "Sign In"

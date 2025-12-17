@@ -95,6 +95,7 @@ jobrunr-micronaut-annotations = { module = "org.jobrunr:jobrunr-micronaut-annota
 micronaut-data-processor = { module = "io.micronaut.data:micronaut-data-processor" }
 micronaut-http-validation = { module = "io.micronaut:micronaut-http-validation" }
 micronaut-openapi = { module = "io.micronaut.openapi:micronaut-openapi" }
+micronaut-websocket = { module = "io.micronaut:micronaut-websocket" }
 micronaut-serde-processor = { module = "io.micronaut.serde:micronaut-serde-processor" }
 micronaut-validation-processor = { module = "io.micronaut.validation:micronaut-validation-processor" }
 micronaut-security-annotations = { module = "io.micronaut.security:micronaut-security-annotations" }

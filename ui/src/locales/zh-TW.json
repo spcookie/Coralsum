@@ -7,6 +7,10 @@
     "empty": "暫無數據",
     "action_failed": "操作失敗"
   },
+  "image_generation": {
+    "task_in_progress": "檢測到正在進行的圖片生成任務，正在獲取結果...",
+    "task_failed": "生成任務失敗"
+  },
   "auth": {
     "login": {
       "title": "登入"
